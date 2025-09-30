@@ -35,24 +35,29 @@ router.get('/', async (req, res) => {
         id: row.id,
         pawnerId: row.pawner_id,
         appraiserId: row.appraiser_id,
-        itemCategory: row.item_category,
-        itemCategoryDescription: row.item_category_description,
-        itemType: row.item_type,
-        brand: row.brand,
-        model: row.model,
+        category: row.item_category,
+        categoryDescription: row.item_category_description,
         description: row.description,
         serialNumber: row.serial_number,
         weight: row.weight,
         karat: row.karat,
         estimatedValue: parseFloat(row.estimated_value),
-        conditionNotes: row.condition_notes,
-        appraisalNotes: row.appraisal_notes,
+        interestRate: parseFloat(row.interest_rate || 0.05),
+        notes: row.condition_notes || row.appraisal_notes,
         status: row.status,
         createdAt: row.created_at,
         updatedAt: row.updated_at,
         pawnerName: `${row.first_name} ${row.last_name}`,
         pawnerContact: row.contact_number,
-        appraiserName: `${row.appraiser_first_name} ${row.appraiser_last_name}`
+        appraiserName: `${row.appraiser_first_name} ${row.appraiser_last_name}`,
+        // Legacy fields for compatibility
+        itemCategory: row.item_category,
+        itemCategoryDescription: row.item_category_description,
+        itemType: row.item_type,
+        brand: row.brand,
+        model: row.model,
+        conditionNotes: row.condition_notes,
+        appraisalNotes: row.appraisal_notes
       }))
     });
   } catch (error) {
@@ -213,25 +218,36 @@ router.post('/', async (req, res) => {
   try {
     const {
       pawnerId,
-      itemCategory,
-      itemCategoryDescription,
-      itemType,
-      brand,
-      model,
+      category,
+      categoryDescription,
       description,
       serialNumber,
       weight,
       karat,
       estimatedValue,
+      interestRate,
+      notes,
+      // Legacy support
+      itemCategory,
+      itemCategoryDescription,
+      itemType,
+      brand,
+      model,
       conditionNotes,
       appraisalNotes
     } = req.body;
     
+    // Support both new and legacy field names
+    const finalCategory = category || itemCategory;
+    const finalCategoryDescription = categoryDescription || itemCategoryDescription;
+    const finalDescription = description || itemType;
+    const finalNotes = notes || conditionNotes || appraisalNotes;
+    
     // Validate required fields
-    if (!pawnerId || !itemCategory || !itemType || !description || !estimatedValue) {
+    if (!pawnerId || !finalCategory || !finalDescription || !estimatedValue) {
       return res.status(400).json({
         success: false,
-        message: 'Missing required fields: pawnerId, itemCategory, itemType, description, estimatedValue'
+        message: 'Missing required fields: pawnerId, category, description, estimatedValue'
       });
     }
     
@@ -241,13 +257,13 @@ router.post('/', async (req, res) => {
       INSERT INTO appraisals (
         pawner_id, appraiser_id, item_category, item_category_description,
         item_type, brand, model, description, serial_number, weight, karat,
-        estimated_value, condition_notes, appraisal_notes, status
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+        estimated_value, interest_rate, condition_notes, appraisal_notes, status
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
       RETURNING *
     `, [
-      pawnerId, req.user.userId, itemCategory, itemCategoryDescription,
-      itemType, brand, model, description, serialNumber, weight, karat,
-      estimatedValue, conditionNotes, appraisalNotes, 'pending'
+      pawnerId, req.user.userId, finalCategory, finalCategoryDescription,
+      finalDescription, brand || '', model || '', finalDescription, serialNumber, weight, karat,
+      estimatedValue, interestRate || 0.05, finalNotes, finalNotes, 'pending'
     ]);
     
     const appraisal = result.rows[0];
@@ -274,21 +290,26 @@ router.post('/', async (req, res) => {
         id: appraisal.id,
         pawnerId: appraisal.pawner_id,
         appraiserId: appraisal.appraiser_id,
-        itemCategory: appraisal.item_category,
-        itemCategoryDescription: appraisal.item_category_description,
-        itemType: appraisal.item_type,
-        brand: appraisal.brand,
-        model: appraisal.model,
+        category: appraisal.item_category,
+        categoryDescription: appraisal.item_category_description,
         description: appraisal.description,
         serialNumber: appraisal.serial_number,
         weight: appraisal.weight,
         karat: appraisal.karat,
         estimatedValue: parseFloat(appraisal.estimated_value),
-        conditionNotes: appraisal.condition_notes,
-        appraisalNotes: appraisal.appraisal_notes,
+        interestRate: parseFloat(appraisal.interest_rate || 0.05),
+        notes: appraisal.condition_notes || appraisal.appraisal_notes,
         status: appraisal.status,
         createdAt: appraisal.created_at,
-        updatedAt: appraisal.updated_at
+        updatedAt: appraisal.updated_at,
+        // Legacy fields for compatibility
+        itemCategory: appraisal.item_category,
+        itemCategoryDescription: appraisal.item_category_description,
+        itemType: appraisal.item_type,
+        brand: appraisal.brand,
+        model: appraisal.model,
+        conditionNotes: appraisal.condition_notes,
+        appraisalNotes: appraisal.appraisal_notes
       }
     });
   } catch (error) {

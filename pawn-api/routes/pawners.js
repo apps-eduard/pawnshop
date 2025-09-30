@@ -13,26 +13,37 @@ router.use(authenticateToken);
 
 // Search pawners (must be before /:id route)
 router.get('/search', async (req, res) => {
+  console.log(`🔍 [${new Date().toISOString()}] PAWNER SEARCH REQUEST:`, {
+    method: req.method,
+    url: req.url,
+    query: req.query,
+    headers: {
+      authorization: req.headers.authorization ? `${req.headers.authorization.substring(0, 20)}...` : 'MISSING',
+      'content-type': req.headers['content-type'],
+      'user-agent': req.headers['user-agent']
+    },
+    user: req.user ? { id: req.user.id, username: req.user.username, role: req.user.role } : 'NOT_AUTHENTICATED',
+    ip: req.ip || req.connection.remoteAddress
+  });
+
   try {
     const { q } = req.query;
     
     if (!q) {
+      console.log(`❌ [${new Date().toISOString()}] Search query missing`);
       return res.status(400).json({
         success: false,
         message: 'Search query is required'
       });
     }
     
-    console.log(`🔍 [${new Date().toISOString()}] Searching pawners: ${q} - User: ${req.user.username}`);
+    console.log(`🔍 [${new Date().toISOString()}] Searching pawners: "${q}" - User: ${req.user?.username || 'UNKNOWN'}`);
     
     const result = await pool.query(`
       SELECT p.id, p.first_name, p.last_name, p.contact_number, p.email,
-             p.city_id, p.barangay_id, p.address_details, p.is_active,
-             p.created_at, p.updated_at,
-             c.name as city_name, b.name as barangay_name
+             p.address, p.id_type, p.id_number, p.birth_date, p.is_active,
+             p.created_at, p.updated_at
       FROM pawners p
-      LEFT JOIN cities c ON p.city_id = c.id
-      LEFT JOIN barangays b ON p.barangay_id = b.id
       WHERE p.is_active = true
         AND (
           LOWER(p.first_name) LIKE LOWER($1) OR
@@ -44,29 +55,44 @@ router.get('/search', async (req, res) => {
       LIMIT 50
     `, [`%${q}%`]);
     
-    console.log(`✅ Found ${result.rows.length} pawners matching: ${q}`);
+    const mappedResults = result.rows.map(row => ({
+      id: row.id,
+      firstName: row.first_name,
+      lastName: row.last_name,
+      contactNumber: row.contact_number,
+      email: row.email,
+      address: row.address,
+      idType: row.id_type,
+      idNumber: row.id_number,
+      birthDate: row.birth_date,
+      isActive: row.is_active,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at
+    }));
+
+    console.log(`✅ [${new Date().toISOString()}] Found ${result.rows.length} pawners matching: "${q}"`);
+    console.log(`📊 [${new Date().toISOString()}] Search results:`, mappedResults.map(r => `${r.firstName} ${r.lastName} (${r.contactNumber})`));
     
-    res.json({
+    const response = {
       success: true,
       message: 'Pawners found successfully',
-      data: result.rows.map(row => ({
-        id: row.id,
-        firstName: row.first_name,
-        lastName: row.last_name,
-        contactNumber: row.contact_number,
-        email: row.email,
-        cityId: row.city_id,
-        barangayId: row.barangay_id,
-        addressDetails: row.address_details,
-        cityName: row.city_name,
-        barangayName: row.barangay_name,
-        isActive: row.is_active,
-        createdAt: row.created_at,
-        updatedAt: row.updated_at
-      }))
+      data: mappedResults
+    };
+
+    console.log(`📤 [${new Date().toISOString()}] Sending response:`, { 
+      success: response.success, 
+      message: response.message, 
+      dataCount: response.data.length 
     });
+
+    res.json(response);
   } catch (error) {
-    console.error('❌ Error searching pawners:', error);
+    console.error(`❌ [${new Date().toISOString()}] Error searching pawners:`, {
+      error: error.message,
+      stack: error.stack,
+      query: req.query,
+      user: req.user?.username || 'UNKNOWN'
+    });
     res.status(500).json({
       success: false,
       message: 'Error searching pawners'

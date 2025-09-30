@@ -2,18 +2,35 @@ const jwt = require('jsonwebtoken');
 const db = require('../config/database');
 
 const authenticateToken = async (req, res, next) => {
+  console.log(`🔐 [${new Date().toISOString()}] AUTH MIDDLEWARE:`, {
+    method: req.method,
+    url: req.url,
+    headers: {
+      authorization: req.headers['authorization'] ? `${req.headers['authorization'].substring(0, 30)}...` : 'MISSING',
+      'content-type': req.headers['content-type']
+    },
+    ip: req.ip || req.connection.remoteAddress
+  });
+
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
 
   if (!token) {
+    console.log(`❌ [${new Date().toISOString()}] No token provided`);
     return res.status(401).json({
       success: false,
       message: 'Access token required'
     });
   }
 
+  console.log(`🔑 [${new Date().toISOString()}] Token received: ${token.substring(0, 20)}...`);
+
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    console.log(`✅ [${new Date().toISOString()}] Token decoded successfully:`, { 
+      userId: decoded.userId, 
+      exp: new Date(decoded.exp * 1000).toISOString() 
+    });
     
     // Verify user still exists and is active
     const userQuery = `
@@ -23,8 +40,13 @@ const authenticateToken = async (req, res, next) => {
     `;
     
     const result = await db.query(userQuery, [decoded.userId]);
+    console.log(`👤 [${new Date().toISOString()}] User lookup result:`, { 
+      found: result.rows.length > 0, 
+      user: result.rows[0] ? { id: result.rows[0].id, username: result.rows[0].username, role: result.rows[0].role } : null 
+    });
     
     if (result.rows.length === 0) {
+      console.log(`❌ [${new Date().toISOString()}] User not found or inactive for ID: ${decoded.userId}`);
       return res.status(401).json({
         success: false,
         message: 'Invalid token - user not found or inactive'
@@ -32,8 +54,15 @@ const authenticateToken = async (req, res, next) => {
     }
 
     req.user = result.rows[0];
+    console.log(`🎉 [${new Date().toISOString()}] Authentication successful for user: ${req.user.username} (${req.user.role})`);
     next();
   } catch (error) {
+    console.log(`❌ [${new Date().toISOString()}] Authentication error:`, {
+      name: error.name,
+      message: error.message,
+      tokenPreview: token ? token.substring(0, 20) + '...' : 'null'
+    });
+
     if (error.name === 'TokenExpiredError') {
       return res.status(401).json({
         success: false,

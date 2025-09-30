@@ -111,18 +111,15 @@ export interface Appraisal {
   id: number;
   pawnerId: number;
   appraiserId: number;
-  itemCategory: string;
-  itemCategoryDescription?: string;
-  itemType: string;
-  brand?: string;
-  model?: string;
+  category: string;
+  categoryDescription?: string;
   description: string;
   serialNumber?: string;
   weight?: number;
   karat?: number;
   estimatedValue: number;
-  conditionNotes?: string;
-  appraisalNotes?: string;
+  interestRate?: number;
+  notes?: string;
   status: 'pending' | 'approved' | 'processing' | 'completed' | 'cancelled';
   createdAt: Date | string;
   updatedAt: Date | string;
@@ -134,18 +131,15 @@ export interface Appraisal {
 
 export interface CreateAppraisalRequest {
   pawnerId: number;
-  itemCategory: string;
-  itemCategoryDescription?: string;
-  itemType: string;
-  brand?: string;
-  model?: string;
+  category: string;
+  categoryDescription?: string;
   description: string;
   serialNumber?: string;
   weight?: number;
   karat?: number;
   estimatedValue: number;
-  conditionNotes?: string;
-  appraisalNotes?: string;
+  interestRate?: number;
+  notes?: string;
 }
 
 export interface Item {

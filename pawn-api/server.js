@@ -39,6 +39,27 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
+// Request logging middleware - EVERY REQUEST
+app.use((req, res, next) => {
+  console.log(`\n🌐 [${new Date().toISOString()}] ${req.method} ${req.url}`);
+  console.log(`📋 Headers:`, { 
+    authorization: req.headers.authorization ? `${req.headers.authorization.substring(0, 20)}...` : 'NONE',
+    'content-type': req.headers['content-type'],
+    origin: req.headers.origin,
+    'user-agent': req.headers['user-agent']?.substring(0, 50) + '...'
+  });
+  console.log(`📍 IP: ${req.ip || req.connection.remoteAddress}`);
+  console.log(`🔍 Query:`, req.query);
+  console.log(`⏰ Timestamp: ${new Date().toLocaleString()}`);
+  next();
+});
+
+// Test route for debugging
+app.get('/api/test', (req, res) => {
+  console.log('🧪 TEST ROUTE HIT!');
+  res.json({ success: true, message: 'API server is working!', timestamp: new Date().toISOString() });
+});
+
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
@@ -53,6 +74,7 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/branches', branchRoutes);
 app.use('/api/admin-advanced', adminAdvancedRoutes);
+app.use('/api/categories', require('./routes/categories'));
 
 // Health check endpoint
 app.get('/api/health', async (req, res) => {

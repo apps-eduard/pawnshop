@@ -6,6 +6,19 @@
         <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Appraiser Dashboard</h1>
         <p class="text-gray-600 dark:text-gray-400 mt-1">{{ currentDateTime | date:'EEEE, MMMM d, y - h:mm:ss a' }}</p>
       </div>
+      
+      <!-- Quick Login for Testing -->
+      <div class="flex items-center space-x-3">
+        <button
+          *ngIf="!isAuthenticated()"
+          (click)="quickLogin()"
+          class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+          🔐 Quick Login (Testing)
+        </button>
+        <span *ngIf="isAuthenticated()" class="text-sm bg-green-100 text-green-800 px-3 py-1 rounded-full">
+          ✅ Logged in as {{ getCurrentUser()?.firstName }}
+        </span>
+      </div>
     </div>
 
     <!-- Dashboard Cards Grid -->
@@ -69,44 +82,71 @@
             <!-- Search Input -->
             <div class="relative">
               <div class="absolute inset-y-0 left-0 pl-3 flex items-center">
-                <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg *ngIf="!isSearching" class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
                 </svg>
+                <div *ngIf="isSearching" class="animate-spin h-5 w-5 border-2 border-primary-600 border-t-transparent rounded-full"></div>
               </div>
               <input
                 type="text"
                 [(ngModel)]="searchQuery"
-                class="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-                placeholder="Search by name, email, or mobile...">
+                (keydown.enter)="searchPawners()"
+                [disabled]="isSearching"
+                class="w-full pl-10 pr-12 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white disabled:opacity-50"
+                placeholder="Search by name, email, or mobile... (Press Enter to search)"
+                #searchInput>
+              
+              <!-- Clear Button -->
+              <button
+                *ngIf="searchQuery"
+                (click)="clearSearch()"
+                type="button"
+                class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+              </button>
             </div>
 
-            <!-- Search Actions -->
-            <div class="flex gap-2 mt-2">
+            <!-- Start New Appraisal Action -->
+            <div class="mt-4">
               <button
-                (click)="searchPawners()"
-                class="flex-1 bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
-                Search
-              </button>
-              
-              <button
-                (click)="showCreateForm()"
-                class="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
-                Create New
+                (click)="startNewAppraisal()"
+                class="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg font-medium transition-colors flex items-center justify-center">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                </svg>
+                Start New Appraisal
               </button>
             </div>
 
             <!-- Search Results -->
             <div *ngIf="searchResults.length > 0" class="mb-4 max-h-60 overflow-y-auto">
-              <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Search Results:</h3>
+              <div class="flex items-center justify-between mb-2">
+                <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300">Search Results:</h3>
+                <span class="text-xs text-gray-500 dark:text-gray-400">{{ searchResults.length }} found</span>
+              </div>
               <div class="space-y-2">
                 <button
-                  *ngFor="let pawner of searchResults"
+                  *ngFor="let pawner of searchResults; let i = index"
                   (click)="selectPawner(pawner)"
-                  class="w-full text-left p-3 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg transition-colors">
-                  <div class="font-medium text-gray-900 dark:text-white">{{ pawner.firstName }} {{ pawner.lastName }}</div>
-                  <div class="text-sm text-gray-600 dark:text-gray-400">{{ pawner.contactNumber }}</div>
-                  <div class="text-xs text-gray-500 dark:text-gray-500">{{ pawner.email }}</div>
+                  class="w-full text-left p-3 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg transition-colors border border-transparent hover:border-primary-200 dark:hover:border-primary-800">
+                  <div class="flex items-center justify-between">
+                    <div class="flex-1">
+                      <div class="font-medium text-gray-900 dark:text-white">{{ pawner.firstName }} {{ pawner.lastName }}</div>
+                      <div class="text-sm text-gray-600 dark:text-gray-400">{{ pawner.contactNumber }}</div>
+                      <div class="text-xs text-gray-500 dark:text-gray-500" *ngIf="pawner.email">{{ pawner.email }}</div>
+                    </div>
+                    <div class="text-primary-600 dark:text-primary-400">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                      </svg>
+                    </div>
+                  </div>
                 </button>
+              </div>
+              <div class="mt-2 text-xs text-gray-500 dark:text-gray-400 text-center">
+                Click on a pawner to select them
               </div>
             </div>
 
@@ -130,29 +170,13 @@
                 </button>
               </div>
             </div>
-
-            <!-- Action Button -->
-            <button
-              (click)="startItemAppraisal()"
-              [disabled]="!selectedPawner"
-              class="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-4 py-3 rounded-lg font-medium transition-colors">
-              <span *ngIf="selectedPawner">Start Item Appraisal</span>
-              <span *ngIf="!selectedPawner">Select a Pawner First</span>
-            </button>
           </div>
         </div>
 
-        <!-- Create New Pawner Form -->
+        <!-- Pawner Information Form -->
         <div *ngIf="showCreatePawnerForm" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-          <div class="flex justify-between items-center mb-4">
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Create New Pawner</h3>
-            <button
-              (click)="resetPawnerForm()"
-              class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-              </svg>
-            </button>
+          <div class="mb-4">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Pawner Information</h3>
           </div>
 
           <form (ngSubmit)="createPawner()" class="space-y-4">
@@ -243,20 +267,8 @@
                 placeholder="Street, house number, etc."></textarea>
             </div>
 
-            <!-- Form Actions -->
-            <div class="flex gap-3 pt-4">
-              <button
-                type="button"
-                (click)="resetPawnerForm()"
-                class="flex-1 px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 rounded-lg font-medium transition-colors">
-                Cancel
-              </button>
-              <button
-                type="submit"
-                class="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors">
-                Create & Select
-              </button>
-            </div>
+
+
           </form>
         </div>
 
@@ -275,23 +287,7 @@
           </div>
         </div>
 
-        <!-- Appraisal Tools -->
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-          <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-6">Appraisal Tools</h3>
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <button class="flex items-center space-x-3 p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-left">
-              <div class="p-2 bg-yellow-100 dark:bg-yellow-900 rounded-lg">
-                <svg class="w-5 h-5 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
-                </svg>
-              </div>
-              <div>
-                <p class="font-medium text-gray-900 dark:text-white">Jewelry Calculator</p>
-                <p class="text-sm text-gray-500 dark:text-gray-400">Gold/Silver pricing</p>
-              </div>
-            </button>
-          </div>
-        </div>
+
       </div>
 
       <!-- Right Column - Item Appraisal and Recent Activity -->
@@ -310,40 +306,42 @@
           </div>
 
           <form (ngSubmit)="saveItemAppraisal()" class="space-y-6">
-            <!-- Item Type -->
+            <!-- Category -->
             <div>
               <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Item Type <span class="text-red-500">*</span>
+                Category <span class="text-red-500">*</span>
               </label>
               <select
-                [(ngModel)]="currentItem.itemType"
-                name="itemType"
+                [(ngModel)]="currentItem.category"
+                name="category"
+                (change)="onCategoryChange()"
                 required
                 class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-gray-700 dark:text-white">
-                <option value="">Select Item Type</option>
-                <option *ngFor="let type of itemTypes" [value]="type">{{ type }}</option>
+                <option value="">Select Category</option>
+                <option *ngFor="let category of categories" [value]="category.name">{{ category.name }} ({{ category.interestRate * 100 }}% interest)</option>
               </select>
             </div>
 
-            <!-- Brand & Model -->
-            <div class="grid grid-cols-2 gap-4">
-              <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Brand</label>
-                <input
-                  type="text"
-                  [(ngModel)]="currentItem.brand"
-                  name="brand"
-                  class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-                  placeholder="Enter brand">
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Model</label>
-                <input
-                  type="text"
-                  [(ngModel)]="currentItem.model"
-                  name="model"
-                  class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-                  placeholder="Enter model">
+            <!-- Category Description -->
+            <div *ngIf="currentItem.category">
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Category Description</label>
+              <div class="flex gap-2">
+                <select
+                  [(ngModel)]="currentItem.categoryDescription"
+                  name="categoryDescription"
+                  class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-gray-700 dark:text-white">
+                  <option value="">Select Description (optional)</option>
+                  <option *ngFor="let desc of filteredCategoryDescriptions" [value]="desc">{{ desc }}</option>
+                </select>
+                <button
+                  type="button"
+                  (click)="openAddCategoryDescriptionDialog()"
+                  class="px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md transition-colors flex items-center justify-center"
+                  title="Add New Category Description">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                  </svg>
+                </button>
               </div>
             </div>
 
@@ -373,7 +371,7 @@
             </div>
 
             <!-- Jewelry Specific Fields -->
-            <div *ngIf="getItemTypeCategory(currentItem.itemType) === 'jewelry'" class="grid grid-cols-2 gap-4">
+            <div *ngIf="currentItem.category === 'Jewelry'" class="grid grid-cols-2 gap-4">
               <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Weight (grams)</label>
                 <input
@@ -406,26 +404,15 @@
                 placeholder="Enter serial number if available">
             </div>
 
-            <!-- Condition Notes -->
+            <!-- Notes -->
             <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Condition Notes</label>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notes</label>
               <textarea
-                [(ngModel)]="currentItem.conditionNotes"
-                name="conditionNotes"
-                rows="2"
+                [(ngModel)]="currentItem.notes"
+                name="notes"
+                rows="4"
                 class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-                placeholder="Note any damage, wear, or special conditions"></textarea>
-            </div>
-
-            <!-- Appraisal Notes -->
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Appraisal Notes</label>
-              <textarea
-                [(ngModel)]="currentItem.appraisalNotes"
-                name="appraisalNotes"
-                rows="3"
-                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-                placeholder="Professional appraisal notes and valuation reasoning"></textarea>
+                placeholder="Notes about condition, appraisal reasoning, or special considerations"></textarea>
             </div>
 
             <!-- Form Actions -->
@@ -437,31 +424,92 @@
                 Cancel
               </button>
               <button
-                type="submit"
-                class="flex-1 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors">
-                Save Appraisal
+                type="button"
+                (click)="addItemToAppraisal()"
+                class="flex-1 px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors">
+                Add Item
               </button>
             </div>
           </form>
         </div>
 
-        <!-- Welcome Message (when no item form is shown) -->
-        <div *ngIf="!showItemForm" class="bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center">
-          <div class="mb-4">
-            <svg class="w-16 h-16 mx-auto text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-            </svg>
+        <!-- Current Appraisal Items Table -->
+        <div *ngIf="appraisalItems.length > 0" class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+          <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Current Appraisal Items</h2>
+            <div class="text-right">
+              <div class="text-sm text-gray-600 dark:text-gray-400">Total Items: {{ appraisalItems.length }}</div>
+              <div class="text-lg font-semibold text-green-600 dark:text-green-400">{{ formatCurrency(getTotalEstimatedValue()) }}</div>
+            </div>
           </div>
-          <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">Ready to Start Appraising</h3>
-          <p class="text-gray-600 dark:text-gray-400 mb-4">
-            Search for an existing pawner or create a new one to begin the appraisal process.
-          </p>
-          <button
-            (click)="showCreateForm()"
-            class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors">
-            Start New Appraisal
-          </button>
+          
+          <!-- Items Table -->
+          <div class="overflow-x-auto">
+            <table class="w-full border-collapse">
+              <thead>
+                <tr class="border-b border-gray-200 dark:border-gray-700">
+                  <th class="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">Category</th>
+                  <th class="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">Description</th>
+                  <th class="text-right py-3 px-4 font-medium text-gray-900 dark:text-white">Value (₱)</th>
+                  <th class="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">Details</th>
+                  <th class="text-center py-3 px-4 font-medium text-gray-900 dark:text-white">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let item of appraisalItems; let i = index" 
+                    class="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                  <td class="py-3 px-4">
+                    <div class="flex items-center gap-2">
+                      <span class="text-xl">{{ getCategoryIcon(item.category) }}</span>
+                      <div>
+                        <div class="font-medium text-gray-900 dark:text-white">{{ item.category }}</div>
+                        <div *ngIf="item.categoryDescription" class="text-xs text-gray-500 dark:text-gray-400">{{ item.categoryDescription }}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="py-3 px-4">
+                    <div class="text-sm text-gray-900 dark:text-white">{{ item.description }}</div>
+                    <div *ngIf="item.serialNumber" class="text-xs text-gray-500 dark:text-gray-400">S/N: {{ item.serialNumber }}</div>
+                  </td>
+                  <td class="py-3 px-4 text-right">
+                    <div class="font-semibold text-gray-900 dark:text-white">{{ formatCurrency(item.estimatedValue) }}</div>
+                  </td>
+                  <td class="py-3 px-4">
+                    <div class="text-xs text-gray-600 dark:text-gray-400">
+                      <div *ngIf="item.weight">Weight: {{ item.weight }}g</div>
+                      <div *ngIf="item.karat">{{ item.karat }}k</div>
+                      <div *ngIf="item.notes" class="truncate max-w-32" [title]="item.notes">Notes: {{ item.notes }}</div>
+                    </div>
+                  </td>
+                  <td class="py-3 px-4 text-center">
+                    <button
+                      (click)="removeItemFromAppraisal(i)"
+                      class="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                      title="Remove Item">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                      </svg>
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          
+          <!-- Save Appraisal Button -->
+          <div class="mt-6 flex justify-end">
+            <button
+              (click)="saveAppraisal()"
+              class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-medium transition-colors flex items-center">
+              <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path>
+              </svg>
+              Save Appraisal ({{ appraisalItems.length }} items)
+            </button>
+          </div>
         </div>
+
+
 
         <!-- Recent Appraisals -->
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
@@ -477,18 +525,18 @@
               <div class="flex items-start justify-between">
                 <div class="flex-1">
                   <div class="flex items-center gap-2 mb-2">
-                    <span class="text-2xl">{{ getItemTypeIcon(appraisal.itemType) }}</span>
-                    <h3 class="font-semibold text-gray-900 dark:text-white">{{ appraisal.itemType }}</h3>
+                    <span class="text-2xl">{{ getCategoryIcon(appraisal.category) }}</span>
+                    <h3 class="font-semibold text-gray-900 dark:text-white">{{ appraisal.category }}</h3>
                     <span [class]="getStatusBadgeClass(appraisal.status)" class="px-2 py-1 text-xs font-medium rounded-full">
                       {{ appraisal.status }}
                     </span>
                   </div>
                   <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">{{ appraisal.description }}</p>
                   <div class="flex gap-4 text-sm text-gray-500 dark:text-gray-500">
-                    <span *ngIf="appraisal.brand">Brand: {{ appraisal.brand }}</span>
-                    <span *ngIf="appraisal.model">Model: {{ appraisal.model }}</span>
+                    <span *ngIf="appraisal.categoryDescription">Type: {{ appraisal.categoryDescription }}</span>
                     <span *ngIf="appraisal.weight">Weight: {{ appraisal.weight }}g</span>
                     <span *ngIf="appraisal.karat">{{ appraisal.karat }}k</span>
+                    <span *ngIf="appraisal.serialNumber">S/N: {{ appraisal.serialNumber }}</span>
                   </div>
                 </div>
                 <div class="text-right">
@@ -505,5 +553,62 @@
         </div>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- Add Category Description Modal -->
+<div *ngIf="showAddCategoryDescriptionModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+  <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4">
+    <div class="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-700">
+      <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Add Category Description</h3>
+      <button
+        (click)="closeAddCategoryDescriptionDialog()"
+        class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+      </button>
+    </div>
+    
+    <form (ngSubmit)="addCategoryDescription()" class="p-6">
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          Category: <span class="font-semibold text-primary-600">{{ currentItem.category }}</span>
+        </label>
+      </div>
+      
+      <div class="mb-6">
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          New Description <span class="text-red-500">*</span>
+        </label>
+        <input
+          type="text"
+          [(ngModel)]="newCategoryDescription"
+          name="newCategoryDescription"
+          required
+          #descriptionInput
+          class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+          placeholder="e.g., 22K Gold Ring, 43 inch Smart TV"
+          maxlength="255">
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Enter a specific description for this category</p>
+      </div>
+      
+      <div class="flex gap-3">
+        <button
+          type="button"
+          (click)="closeAddCategoryDescriptionDialog()"
+          class="flex-1 px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 rounded-md font-medium transition-colors">
+          Cancel
+        </button>
+        <button
+          type="submit"
+          [disabled]="!newCategoryDescription || newCategoryDescription.trim() === '' || isAddingCategoryDescription"
+          class="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white rounded-md font-medium transition-colors flex items-center justify-center">
+          <div *ngIf="isAddingCategoryDescription" class="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2"></div>
+          <span *ngIf="!isAddingCategoryDescription">Add Description</span>
+          <span *ngIf="isAddingCategoryDescription">Adding...</span>
+        </button>
+      </div>
+    </form>
   </div>
 </div>
