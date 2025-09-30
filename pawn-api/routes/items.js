@@ -126,7 +126,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // Create new item
-router.post('/', authorizeRoles(['admin', 'manager']), async (req, res) => {
+router.post('/', authorizeRoles(['administrator', 'manager']), async (req, res) => {
   try {
     const {
       ticketId,
@@ -205,7 +205,7 @@ router.post('/', authorizeRoles(['admin', 'manager']), async (req, res) => {
 });
 
 // Update item
-router.put('/:id', authorizeRoles(['admin', 'manager']), async (req, res) => {
+router.put('/:id', authorizeRoles(['administrator', 'manager']), async (req, res) => {
   try {
     const { id } = req.params;
     const {
@@ -277,7 +277,7 @@ router.put('/:id', authorizeRoles(['admin', 'manager']), async (req, res) => {
 });
 
 // Delete item
-router.delete('/:id', authorizeRoles(['admin']), async (req, res) => {
+router.delete('/:id', authorizeRoles(['administrator']), async (req, res) => {
   try {
     const { id } = req.params;
     

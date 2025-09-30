@@ -21,39 +21,52 @@ export class LoginComponent implements OnInit {
   // Demo accounts for testing (matching database usernames)
   demoAccounts = [
     {
-      role: 'Admin',
+      role: 'Administrator',
       username: 'admin',
       password: 'admin123',
       color: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
-      icon: '🛡️'
+      icon: '⚡',
+      description: 'Full system access'
     },
     {
       role: 'Manager',
       username: 'manager1',
       password: 'manager123',
       color: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
-      icon: '📊'
-    },
-    {
-      role: 'Appraiser',
-      username: 'appraiser1',
-      password: 'appraiser123',
-      color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-      icon: '💎'
+      icon: '👔',
+      description: 'Branch management'
     },
     {
       role: 'Cashier',
       username: 'cashier1',
       password: 'cashier123',
       color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-      icon: '💰'
+      icon: '💰',
+      description: 'Process transactions'
     },
     {
       role: 'Auctioneer',
       username: 'auctioneer1',
       password: 'auctioneer123',
       color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
-      icon: '🔨'
+      icon: '🔨',
+      description: 'Manage auctions'
+    },
+    {
+      role: 'Appraiser',
+      username: 'appraiser1',
+      password: 'appraiser123',
+      color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+      icon: '💎',
+      description: 'Item appraisal'
+    },
+    {
+      role: 'Pawner',
+      username: 'pawner1',
+      password: 'pawner123',
+      color: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200',
+      icon: '👤',
+      description: 'Customer access'
     }
   ];
 
@@ -136,6 +149,14 @@ export class LoginComponent implements OnInit {
     this.loginForm.patchValue({
       username: 'cashier1',
       password: 'cashier123'
+    });
+    this.onSubmit();
+  }
+
+  loginAsPawner(): void {
+    this.loginForm.patchValue({
+      username: 'pawner1',
+      password: 'pawner123'
     });
     this.onSubmit();
   }

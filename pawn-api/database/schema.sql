@@ -27,7 +27,7 @@ CREATE TABLE users (
     password_hash VARCHAR(255) NOT NULL,
     first_name VARCHAR(50) NOT NULL,
     last_name VARCHAR(50) NOT NULL,
-    role VARCHAR(20) NOT NULL CHECK (role IN ('administrator', 'manager', 'supervisor', 'cashier', 'clerk')),
+    role VARCHAR(20) NOT NULL CHECK (role IN ('administrator', 'manager', 'cashier', 'auctioneer', 'appraiser')),
     branch_id INTEGER REFERENCES branches(id),
     position VARCHAR(50),
     contact_number VARCHAR(20),

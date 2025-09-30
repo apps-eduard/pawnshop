@@ -78,11 +78,12 @@ export interface Barangay {
 }
 
 export enum UserRole {
-  ADMIN = 'admin',
+  ADMINISTRATOR = 'administrator',
   MANAGER = 'manager',
   CASHIER = 'cashier',
+  AUCTIONEER = 'auctioneer',
   APPRAISER = 'appraiser',
-  AUCTIONEER = 'auctioneer'
+  PAWNER = 'pawner'
 }
 
 export enum ItemCategory {
@@ -104,6 +105,47 @@ export enum TransactionType {
   PARTIAL = 'PARTIAL',
   ADDITIONAL = 'ADDITIONAL',
   RENEW = 'RENEW'
+}
+
+export interface Appraisal {
+  id: number;
+  pawnerId: number;
+  appraiserId: number;
+  itemCategory: string;
+  itemCategoryDescription?: string;
+  itemType: string;
+  brand?: string;
+  model?: string;
+  description: string;
+  serialNumber?: string;
+  weight?: number;
+  karat?: number;
+  estimatedValue: number;
+  conditionNotes?: string;
+  appraisalNotes?: string;
+  status: 'pending' | 'approved' | 'processing' | 'completed' | 'cancelled';
+  createdAt: Date | string;
+  updatedAt: Date | string;
+  pawner?: Pawner;
+  pawnerName?: string;
+  pawnerContact?: string;
+  appraiserName?: string;
+}
+
+export interface CreateAppraisalRequest {
+  pawnerId: number;
+  itemCategory: string;
+  itemCategoryDescription?: string;
+  itemType: string;
+  brand?: string;
+  model?: string;
+  description: string;
+  serialNumber?: string;
+  weight?: number;
+  karat?: number;
+  estimatedValue: number;
+  conditionNotes?: string;
+  appraisalNotes?: string;
 }
 
 export interface Item {

@@ -1,6 +1,8 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
+import { AppraisalService } from '../../core/services/appraisal.service';
+import { Appraisal } from '../../core/models/interfaces';
 
 interface DashboardCard {
   title: string;
@@ -32,10 +34,64 @@ export class CashierDashboard implements OnInit {
   isLoading = false;
   dashboardCards: DashboardCard[] = [];
   recentTransactions: Transaction[] = [];
+  pendingAppraisals: Appraisal[] = [];
+  
+  // Transaction types
+  transactionTypes = [
+    {
+      id: 'new_loan',
+      title: 'New Loan',
+      description: 'Create a new pawn loan',
+      icon: 'plus',
+      color: 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400',
+      bgColor: 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800',
+      iconColor: 'text-blue-600 dark:text-blue-400'
+    },
+    {
+      id: 'additional',
+      title: 'Additional',
+      description: 'Add additional loan amount',
+      icon: 'plus-circle',
+      color: 'bg-green-100 dark:bg-green-900 text-green-600 dark:text-green-400',
+      bgColor: 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800',
+      iconColor: 'text-green-600 dark:text-green-400'
+    },
+    {
+      id: 'partial',
+      title: 'Partial Payment',
+      description: 'Process partial payment',
+      icon: 'credit-card',
+      color: 'bg-yellow-100 dark:bg-yellow-900 text-yellow-600 dark:text-yellow-400',
+      bgColor: 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800',
+      iconColor: 'text-yellow-600 dark:text-yellow-400'
+    },
+    {
+      id: 'redeem',
+      title: 'Redeem',
+      description: 'Process full redemption',
+      icon: 'check-circle',
+      color: 'bg-purple-100 dark:bg-purple-900 text-purple-600 dark:text-purple-400',
+      bgColor: 'bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800',
+      iconColor: 'text-purple-600 dark:text-purple-400'
+    },
+    {
+      id: 'renew',
+      title: 'Renew',
+      description: 'Renew existing loan',
+      icon: 'refresh',
+      color: 'bg-orange-100 dark:bg-orange-900 text-orange-600 dark:text-orange-400',
+      bgColor: 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800',
+      iconColor: 'text-orange-600 dark:text-orange-400'
+    }
+  ];
+
+  constructor(private appraisalService: AppraisalService) {}
 
   ngOnInit() {
     this.loadDashboardData();
+    this.loadPendingAppraisals();
     this.updateTime();
+    setInterval(() => this.updateTime(), 1000);
   }
 
   private loadDashboardData() {
@@ -176,9 +232,10 @@ export class CashierDashboard implements OnInit {
     return colorMap[status] || colorMap['pending'];
   }
 
-  getTimeAgo(date: Date): string {
+  getTimeAgo(date: Date | string): string {
     const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
+    const targetDate = typeof date === 'string' ? new Date(date) : date;
+    const diffMs = now.getTime() - targetDate.getTime();
     const diffMins = Math.floor(diffMs / (1000 * 60));
 
     if (diffMins < 60) {
@@ -190,5 +247,25 @@ export class CashierDashboard implements OnInit {
       const diffDays = Math.floor(diffMins / 1440);
       return `${diffDays} day(s) ago`;
     }
+  }
+
+  loadPendingAppraisals() {
+    this.appraisalService.getAppraisalsByStatus('completed').subscribe({
+      next: (response) => {
+        if (response.success) {
+          this.pendingAppraisals = response.data.filter((appraisal: any) => 
+            !appraisal.transaction_id
+          );
+        }
+      },
+      error: (error) => {
+        console.error('Error loading pending appraisals:', error);
+      }
+    });
+  }
+
+  onTransactionTypeSelect(transactionType: any) {
+    console.log('Selected transaction type:', transactionType);
+    // Handle transaction type selection - will implement transaction dialog
   }
 }

@@ -8,9 +8,9 @@ async function seedDatabase() {
     // Hash passwords
     const adminPassword = await bcrypt.hash('admin123', 10);
     const managerPassword = await bcrypt.hash('manager123', 10);
-    const appraiserPassword = await bcrypt.hash('appraiser123', 10);
     const cashierPassword = await bcrypt.hash('cashier123', 10);
     const auctioneerPassword = await bcrypt.hash('auctioneer123', 10);
+    const appraiserPassword = await bcrypt.hash('appraiser123', 10);
 
     // Insert branches
     console.log('📍 Creating branches...');
@@ -34,18 +34,18 @@ async function seedDatabase() {
     const userResult = await pool.query(`
       INSERT INTO users (username, email, password_hash, first_name, last_name, role, branch_id, position, contact_number, address) 
       VALUES 
-        ('admin', 'admin@pawnshop.com', $1, 'John', 'Smith', 'admin', $2, 'System Administrator', '+1-555-1001', '100 Admin Lane, Business District'),
+        ('admin', 'admin@pawnshop.com', $1, 'John', 'Smith', 'administrator', $2, 'System Administrator', '+1-555-1001', '100 Admin Lane, Business District'),
         ('manager1', 'manager@pawnshop.com', $3, 'Sarah', 'Johnson', 'manager', $4, 'Branch Manager', '+1-555-1002', '200 Manager St, Executive Area'),
-        ('appraiser1', 'appraiser@pawnshop.com', $5, 'Mike', 'Davis', 'appraiser', $6, 'Senior Appraiser', '+1-555-1003', '300 Appraiser Ave, Mid-town'),
-        ('cashier1', 'cashier@pawnshop.com', $7, 'Lisa', 'Wilson', 'cashier', $8, 'Senior Cashier', '+1-555-1004', '400 Cashier Rd, Residential'),
-        ('auctioneer1', 'auctioneer@pawnshop.com', $9, 'Tom', 'Brown', 'auctioneer', $10, 'Lead Auctioneer', '+1-555-1005', '500 Auctioneer Ct, Suburban Area')
+        ('cashier1', 'cashier@pawnshop.com', $5, 'Lisa', 'Wilson', 'cashier', $6, 'Senior Cashier', '+1-555-1004', '400 Cashier Rd, Residential'),
+        ('auctioneer1', 'auctioneer@pawnshop.com', $7, 'Tom', 'Brown', 'auctioneer', $8, 'Lead Auctioneer', '+1-555-1005', '500 Auctioneer Ct, Suburban Area'),
+        ('appraiser1', 'appraiser@pawnshop.com', $9, 'Mike', 'Davis', 'appraiser', $10, 'Senior Appraiser', '+1-555-1003', '300 Appraiser Ave, Mid-town')
       RETURNING id, username, role
     `, [
       adminPassword, mainBranchId,
       managerPassword, mainBranchId, 
-      appraiserPassword, northBranchId,
       cashierPassword, mainBranchId,
-      auctioneerPassword, southBranchId
+      auctioneerPassword, southBranchId,
+      appraiserPassword, northBranchId
     ]);
     
     console.log(`✅ Created ${userResult.rows.length} users`);
@@ -53,9 +53,9 @@ async function seedDatabase() {
     // Get user IDs for references
     const adminId = userResult.rows.find(u => u.username === 'admin').id;
     const managerId = userResult.rows.find(u => u.username === 'manager1').id;
-    const appraiserId = userResult.rows.find(u => u.username === 'appraiser1').id;
     const cashierId = userResult.rows.find(u => u.username === 'cashier1').id;
     const auctioneerId = userResult.rows.find(u => u.username === 'auctioneer1').id;
+    const appraiserId = userResult.rows.find(u => u.username === 'appraiser1').id;
 
     // Update branch managers
     console.log('👨‍💼 Assigning branch managers...');
@@ -150,7 +150,7 @@ async function seedDatabase() {
     console.log('\n🎉 Database seeding completed successfully!');
     console.log('\n📊 Summary:');
     console.log('- 3 branches created');
-    console.log('- 5 users created (admin, manager, supervisor, cashier, clerk)');
+    console.log('- 5 users created (admin, manager, cashier, auctioneer, appraiser)');
     console.log('- 5 pawners created');
     console.log('- 5 pawn tickets created');
     console.log('- Multiple pawn items created');
@@ -159,9 +159,9 @@ async function seedDatabase() {
     console.log('\n🔐 Demo Account Credentials:');
     console.log('Administrator: admin / admin123');
     console.log('Manager: manager1 / manager123');
-    console.log('Supervisor: supervisor1 / supervisor123');
     console.log('Cashier: cashier1 / cashier123');
-    console.log('Clerk: clerk1 / clerk123');
+    console.log('Auctioneer: auctioneer1 / auctioneer123');
+    console.log('Appraiser: appraiser1 / appraiser123');
 
   } catch (error) {
     console.error('❌ Error seeding database:', error);

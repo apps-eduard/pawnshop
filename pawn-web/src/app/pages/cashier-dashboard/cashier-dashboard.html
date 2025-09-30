@@ -129,58 +129,117 @@
         </div>
       </div>
 
-      <!-- Quick Actions -->
+      <!-- Transaction Types -->
       <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-6">Quick Actions</h3>
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-6">Transaction Types</h3>
 
         <div class="space-y-3">
-          <button class="w-full flex items-center space-x-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-left">
-            <div class="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
-              <svg class="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <button 
+            *ngFor="let type of transactionTypes" 
+            (click)="onTransactionTypeSelect(type)"
+            class="w-full flex items-center space-x-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-left hover:shadow-md group">
+            
+            <div [class]="'p-2 rounded-lg transition-colors ' + type.bgColor">
+              <!-- New Loan Icon -->
+              <svg *ngIf="type.icon === 'plus'" class="w-5 h-5" [class]="type.iconColor" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
               </svg>
-            </div>
-            <div>
-              <p class="font-medium text-gray-900 dark:text-white">Create New Loan</p>
-              <p class="text-sm text-gray-500 dark:text-gray-400">Start a new pawn loan</p>
-            </div>
-          </button>
 
-          <button class="w-full flex items-center space-x-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-left">
-            <div class="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
-              <svg class="w-5 h-5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path>
+              <!-- Additional Icon -->
+              <svg *ngIf="type.icon === 'plus-circle'" class="w-5 h-5" [class]="type.iconColor" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"></path>
               </svg>
-            </div>
-            <div>
-              <p class="font-medium text-gray-900 dark:text-white">Process Payment</p>
-              <p class="text-sm text-gray-500 dark:text-gray-400">Receive loan payment</p>
-            </div>
-          </button>
 
-          <button class="w-full flex items-center space-x-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-left">
-            <div class="p-2 bg-orange-100 dark:bg-orange-900 rounded-lg">
-              <svg class="w-5 h-5 text-orange-600 dark:text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <!-- Partial Icon -->
+              <svg *ngIf="type.icon === 'credit-card'" class="w-5 h-5" [class]="type.iconColor" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+              </svg>
+
+              <!-- Redeem Icon -->
+              <svg *ngIf="type.icon === 'check-circle'" class="w-5 h-5" [class]="type.iconColor" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+
+              <!-- Renew Icon -->
+              <svg *ngIf="type.icon === 'refresh'" class="w-5 h-5" [class]="type.iconColor" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
               </svg>
             </div>
-            <div>
-              <p class="font-medium text-gray-900 dark:text-white">Renew Loan</p>
-              <p class="text-sm text-gray-500 dark:text-gray-400">Process loan renewal</p>
-            </div>
-          </button>
 
-          <button class="w-full flex items-center space-x-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-left">
-            <div class="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
-              <svg class="w-5 h-5 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
+            <div class="flex-1">
+              <p class="font-medium text-gray-900 dark:text-white group-hover:text-primary-600 transition-colors">{{ type.title }}</p>
+              <p class="text-sm text-gray-500 dark:text-gray-400">{{ type.description }}</p>
+            </div>
+
+            <div class="text-gray-400 group-hover:text-primary-600 transition-colors">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
               </svg>
             </div>
-            <div>
-              <p class="font-medium text-gray-900 dark:text-white">Item Redemption</p>
-              <p class="text-sm text-gray-500 dark:text-gray-400">Process item redemption</p>
-            </div>
           </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pending Appraisals -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-8">
+      <div class="flex items-center justify-between mb-6">
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Pending Appraisals Ready for Transaction</h3>
+        <span class="bg-primary-100 text-primary-800 dark:bg-primary-900 dark:text-primary-200 px-2 py-1 rounded-full text-sm font-medium">
+          {{ pendingAppraisals.length }} items
+        </span>
+      </div>
+
+      <div *ngIf="pendingAppraisals.length === 0" class="text-center py-8">
+        <div class="text-gray-400 mb-2">
+          <svg class="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
+          </svg>
+        </div>
+        <p class="text-gray-500 dark:text-gray-400">No pending appraisals at the moment</p>
+        <p class="text-sm text-gray-400 dark:text-gray-500">Completed appraisals will appear here for transaction processing</p>
+      </div>
+
+      <div *ngIf="pendingAppraisals.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div 
+          *ngFor="let appraisal of pendingAppraisals" 
+          class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer hover:border-primary-300 dark:hover:border-primary-600">
+          
+          <div class="flex items-start justify-between mb-3">
+            <div class="flex-1">
+              <h4 class="font-medium text-gray-900 dark:text-white text-sm">{{ appraisal.pawnerName || 'Unknown Pawner' }}</h4>
+              <p class="text-xs text-gray-500 dark:text-gray-400">ID: {{ appraisal.id }}</p>
+            </div>
+            <span class="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 px-2 py-1 rounded-full text-xs font-medium">
+              Ready
+            </span>
+          </div>
+
+          <div class="space-y-2 mb-3">
+            <div class="flex justify-between text-sm">
+              <span class="text-gray-500 dark:text-gray-400">Item:</span>
+              <span class="text-gray-900 dark:text-white font-medium">{{ appraisal.description }}</span>
+            </div>
+            <div class="flex justify-between text-sm">
+              <span class="text-gray-500 dark:text-gray-400">Category:</span>
+              <span class="text-gray-900 dark:text-white">{{ appraisal.itemCategory }}</span>
+            </div>
+            <div class="flex justify-between text-sm">
+              <span class="text-gray-500 dark:text-gray-400">Appraised Value:</span>
+              <span class="text-gray-900 dark:text-white font-semibold">{{ formatCurrency(appraisal.estimatedValue) }}</span>
+            </div>
+          </div>
+
+          <div class="flex justify-between items-center pt-3 border-t border-gray-100 dark:border-gray-700">
+            <span class="text-xs text-gray-400">
+              {{ getTimeAgo(appraisal.createdAt) }}
+            </span>
+            <button 
+              (click)="onTransactionTypeSelect({id: 'new_loan', appraisal: appraisal})"
+              class="bg-primary-600 hover:bg-primary-700 text-white px-3 py-1 rounded text-xs font-medium transition-colors">
+              Process
+            </button>
+          </div>
         </div>
       </div>
     </div>

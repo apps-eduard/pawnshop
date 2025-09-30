@@ -29,51 +29,55 @@ export class SidebarComponent implements OnInit, OnDestroy {
   // Navigation items for different roles
   navigationItems: NavigationItem[] = [
     // Dashboard items
-    { label: 'Dashboard', route: '/admin-dashboard', icon: '📊', roles: ['admin'] },
+    { label: 'Dashboard', route: '/admin-dashboard', icon: '📊', roles: ['administrator'] },
     { label: 'Dashboard', route: '/manager-dashboard', icon: '📊', roles: ['manager'] },
     { label: 'Dashboard', route: '/cashier-dashboard', icon: '📊', roles: ['cashier'] },
     { label: 'Dashboard', route: '/appraiser-dashboard', icon: '📊', roles: ['appraiser'] },
     { label: 'Dashboard', route: '/auctioneer-dashboard', icon: '📊', roles: ['auctioneer'] },
+    { label: 'Dashboard', route: '/pawner-dashboard', icon: '📊', roles: ['pawner'] },
 
     // Transactions
-    { label: 'Transactions', route: '/transactions', icon: '💳', roles: ['admin', 'manager', 'cashier'] },
+    { label: 'Transactions', route: '/transactions', icon: '💳', roles: ['administrator', 'manager', 'cashier'] },
 
     // Users & Staff Management
-    { label: 'User Management', route: '/user-management', icon: '👥', roles: ['admin'] },
-    { label: 'Address Management', route: '/address-management', icon: '🏠', roles: ['admin'] },
+    { label: 'User Management', route: '/user-management', icon: '👥', roles: ['administrator'] },
+    { label: 'Address Management', route: '/address-management', icon: '🏠', roles: ['administrator'] },
     { label: 'Staff', route: '/staff', icon: '👨‍💼', roles: ['manager'] },
 
     // Customer Management
-    { label: 'Pawner Management', route: '/pawner-management', icon: '🧑‍🤝‍🧑', roles: ['admin', 'manager', 'cashier'] },
+    { label: 'Pawner Management', route: '/pawner-management', icon: '🧑‍🤝‍🧑', roles: ['administrator', 'manager', 'cashier'] },
     { label: 'Customers', route: '/customers', icon: '👤', roles: ['cashier'] },
 
     // Loans & Pawning
     { label: 'Loans', route: '/loans', icon: '🏦', roles: ['cashier', 'manager'] },
+    { label: 'My Loans', route: '/my-loans', icon: '🏦', roles: ['pawner'] },
+    { label: 'Make Payment', route: '/payments', icon: '💳', roles: ['pawner'] },
+    { label: 'Loan History', route: '/loan-history', icon: '📋', roles: ['pawner'] },
 
     // Appraisals
     { label: 'Appraisals', route: '/appraisals', icon: '💎', roles: ['appraiser'] },
 
     // Items Management
-    { label: 'Item Management', route: '/item-management', icon: '📦', roles: ['admin', 'manager'] },
+    { label: 'Item Management', route: '/item-management', icon: '📦', roles: ['administrator', 'manager'] },
 
     // Auctions
     { label: 'Auctions', route: '/auctions', icon: '🔨', roles: ['auctioneer', 'manager'] },
     { label: 'Bidders', route: '/bidders', icon: '🙋', roles: ['auctioneer'] },
 
     // Reports
-    { label: 'Reports', route: '/reports', icon: '📈', roles: ['admin', 'manager', 'appraiser'] },
+    { label: 'Reports', route: '/reports', icon: '📈', roles: ['administrator', 'manager', 'appraiser'] },
 
     // Settings (Admin only)
-    { label: 'Settings', route: '/admin-settings', icon: '⚙️', roles: ['admin'] },
+    { label: 'Settings', route: '/admin-settings', icon: '⚙️', roles: ['administrator'] },
   ];
 
   // Quick action items
   quickActions = [
-    { label: 'New User', action: 'newUser', icon: '➕', roles: ['admin'] },
+    { label: 'New User', action: 'newUser', icon: '➕', roles: ['administrator'] },
     { label: 'New Loan', action: 'newLoan', icon: '🏦', roles: ['cashier'] },
     { label: 'New Appraisal', action: 'newAppraisal', icon: '💎', roles: ['appraiser'] },
     { label: 'New Auction', action: 'newAuction', icon: '🔨', roles: ['auctioneer'] },
-    { label: 'Generate Report', action: 'generateReport', icon: '📄', roles: ['admin', 'manager'] },
+    { label: 'Generate Report', action: 'generateReport', icon: '📄', roles: ['administrator', 'manager'] },
   ];
 
   constructor(
@@ -99,7 +103,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
         email: 'admin@test.com',
         firstName: 'Admin',
         lastName: 'User',
-        role: 'admin',
+        role: 'administrator',
         isActive: true
       };
     }
@@ -118,7 +122,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
     // For testing purposes, if no user is logged in, show admin items
     if (!this.currentUser) {
       console.log('No current user - showing admin navigation for testing');
-      return this.navigationItems.filter(item => item.roles.includes('admin'));
+      return this.navigationItems.filter(item => item.roles.includes('administrator'));
     }
 
     console.log('Filtering navigation for role:', this.currentUser.role);

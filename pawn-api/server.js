@@ -44,6 +44,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/addresses', require('./routes/addresses'));
 app.use('/api/pawners', require('./routes/pawners'));
+app.use('/api/appraisals', require('./routes/appraisals'));
 app.use('/api/loans', loanRoutes);
 app.use('/api/items', itemRoutes);
 app.use('/api/vouchers', voucherRoutes);

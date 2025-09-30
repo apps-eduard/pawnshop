@@ -87,7 +87,7 @@ router.get('/cities/:id', async (req, res) => {
 
 // Create new city (Admin/Manager only)
 router.post('/cities', async (req, res) => {
-  if (!['admin', 'manager'].includes(req.user.role)) {
+  if (!['administrator', 'manager'].includes(req.user.role)) {
     return res.status(403).json({
       success: false,
       message: 'Admin or manager access required'
@@ -139,7 +139,7 @@ router.post('/cities', async (req, res) => {
 
 // Update city (Admin/Manager only)
 router.put('/cities/:id', async (req, res) => {
-  if (!['admin', 'manager'].includes(req.user.role)) {
+  if (!['administrator', 'manager'].includes(req.user.role)) {
     return res.status(403).json({
       success: false,
       message: 'Admin or manager access required'
@@ -207,7 +207,7 @@ router.put('/cities/:id', async (req, res) => {
 
 // Delete city (Admin only)
 router.delete('/cities/:id', async (req, res) => {
-  if (req.user.role !== 'admin') {
+  if (req.user.role !== 'administrator') {
     return res.status(403).json({
       success: false,
       message: 'Admin access required'
@@ -337,7 +337,7 @@ router.get('/cities/:cityId/barangays', async (req, res) => {
 
 // Create new barangay (Admin/Manager only)
 router.post('/barangays', async (req, res) => {
-  if (!['admin', 'manager'].includes(req.user.role)) {
+  if (!['administrator', 'manager'].includes(req.user.role)) {
     return res.status(403).json({
       success: false,
       message: 'Admin or manager access required'
@@ -389,7 +389,7 @@ router.post('/barangays', async (req, res) => {
 
 // Update barangay (Admin/Manager only)
 router.put('/barangays/:id', async (req, res) => {
-  if (!['admin', 'manager'].includes(req.user.role)) {
+  if (!['administrator', 'manager'].includes(req.user.role)) {
     return res.status(403).json({
       success: false,
       message: 'Admin or manager access required'
@@ -453,7 +453,7 @@ router.put('/barangays/:id', async (req, res) => {
 
 // Delete barangay (Admin only)
 router.delete('/barangays/:id', async (req, res) => {
-  if (req.user.role !== 'admin') {
+  if (req.user.role !== 'administrator') {
     return res.status(403).json({
       success: false,
       message: 'Admin access required'

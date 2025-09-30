@@ -11,6 +11,69 @@ router.use(authenticateToken);
 // PAWNERS MANAGEMENT
 // =============================================
 
+// Search pawners (must be before /:id route)
+router.get('/search', async (req, res) => {
+  try {
+    const { q } = req.query;
+    
+    if (!q) {
+      return res.status(400).json({
+        success: false,
+        message: 'Search query is required'
+      });
+    }
+    
+    console.log(`🔍 [${new Date().toISOString()}] Searching pawners: ${q} - User: ${req.user.username}`);
+    
+    const result = await pool.query(`
+      SELECT p.id, p.first_name, p.last_name, p.contact_number, p.email,
+             p.city_id, p.barangay_id, p.address_details, p.is_active,
+             p.created_at, p.updated_at,
+             c.name as city_name, b.name as barangay_name
+      FROM pawners p
+      LEFT JOIN cities c ON p.city_id = c.id
+      LEFT JOIN barangays b ON p.barangay_id = b.id
+      WHERE p.is_active = true
+        AND (
+          LOWER(p.first_name) LIKE LOWER($1) OR
+          LOWER(p.last_name) LIKE LOWER($1) OR
+          p.contact_number LIKE $1 OR
+          LOWER(p.email) LIKE LOWER($1)
+        )
+      ORDER BY p.first_name ASC, p.last_name ASC
+      LIMIT 50
+    `, [`%${q}%`]);
+    
+    console.log(`✅ Found ${result.rows.length} pawners matching: ${q}`);
+    
+    res.json({
+      success: true,
+      message: 'Pawners found successfully',
+      data: result.rows.map(row => ({
+        id: row.id,
+        firstName: row.first_name,
+        lastName: row.last_name,
+        contactNumber: row.contact_number,
+        email: row.email,
+        cityId: row.city_id,
+        barangayId: row.barangay_id,
+        addressDetails: row.address_details,
+        cityName: row.city_name,
+        barangayName: row.barangay_name,
+        isActive: row.is_active,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at
+      }))
+    });
+  } catch (error) {
+    console.error('❌ Error searching pawners:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error searching pawners'
+    });
+  }
+});
+
 // Get all pawners
 router.get('/', async (req, res) => {
   try {
@@ -294,10 +357,10 @@ router.put('/:id', async (req, res) => {
 
 // Delete pawner (Admin only)
 router.delete('/:id', async (req, res) => {
-  if (req.user.role !== 'admin') {
+  if (req.user.role !== 'administrator') {
     return res.status(403).json({
       success: false,
-      message: 'Admin access required'
+      message: 'Administrator access required'
     });
   }
 
@@ -326,69 +389,6 @@ router.delete('/:id', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error deleting pawner'
-    });
-  }
-});
-
-// Search pawners
-router.get('/search', async (req, res) => {
-  try {
-    const { q } = req.query;
-    
-    if (!q) {
-      return res.status(400).json({
-        success: false,
-        message: 'Search query is required'
-      });
-    }
-    
-    console.log(`🔍 [${new Date().toISOString()}] Searching pawners: ${q} - User: ${req.user.username}`);
-    
-    const result = await pool.query(`
-      SELECT p.id, p.first_name, p.last_name, p.contact_number, p.email,
-             p.city_id, p.barangay_id, p.address_details, p.is_active,
-             p.created_at, p.updated_at,
-             c.name as city_name, b.name as barangay_name
-      FROM pawners p
-      LEFT JOIN cities c ON p.city_id = c.id
-      LEFT JOIN barangays b ON p.barangay_id = b.id
-      WHERE p.is_active = true
-        AND (
-          LOWER(p.first_name) LIKE LOWER($1) OR
-          LOWER(p.last_name) LIKE LOWER($1) OR
-          p.contact_number LIKE $1 OR
-          LOWER(p.email) LIKE LOWER($1)
-        )
-      ORDER BY p.first_name ASC, p.last_name ASC
-      LIMIT 50
-    `, [`%${q}%`]);
-    
-    console.log(`✅ Found ${result.rows.length} pawners matching: ${q}`);
-    
-    res.json({
-      success: true,
-      message: 'Pawners found successfully',
-      data: result.rows.map(row => ({
-        id: row.id,
-        firstName: row.first_name,
-        lastName: row.last_name,
-        contactNumber: row.contact_number,
-        email: row.email,
-        cityId: row.city_id,
-        barangayId: row.barangay_id,
-        addressDetails: row.address_details,
-        cityName: row.city_name,
-        barangayName: row.barangay_name,
-        isActive: row.is_active,
-        createdAt: row.created_at,
-        updatedAt: row.updated_at
-      }))
-    });
-  } catch (error) {
-    console.error('❌ Error searching pawners:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error searching pawners'
     });
   }
 });

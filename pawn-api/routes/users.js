@@ -10,10 +10,10 @@ router.use(authenticateToken);
 
 // Middleware to check admin role for user management
 const requireAdmin = (req, res, next) => {
-  if (req.user.role !== 'admin') {
+  if (req.user.role !== 'administrator') {
     return res.status(403).json({
       success: false,
-      message: 'Admin access required'
+      message: 'Administrator access required'
     });
   }
   next();
@@ -172,7 +172,7 @@ router.post('/', requireAdmin, async (req, res) => {
     }
     
     // Validate role
-    const validRoles = ['admin', 'manager', 'cashier', 'appraiser', 'auctioneer'];
+    const validRoles = ['administrator', 'manager', 'cashier', 'appraiser', 'auctioneer'];
     if (!validRoles.includes(role)) {
       return res.status(400).json({
         success: false,
@@ -516,7 +516,7 @@ router.post('/:id/change-password', async (req, res) => {
     const { oldPassword, newPassword } = req.body;
     
     // Users can only change their own password unless they're admin
-    if (parseInt(id) !== req.user.id && req.user.role !== 'admin') {
+    if (parseInt(id) !== req.user.id && req.user.role !== 'administrator') {
       return res.status(403).json({
         success: false,
         message: 'Access denied'

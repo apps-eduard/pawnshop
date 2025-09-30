@@ -10,6 +10,7 @@ import { CashierDashboard } from './pages/cashier-dashboard/cashier-dashboard';
 import { AppraiserDashboard } from './pages/appraiser-dashboard/appraiser-dashboard';
 import { ManagerDashboard } from './pages/manager-dashboard/manager-dashboard';
 import { AuctioneerDashboard } from './pages/auctioneer-dashboard/auctioneer-dashboard';
+import { PawnerDashboard } from './pages/pawner-dashboard/pawner-dashboard';
 
 export const routes: Routes = [
   { path: '', redirectTo: '/login', pathMatch: 'full' },
@@ -18,37 +19,37 @@ export const routes: Routes = [
     path: 'admin-dashboard',
     component: AdminDashboard,
     // canActivate: [AuthGuard], // TODO: Implement auth guard
-    data: { roles: ['admin'] }
+    data: { roles: ['administrator'] }
   },
   {
     path: 'admin-settings',
     component: AdminSettingsComponent,
     // canActivate: [AuthGuard], // TODO: Implement auth guard
-    data: { roles: ['admin'] }
+    data: { roles: ['administrator'] }
   },
   {
     path: 'user-management',
     component: UserManagementComponent,
     // canActivate: [AuthGuard], // TODO: Implement auth guard
-    data: { roles: ['admin'] }
+    data: { roles: ['administrator'] }
   },
   {
     path: 'address-management',
     component: AddressManagementComponent,
     // canActivate: [AuthGuard], // TODO: Implement auth guard
-    data: { roles: ['admin'] }
+    data: { roles: ['administrator'] }
   },
   {
     path: 'pawner-management',
     component: PawnerManagementComponent,
     // canActivate: [AuthGuard], // TODO: Implement auth guard
-    data: { roles: ['admin', 'manager', 'cashier'] }
+    data: { roles: ['administrator', 'manager', 'cashier'] }
   },
   {
     path: 'item-management',
     component: ItemManagementComponent,
     // canActivate: [AuthGuard], // TODO: Implement auth guard
-    data: { roles: ['admin', 'manager'] }
+    data: { roles: ['administrator', 'manager'] }
   },
   {
     path: 'manager-dashboard',
@@ -75,6 +76,12 @@ export const routes: Routes = [
     component: AuctioneerDashboard,
     // canActivate: [AuthGuard],
     data: { roles: ['auctioneer'] }
+  },
+  {
+    path: 'pawner-dashboard',
+    component: PawnerDashboard,
+    // canActivate: [AuthGuard],
+    data: { roles: ['pawner'] }
   },
   { path: '**', redirectTo: '/login' }
 ];
