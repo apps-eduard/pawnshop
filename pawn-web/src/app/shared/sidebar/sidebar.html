@@ -1,0 +1,115 @@
+<!-- Sidebar Overlay (Mobile) -->
+<div
+  *ngIf="isOpen"
+  class="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+  (click)="onBackdropClick()">
+</div>
+
+<!-- Sidebar -->
+<div
+  class="fixed left-0 top-0 h-full w-72 bg-white dark:bg-gray-900 shadow-xl transform transition-transform duration-300 z-50 sidebar"
+  [class.translate-x-0]="isOpen"
+  [class.-translate-x-full]="!isOpen"
+  [class.lg:translate-x-0]="isOpen">
+
+  <!-- Sidebar Header -->
+  <div class="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+    <div class="flex items-center space-x-3">
+      <!-- Golden Diamond Icon -->
+      <div class="h-8 w-8 flex items-center justify-center">
+        <svg class="h-7 w-7 text-yellow-500" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M6,2l2,6h8l2,-6h-12Zm-2,8l5,12l5,-12h-10Zm14,0l-5,12l5,-12Z" opacity="0.8"/>
+          <path d="M12,10l-5,12l10,0l-5,-12Z" fill="#fbbf24"/>
+        </svg>
+      </div>
+      <div>
+        <h2 class="text-lg font-bold text-gray-900 dark:text-white">
+          <span class="text-yellow-600 dark:text-yellow-400">Gold</span>
+          <span class="text-yellow-500 dark:text-yellow-300">Win</span>
+        </h2>
+        <p class="text-xs text-gray-500 dark:text-gray-400" *ngIf="currentUser">
+          {{ currentUser.role | titlecase }}
+        </p>
+      </div>
+    </div>
+
+    <!-- Close button (Mobile) -->
+    <button
+      (click)="closeSidebar.emit()"
+      class="lg:hidden p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Navigation Content -->
+  <div class="flex-1 overflow-y-auto">
+
+    <!-- User Info -->
+    <div class="p-4 border-b border-gray-200 dark:border-gray-700" *ngIf="currentUser">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 bg-primary-500 rounded-full flex items-center justify-center">
+          <span class="text-sm font-medium text-white">
+                              {{ currentUser.firstName.charAt(0) }}{{ currentUser.lastName.charAt(0) }}
+          </span>
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-medium text-gray-900 dark:text-white truncate">
+            {{ currentUser.firstName }} {{ currentUser.lastName }}
+          </p>
+          <p class="text-xs text-gray-500 dark:text-gray-400 truncate">
+            {{ currentUser.email }}
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Navigation Items -->
+    <nav class="p-4 space-y-2">
+      <div class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">
+        Navigation
+      </div>
+
+      <div *ngFor="let item of getFilteredNavigation()" class="group">
+        <a
+          [routerLink]="item.route"
+          routerLinkActive="bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 border-r-2 border-primary-500"
+          class="flex items-center px-3 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 rounded-l-md hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white transition-all duration-200 group"
+          (click)="navigateTo(item.route)">
+          <span class="text-lg mr-3">{{ item.icon }}</span>
+          {{ item.label }}
+        </a>
+      </div>
+    </nav>
+
+    <!-- Quick Actions -->
+    <div class="p-4 border-t border-gray-200 dark:border-gray-700" *ngIf="getFilteredQuickActions().length > 0">
+      <div class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">
+        Quick Actions
+      </div>
+
+      <div class="space-y-2">
+        <button
+          *ngFor="let action of getFilteredQuickActions()"
+          (click)="handleQuickAction(action.action)"
+          class="w-full flex items-center px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 rounded-md hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-700 dark:hover:text-primary-300 transition-all duration-200">
+          <span class="text-lg mr-3">{{ action.icon }}</span>
+          {{ action.label }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Current Time -->
+    <div class="p-4 border-t border-gray-200 dark:border-gray-700 mt-auto">
+      <div class="text-center">
+        <div class="text-xs text-gray-500 dark:text-gray-400">
+          {{ getCurrentDate() | date:'EEEE, MMM d, y' }}
+        </div>
+        <div class="text-sm font-medium text-gray-700 dark:text-gray-300">
+          {{ getCurrentDate() | date:'h:mm a' }}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

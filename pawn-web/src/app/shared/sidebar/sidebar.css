@@ -1,0 +1,83 @@
+/* Sidebar Styles */
+.sidebar {
+  width: 280px;
+}
+
+/* Smooth transitions */
+.sidebar-transition {
+  transition: transform 0.3s ease-in-out;
+}
+
+/* Custom scrollbar for sidebar */
+.sidebar-content::-webkit-scrollbar {
+  width: 4px;
+}
+
+.sidebar-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-content::-webkit-scrollbar-thumb {
+  background-color: rgba(156, 163, 175, 0.5);
+  border-radius: 2px;
+}
+
+.sidebar-content::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(156, 163, 175, 0.8);
+}
+
+/* Active navigation item styles */
+.nav-item-active {
+  @apply bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300;
+  border-right: 2px solid rgb(var(--primary-500));
+}
+
+/* Hover effects */
+.nav-item:hover {
+  @apply bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white;
+}
+
+.quick-action-btn:hover {
+  @apply bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300;
+}
+
+/* Mobile overlay */
+.sidebar-overlay {
+  backdrop-filter: blur(2px);
+}
+
+/* Logo animation */
+.logo-text {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* User avatar */
+.user-avatar {
+  background: linear-gradient(135deg, rgb(var(--primary-500)), rgb(var(--primary-600)));
+}
+
+/* Navigation section headers */
+.nav-section-header {
+  @apply text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1024px) {
+  .sidebar {
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  }
+}
+
+/* Dark mode specific adjustments */
+@media (prefers-color-scheme: dark) {
+  .sidebar-content::-webkit-scrollbar-thumb {
+    background-color: rgba(75, 85, 99, 0.5);
+  }
+
+  .sidebar-content::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(75, 85, 99, 0.8);
+  }
+}

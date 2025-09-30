@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Navigation Guide - Pawn Shop System</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .route { background: #f0f8ff; padding: 10px; margin: 5px 0; border-radius: 3px; }
+        .role-badge { display: inline-block; padding: 2px 8px; margin: 2px; border-radius: 12px; font-size: 12px; }
+        .admin { background: #e1f5fe; color: #0277bd; }
+        .manager { background: #f3e5f5; color: #7b1fa2; }
+        .cashier { background: #e8f5e8; color: #2e7d32; }
+        h1 { color: #333; text-align: center; }
+        h2 { color: #555; border-bottom: 2px solid #eee; padding-bottom: 5px; }
+        .highlight { background: #fff3cd; padding: 10px; border-left: 4px solid #ffc107; margin: 10px 0; }
+        .direct-link { background: #007bff; color: white; padding: 8px 15px; text-decoration: none; border-radius: 4px; display: inline-block; margin: 5px; }
+        .direct-link:hover { background: #0056b3; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏪 Pawn Shop System - Navigation Guide</h1>
+        
+        <div class="highlight">
+            <h3>🔍 Can't find Address & Pawner Management?</h3>
+            <p><strong>Quick Solution:</strong> Once your Angular server is running, you can access these features directly using the URLs below!</p>
+        </div>
+
+        <div class="section">
+            <h2>📍 Direct Access URLs</h2>
+            <p>When your Angular development server is running (usually <code>http://localhost:4200</code>), you can access:</p>
+            
+            <div class="route">
+                <strong>🏠 Address Management:</strong><br>
+                <a href="http://localhost:4200/address-management" class="direct-link" target="_blank">
+                    http://localhost:4200/address-management
+                </a>
+                <span class="role-badge admin">Admin Only</span>
+                <p><em>Manage cities and barangays, add new locations, edit existing ones</em></p>
+            </div>
+
+            <div class="route">
+                <strong>🧑‍🤝‍🧑 Pawner Management:</strong><br>
+                <a href="http://localhost:4200/pawner-management" class="direct-link" target="_blank">
+                    http://localhost:4200/pawner-management
+                </a>
+                <span class="role-badge admin">Admin</span>
+                <span class="role-badge manager">Manager</span>
+                <span class="role-badge cashier">Cashier</span>
+                <p><em>Manage customer/pawner records with city-barangay address selection</em></p>
+            </div>
+
+            <div class="route">
+                <strong>👥 User Management (Updated):</strong><br>
+                <a href="http://localhost:4200/user-management" class="direct-link" target="_blank">
+                    http://localhost:4200/user-management
+                </a>
+                <span class="role-badge admin">Admin Only</span>
+                <p><em>Create users with the new city-barangay address selection</em></p>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🎯 Where to Find in Sidebar</h2>
+            <p>After logging in, these menu items should appear in the sidebar based on your role:</p>
+            
+            <h3>👑 Admin Users see:</h3>
+            <ul>
+                <li>📊 Dashboard</li>
+                <li>👥 User Management</li>
+                <li><strong>🏠 Address Management</strong> ← New!</li>
+                <li><strong>🧑‍🤝‍🧑 Pawner Management</strong> ← New!</li>
+                <li>💳 Transactions</li>
+                <li>📈 Reports</li>
+                <li>⚙️ Settings</li>
+            </ul>
+
+            <h3>👨‍💼 Manager Users see:</h3>
+            <ul>
+                <li>📊 Dashboard</li>
+                <li><strong>🧑‍🤝‍🧑 Pawner Management</strong> ← New!</li>
+                <li>💳 Transactions</li>
+                <li>🏦 Loans</li>
+                <li>🔨 Auctions</li>
+                <li>📈 Reports</li>
+            </ul>
+
+            <h3>💰 Cashier Users see:</h3>
+            <ul>
+                <li>📊 Dashboard</li>
+                <li><strong>🧑‍🤝‍🧑 Pawner Management</strong> ← New!</li>
+                <li>💳 Transactions</li>
+                <li>🏦 Loans</li>
+                <li>👤 Customers</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h2>🚀 How to Start the System</h2>
+            <h3>1. Start the API Server:</h3>
+            <code>cd pawn-api && node server.js</code>
+            <p><em>Should show: "🚀 Server running on port 3000"</em></p>
+
+            <h3>2. Start the Angular Server:</h3>
+            <code>cd pawn-web && npm start</code>
+            <p><em>Should show: "Local: http://localhost:4200"</em></p>
+
+            <h3>3. Login:</h3>
+            <p>Go to <code>http://localhost:4200</code> and login with admin credentials to see all menu items.</p>
+        </div>
+
+        <div class="section">
+            <h2>✨ Features You Can Test</h2>
+            
+            <h3>🏠 Address Management:</h3>
+            <ul>
+                <li>View all cities and their barangays</li>
+                <li>Add new cities</li>
+                <li>Add barangays to specific cities</li>
+                <li>Edit city/barangay names</li>
+                <li>Toggle active/inactive status</li>
+            </ul>
+
+            <h3>🧑‍🤝‍🧑 Pawner Management:</h3>
+            <ul>
+                <li>Create new pawners with city-barangay selection</li>
+                <li>City dropdown automatically loads barangays</li>
+                <li>Search and filter pawners</li>
+                <li>Edit pawner information inline</li>
+                <li>View complete address information</li>
+            </ul>
+
+            <h3>👥 Enhanced User Management:</h3>
+            <ul>
+                <li>Create users with structured address (city + barangay + details)</li>
+                <li>Dependent dropdown: selecting city loads its barangays</li>
+                <li>Additional address field for street/building details</li>
+            </ul>
+        </div>
+
+        <div class="highlight">
+            <h3>🔧 Troubleshooting</h3>
+            <p><strong>If you don't see the menu items:</strong></p>
+            <ul>
+                <li>Make sure you're logged in as an Admin user to see Address Management</li>
+                <li>Check browser console for any JavaScript errors</li>
+                <li>Verify both API server (port 3000) and Angular server (port 4200) are running</li>
+                <li>Try accessing the URLs directly as shown above</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,46 @@
+/* Item Management specific styles */
+.item-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1rem;
+}
+
+.item-status-badge {
+  @apply inline-flex px-2 py-1 text-xs font-semibold rounded-full;
+}
+
+.item-details-card {
+  @apply bg-white dark:bg-gray-700 rounded-lg shadow p-4;
+}
+
+.item-type-jewelry {
+  @apply border-l-4 border-yellow-400;
+}
+
+.item-type-electronics {
+  @apply border-l-4 border-blue-400;
+}
+
+.item-type-other {
+  @apply border-l-4 border-gray-400;
+}
+
+/* Responsive table improvements */
+@media (max-width: 768px) {
+  .table-responsive {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+}
+
+/* Animation for loading state */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}

@@ -1,0 +1,32 @@
+/* Layout Styles */
+.layout-container {
+  min-height: 100vh;
+}
+
+/* Main content transition when sidebar opens/closes */
+.main-content {
+  transition: margin-left 0.3s ease-in-out;
+}
+
+/* Sidebar spacing */
+.sidebar-spacing {
+  margin-left: 280px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1024px) {
+  .main-content {
+    margin-left: 0 !important;
+  }
+}
+
+/* Smooth transitions */
+.transition-spacing {
+  transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Ensure content doesn't jump */
+.content-wrapper {
+  width: 100%;
+  overflow-x: hidden;
+}

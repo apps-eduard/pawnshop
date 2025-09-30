@@ -1,0 +1,390 @@
+<!-- Address Management Header -->
+<div class="p-6 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Address Management</h1>
+      <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+        Manage cities and barangays for user and pawner addresses
+      </p>
+    </div>
+    <div class="mt-4 sm:mt-0 flex space-x-3">
+      <button
+        (click)="showAddCityFormModal()"
+        class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors">
+        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+        </svg>
+        Add City
+      </button>
+      <button
+        (click)="showAddBarangayFormModal()"
+        class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors">
+        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+        </svg>
+        Add Barangay
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Add City Form Modal -->
+<div *ngIf="showAddCityForm" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+  <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
+    <div class="p-6">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl font-bold text-gray-900 dark:text-white">Add New City</h2>
+        <button
+          (click)="hideAddCityFormModal()"
+          class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+
+      <form [formGroup]="cityForm" (ngSubmit)="onSubmitCity()">
+        <div class="space-y-4">
+          <!-- City Name -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              City Name *
+            </label>
+            <input
+              type="text"
+              formControlName="name"
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              placeholder="Enter city name">
+            <div *ngIf="cityForm.get('name')?.errors && cityForm.get('name')?.touched" class="text-red-500 text-xs mt-1">
+              City name is required (minimum 2 characters)
+            </div>
+          </div>
+
+          <!-- Province -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Province
+            </label>
+            <input
+              type="text"
+              formControlName="province"
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              placeholder="Enter province name">
+          </div>
+
+          <!-- Active Status -->
+          <div>
+            <label class="flex items-center">
+              <input
+                type="checkbox"
+                formControlName="isActive"
+                class="rounded border-gray-300 text-primary-600 shadow-sm focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-opacity-50">
+              <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">Active City</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+          <button
+            type="button"
+            (click)="hideAddCityFormModal()"
+            class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors">
+            Cancel
+          </button>
+          <button
+            type="submit"
+            [disabled]="!cityForm.valid"
+            class="px-4 py-2 text-sm font-medium text-white bg-primary-600 border border-transparent rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+            Create City
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Add Barangay Form Modal -->
+<div *ngIf="showAddBarangayForm" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+  <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
+    <div class="p-6">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl font-bold text-gray-900 dark:text-white">Add New Barangay</h2>
+        <button
+          (click)="hideAddBarangayFormModal()"
+          class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+
+      <form [formGroup]="barangayForm" (ngSubmit)="onSubmitBarangay()">
+        <div class="space-y-4">
+          <!-- City Selection -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              City *
+            </label>
+            <select
+              formControlName="cityId"
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white">
+              <option value="">Select City</option>
+              <option *ngFor="let city of getAvailableCities()" [value]="city.id">{{ city.name }}</option>
+            </select>
+            <div *ngIf="barangayForm.get('cityId')?.errors && barangayForm.get('cityId')?.touched" class="text-red-500 text-xs mt-1">
+              Please select a city
+            </div>
+          </div>
+
+          <!-- Barangay Name -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Barangay Name *
+            </label>
+            <input
+              type="text"
+              formControlName="name"
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              placeholder="Enter barangay name">
+            <div *ngIf="barangayForm.get('name')?.errors && barangayForm.get('name')?.touched" class="text-red-500 text-xs mt-1">
+              Barangay name is required (minimum 2 characters)
+            </div>
+          </div>
+
+          <!-- Active Status -->
+          <div>
+            <label class="flex items-center">
+              <input
+                type="checkbox"
+                formControlName="isActive"
+                class="rounded border-gray-300 text-primary-600 shadow-sm focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-opacity-50">
+              <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">Active Barangay</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+          <button
+            type="button"
+            (click)="hideAddBarangayFormModal()"
+            class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors">
+            Cancel
+          </button>
+          <button
+            type="submit"
+            [disabled]="!barangayForm.valid"
+            class="px-4 py-2 text-sm font-medium text-white bg-primary-600 border border-transparent rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+            Create Barangay
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Cities and Barangays List -->
+<div class="flex-1 overflow-hidden">
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="flex items-center justify-center h-64">
+    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+  </div>
+
+  <!-- Cities List -->
+  <div *ngIf="!isLoading" class="p-6">
+    <div class="space-y-4">
+      <div *ngFor="let city of cities" class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+        <!-- City Header -->
+        <div class="p-4 border-b border-gray-200 dark:border-gray-700">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+              <button
+                (click)="toggleBarangays(city)"
+                class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors">
+                <svg class="w-5 h-5 transform transition-transform" [class.rotate-90]="city.showBarangays" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                </svg>
+              </button>
+
+              <div *ngIf="!city.isEditing" class="flex items-center space-x-3">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ city.name }}</h3>
+                <span *ngIf="city.province" class="text-sm text-gray-500 dark:text-gray-400">({{ city.province }})</span>
+                <span [class]="getStatusBadgeClass(city.isActive)" class="inline-flex px-2 py-1 text-xs font-semibold rounded-full">
+                  {{ city.isActive ? 'Active' : 'Inactive' }}
+                </span>
+              </div>
+
+              <div *ngIf="city.isEditing" class="flex items-center space-x-2">
+                <input
+                  [(ngModel)]="city.name"
+                  class="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                  placeholder="City name">
+                <input
+                  [(ngModel)]="city.province"
+                  class="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                  placeholder="Province">
+                <label class="flex items-center">
+                  <input
+                    type="checkbox"
+                    [(ngModel)]="city.isActive"
+                    class="rounded border-gray-300 text-primary-600 shadow-sm focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-opacity-50">
+                  <span class="ml-1 text-sm text-gray-700 dark:text-gray-300">Active</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="flex items-center space-x-2">
+              <div *ngIf="!city.isEditing" class="flex items-center space-x-2">
+                <button
+                  (click)="showAddBarangayFormModal(city.id)"
+                  class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 p-1 rounded transition-colors"
+                  title="Add Barangay">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                  </svg>
+                </button>
+                <button
+                  (click)="startEditCity(city)"
+                  class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-200 p-1 rounded transition-colors"
+                  title="Edit City">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                  </svg>
+                </button>
+                <button
+                  (click)="deleteCity(city)"
+                  class="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200 p-1 rounded transition-colors"
+                  title="Delete City">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                  </svg>
+                </button>
+              </div>
+
+              <div *ngIf="city.isEditing" class="flex items-center space-x-2">
+                <button
+                  (click)="saveCity(city)"
+                  class="text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-200 p-1 rounded transition-colors"
+                  title="Save Changes">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                  </svg>
+                </button>
+                <button
+                  (click)="cancelEditCity(city)"
+                  class="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200 p-1 rounded transition-colors"
+                  title="Cancel Edit">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Barangays List -->
+        <div *ngIf="city.showBarangays" class="p-4 bg-gray-50 dark:bg-gray-900">
+          <div *ngIf="city.barangays && city.barangays.length > 0" class="space-y-2">
+            <div *ngFor="let barangay of city.barangays" class="bg-white dark:bg-gray-800 p-3 rounded border border-gray-200 dark:border-gray-700">
+              <div class="flex items-center justify-between">
+                <div *ngIf="!asBarangayWithActions(barangay).isEditing" class="flex items-center space-x-3">
+                  <span class="text-gray-900 dark:text-white">{{ barangay.name }}</span>
+                  <span [class]="getStatusBadgeClass(barangay.isActive)" class="inline-flex px-2 py-1 text-xs font-semibold rounded-full">
+                    {{ barangay.isActive ? 'Active' : 'Inactive' }}
+                  </span>
+                </div>
+
+                <div *ngIf="barangay.isEditing" class="flex items-center space-x-2">
+                  <input
+                    [(ngModel)]="barangay.name"
+                    class="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                    placeholder="Barangay name">
+                  <label class="flex items-center">
+                    <input
+                      type="checkbox"
+                      [(ngModel)]="barangay.isActive"
+                      class="rounded border-gray-300 text-primary-600 shadow-sm focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-opacity-50">
+                    <span class="ml-1 text-sm text-gray-700 dark:text-gray-300">Active</span>
+                  </label>
+                </div>
+
+                <div class="flex items-center space-x-2">
+                  <div *ngIf="!asBarangayWithActions(barangay).isEditing" class="flex items-center space-x-2">
+                    <button
+                      (click)="startEditBarangay(asBarangayWithActions(barangay))"
+                      class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-200 p-1 rounded transition-colors"
+                      title="Edit Barangay">
+                      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                      </svg>
+                    </button>
+                    <button
+                      (click)="deleteBarangay(asBarangayWithActions(barangay), city)"
+                      class="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200 p-1 rounded transition-colors"
+                      title="Delete Barangay">
+                      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                      </svg>
+                    </button>
+                  </div>
+
+                  <div *ngIf="asBarangayWithActions(barangay).isEditing" class="flex items-center space-x-2">
+                    <button
+                      (click)="saveBarangay(asBarangayWithActions(barangay))"
+                      class="text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-200 p-1 rounded transition-colors"
+                      title="Save Changes">
+                      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                      </svg>
+                    </button>
+                    <button
+                      (click)="cancelEditBarangay(asBarangayWithActions(barangay))"
+                      class="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200 p-1 rounded transition-colors"
+                      title="Cancel Edit">
+                      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div *ngIf="!city.barangays || city.barangays.length === 0" class="text-center py-8 text-gray-500 dark:text-gray-400">
+            <svg class="mx-auto h-8 w-8 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+            </svg>
+            <p class="text-sm">No barangays found for this city</p>
+            <button
+              (click)="showAddBarangayFormModal(city.id)"
+              class="mt-2 text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-200 text-sm font-medium">
+              Add the first barangay
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Empty State -->
+      <div *ngIf="cities.length === 0" class="text-center py-12">
+        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+        </svg>
+        <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-white">No cities found</h3>
+        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Get started by creating your first city.</p>
+        <div class="mt-6">
+          <button
+            (click)="showAddCityFormModal()"
+            class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+            </svg>
+            Add City
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

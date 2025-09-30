@@ -1,0 +1,468 @@
+<!-- User Management Header -->
+<div class="p-6 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-white">User Management</h1>
+      <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+        Manage user accounts, roles, and permissions
+      </p>
+    </div>
+    <div class="mt-4 sm:mt-0">
+      <button
+        (click)="showAddUserForm()"
+        class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors">
+        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+        </svg>
+        Add New User
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Add User Form Modal -->
+<div *ngIf="showAddForm" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+  <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+    <div class="p-6">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl font-bold text-gray-900 dark:text-white">Add New User</h2>
+        <button
+          (click)="hideAddUserForm()"
+          class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+
+      <form [formGroup]="userForm" (ngSubmit)="onSubmitUser()">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Username -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Username *
+            </label>
+            <input
+              type="text"
+              formControlName="username"
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              placeholder="Enter username">
+            <div *ngIf="userForm.get('username')?.errors && userForm.get('username')?.touched" class="text-red-500 text-xs mt-1">
+              Username is required (minimum 3 characters)
+            </div>
+          </div>
+
+          <!-- Email -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Email *
+            </label>
+            <input
+              type="email"
+              formControlName="email"
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              placeholder="Enter email address">
+            <div *ngIf="userForm.get('email')?.errors && userForm.get('email')?.touched" class="text-red-500 text-xs mt-1">
+              Please enter a valid email address
+            </div>
+          </div>
+
+          <!-- First Name -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              First Name *
+            </label>
+            <input
+              type="text"
+              formControlName="firstName"
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              placeholder="Enter first name">
+            <div *ngIf="userForm.get('firstName')?.errors && userForm.get('firstName')?.touched" class="text-red-500 text-xs mt-1">
+              First name is required
+            </div>
+          </div>
+
+          <!-- Last Name -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Last Name *
+            </label>
+            <input
+              type="text"
+              formControlName="lastName"
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              placeholder="Enter last name">
+            <div *ngIf="userForm.get('lastName')?.errors && userForm.get('lastName')?.touched" class="text-red-500 text-xs mt-1">
+              Last name is required
+            </div>
+          </div>
+
+          <!-- Role -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Role *
+            </label>
+            <select
+              formControlName="role"
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white">
+              <option value="">Select Role</option>
+              <option *ngFor="let role of roles" [value]="role.value">{{ role.label }}</option>
+            </select>
+            <div *ngIf="userForm.get('role')?.errors && userForm.get('role')?.touched" class="text-red-500 text-xs mt-1">
+              Please select a role
+            </div>
+          </div>
+
+          <!-- Position -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Position
+            </label>
+            <input
+              type="text"
+              formControlName="position"
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              placeholder="Enter job position">
+          </div>
+
+          <!-- Password -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Password *
+            </label>
+            <input
+              type="password"
+              formControlName="password"
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              placeholder="Enter password">
+            <div *ngIf="userForm.get('password')?.errors && userForm.get('password')?.touched" class="text-red-500 text-xs mt-1">
+              Password is required (minimum 6 characters)
+            </div>
+          </div>
+
+          <!-- Confirm Password -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Confirm Password *
+            </label>
+            <input
+              type="password"
+              formControlName="confirmPassword"
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              placeholder="Confirm password">
+            <div *ngIf="userForm.get('confirmPassword')?.errors?.['passwordMismatch'] && userForm.get('confirmPassword')?.touched" class="text-red-500 text-xs mt-1">
+              Passwords do not match
+            </div>
+          </div>
+
+          <!-- Contact Number -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Contact Number
+            </label>
+            <input
+              type="text"
+              formControlName="contactNumber"
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              placeholder="Enter contact number">
+          </div>
+
+          <!-- City -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              City
+            </label>
+            <select
+              formControlName="cityId"
+              (change)="onCityChange()"
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white">
+              <option value="">Select City</option>
+              <option *ngFor="let city of cities" [value]="city.id">{{ city.name }}</option>
+            </select>
+          </div>
+
+          <!-- Barangay -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Barangay
+            </label>
+            <select
+              formControlName="barangayId"
+              [disabled]="!selectedCityId"
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed">
+              <option value="">Select Barangay</option>
+              <option *ngFor="let barangay of barangays" [value]="barangay.id">{{ barangay.name }}</option>
+            </select>
+          </div>
+
+          <!-- Additional Address -->
+          <div class="md:col-span-2">
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Additional Address Details
+            </label>
+            <textarea
+              formControlName="address"
+              rows="2"
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              placeholder="Enter street, building number, landmarks, etc."></textarea>
+          </div>
+
+          <!-- Active Status -->
+          <div class="md:col-span-2">
+            <label class="flex items-center">
+              <input
+                type="checkbox"
+                formControlName="isActive"
+                class="rounded border-gray-300 text-primary-600 shadow-sm focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-opacity-50">
+              <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">Active User</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+          <button
+            type="button"
+            (click)="hideAddUserForm()"
+            class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors">
+            Cancel
+          </button>
+          <button
+            type="submit"
+            [disabled]="!userForm.valid"
+            class="px-4 py-2 text-sm font-medium text-white bg-primary-600 border border-transparent rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+            Create User
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Filters and Search -->
+<div class="p-6 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+  <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
+    <!-- Search -->
+    <div class="flex-1 max-w-md">
+      <div class="relative">
+        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+          <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+          </svg>
+        </div>
+        <input
+          type="text"
+          [(ngModel)]="searchTerm"
+          (input)="onSearch()"
+          class="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 text-gray-900 dark:text-white sm:text-sm"
+          placeholder="Search users...">
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="flex space-x-4">
+      <!-- Role Filter -->
+      <select
+        [(ngModel)]="selectedRole"
+        (change)="onRoleFilter()"
+        class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white text-sm">
+        <option value="">All Roles</option>
+        <option *ngFor="let role of roles" [value]="role.value">{{ role.label }}</option>
+      </select>
+
+      <!-- Status Filter -->
+      <select
+        [(ngModel)]="selectedStatus"
+        (change)="onStatusFilter()"
+        class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white text-sm">
+        <option value="">All Status</option>
+        <option value="active">Active</option>
+        <option value="inactive">Inactive</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+<!-- Users Table -->
+<div class="flex-1 overflow-hidden">
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="flex items-center justify-center h-64">
+    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+  </div>
+
+  <!-- Users List -->
+  <div *ngIf="!isLoading" class="overflow-x-auto">
+    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+      <thead class="bg-gray-50 dark:bg-gray-800">
+        <tr>
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+            User
+          </th>
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+            Role
+          </th>
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+            Contact
+          </th>
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+            Status
+          </th>
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+            Last Login
+          </th>
+          <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+            Actions
+          </th>
+        </tr>
+      </thead>
+      <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+        <tr *ngFor="let user of filteredUsers" class="hover:bg-gray-50 dark:hover:bg-gray-800">
+          <!-- User Info -->
+          <td class="px-6 py-4 whitespace-nowrap">
+            <div class="flex items-center">
+              <div class="flex-shrink-0 h-10 w-10">
+                <div class="h-10 w-10 rounded-full bg-primary-500 flex items-center justify-center">
+                  <span class="text-sm font-medium text-white">{{ getUserInitials(user) }}</span>
+                </div>
+              </div>
+              <div class="ml-4" *ngIf="!user.isEditing">
+                <div class="text-sm font-medium text-gray-900 dark:text-white">
+                  {{ user.firstName }} {{ user.lastName }}
+                </div>
+                <div class="text-sm text-gray-500 dark:text-gray-400">{{ user.username }}</div>
+              </div>
+              <div class="ml-4 space-y-2" *ngIf="user.isEditing">
+                <input
+                  [(ngModel)]="user.firstName"
+                  class="block w-32 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                  placeholder="First Name">
+                <input
+                  [(ngModel)]="user.lastName"
+                  class="block w-32 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                  placeholder="Last Name">
+              </div>
+            </div>
+          </td>
+
+          <!-- Role -->
+          <td class="px-6 py-4 whitespace-nowrap">
+            <span *ngIf="!user.isEditing" [class]="getRoleBadgeClass(user.role)" class="inline-flex px-2 py-1 text-xs font-semibold rounded-full">
+              {{ getRoleDisplayName(user.role) }}
+            </span>
+            <select *ngIf="user.isEditing" [(ngModel)]="user.role" class="px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-gray-700 dark:text-white">
+              <option *ngFor="let role of roles" [value]="role.value">{{ role.label }}</option>
+            </select>
+          </td>
+
+          <!-- Contact -->
+          <td class="px-6 py-4 whitespace-nowrap">
+            <div *ngIf="!user.isEditing" class="text-sm text-gray-900 dark:text-white">{{ user.email }}</div>
+            <div *ngIf="!user.isEditing" class="text-sm text-gray-500 dark:text-gray-400">{{ user.contactNumber || 'N/A' }}</div>
+            <div *ngIf="user.isEditing" class="space-y-1">
+              <input
+                [(ngModel)]="user.email"
+                class="block w-40 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                placeholder="Email">
+              <input
+                [(ngModel)]="user.contactNumber"
+                class="block w-40 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                placeholder="Contact Number">
+            </div>
+          </td>
+
+          <!-- Status -->
+          <td class="px-6 py-4 whitespace-nowrap">
+            <span *ngIf="!user.isEditing" [class]="getStatusBadgeClass(user.isActive ?? false)" class="inline-flex px-2 py-1 text-xs font-semibold rounded-full">
+              {{ user.isActive ? 'Active' : 'Inactive' }}
+            </span>
+            <label *ngIf="user.isEditing" class="flex items-center">
+              <input
+                type="checkbox"
+                [(ngModel)]="user.isActive"
+                class="rounded border-gray-300 text-primary-600 shadow-sm focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-opacity-50">
+              <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">Active</span>
+            </label>
+          </td>
+
+          <!-- Last Login -->
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+            {{ user.lastLogin ? (user.lastLogin | date:'MMM d, y h:mm a') : 'Never' }}
+          </td>
+
+          <!-- Actions -->
+          <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+            <div *ngIf="!user.isEditing" class="flex items-center justify-end space-x-2">
+              <button
+                (click)="startEdit(user)"
+                class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-indigo-300 p-1 rounded transition-colors"
+                title="Edit User">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                </svg>
+              </button>
+              <button
+                (click)="toggleUserStatus(user)"
+                [class]="user.isActive ? 'text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300' : 'text-green-600 dark:text-green-400 hover:text-green-900 dark:hover:text-green-300'"
+                class="p-1 rounded transition-colors"
+                [title]="user.isActive ? 'Deactivate User' : 'Activate User'">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path *ngIf="user.isActive" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18.364 5.636M5.636 18.364l12.728-12.728"></path>
+                  <path *ngIf="!user.isActive" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+              </button>
+              <button
+                (click)="resetPassword(user)"
+                class="text-yellow-600 dark:text-yellow-400 hover:text-yellow-900 dark:hover:text-yellow-300 p-1 rounded transition-colors"
+                title="Reset Password">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path>
+                </svg>
+              </button>
+              <button
+                (click)="deleteUser(user)"
+                class="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300 p-1 rounded transition-colors"
+                title="Delete User">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                </svg>
+              </button>
+            </div>
+            <div *ngIf="user.isEditing" class="flex items-center justify-end space-x-2">
+              <button
+                (click)="saveUser(user)"
+                class="text-green-600 dark:text-green-400 hover:text-green-900 dark:hover:text-green-300 p-1 rounded transition-colors"
+                title="Save Changes">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+              </button>
+              <button
+                (click)="cancelEdit(user)"
+                class="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300 p-1 rounded transition-colors"
+                title="Cancel Edit">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+              </button>
+            </div>
+          </td>
+        </tr>
+
+        <!-- Empty State -->
+        <tr *ngIf="filteredUsers.length === 0">
+          <td colspan="6" class="px-6 py-12 text-center">
+            <div class="text-gray-500 dark:text-gray-400">
+              <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+              </svg>
+              <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-white">No users found</h3>
+              <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                {{ searchTerm || selectedRole || selectedStatus ? 'Try adjusting your search or filters.' : 'Get started by creating a new user.' }}
+              </p>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

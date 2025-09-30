@@ -1,0 +1,29 @@
+<!-- Main Layout Container -->
+<div class="min-h-screen bg-gray-50 dark:bg-gray-900">
+  <!-- Navbar -->
+  <app-navbar
+    [sidebarOpen]="sidebarOpen"
+    (toggleSidebar)="toggleSidebar()"
+    (closeSidebar)="closeSidebar()">
+  </app-navbar>
+
+  <!-- Sidebar (Fixed Position) -->
+  <app-sidebar
+    [isOpen]="sidebarOpen"
+    (closeSidebar)="closeSidebar()">
+  </app-sidebar>
+
+  <!-- Main Content Area -->
+  <div
+    class="transition-all duration-300 min-h-screen"
+    [ngClass]="{
+      'lg:ml-72': sidebarOpen && currentUser,
+      'ml-0': !sidebarOpen || !currentUser
+    }">
+
+    <!-- Page Content -->
+    <main>
+      <router-outlet></router-outlet>
+    </main>
+  </div>
+</div>
