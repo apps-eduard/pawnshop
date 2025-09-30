@@ -1,8 +1,15 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
 import { AppraisalService } from '../../core/services/appraisal.service';
-import { Appraisal } from '../../core/models/interfaces';
+import { PawnerService } from '../../core/services/pawner.service';
+import { ItemService } from '../../core/services/item.service';
+import { AddressService } from '../../core/services/address.service';
+import { ToastService } from '../../core/services/toast.service';
+import { CategoriesService, Category } from '../../core/services/categories.service';
+import { Appraisal, CreateAppraisalRequest } from '../../core/models/interfaces';
 
 interface DashboardCard {
   title: string;
@@ -27,17 +34,73 @@ interface Transaction {
   templateUrl: './cashier-dashboard.html',
   styleUrl: './cashier-dashboard.css',
   standalone: true,
-  imports: [CommonModule, RouterModule]
+  imports: [CommonModule, FormsModule, RouterModule]
 })
 export class CashierDashboard implements OnInit {
+  @ViewChild('newPawnerModal') newPawnerModal: any;
+  @ViewChild('cityInput') cityInput: any;
+  @ViewChild('barangayInput') barangayInput: any;
+
   currentDateTime = new Date();
   isLoading = false;
   dashboardCards: DashboardCard[] = [];
   recentTransactions: Transaction[] = [];
   pendingAppraisals: Appraisal[] = [];
   
+  // Appraisal mode toggle
+  isAppraisalMode = false;
+
+  // Appraisal functionality - only active when isAppraisalMode is true
+  pawnerForm = {
+    first_name: '',
+    last_name: '',
+    address: '',
+    city: '',
+    barangay: '',
+    phone: '',
+    email: '',
+    birth_date: '',
+    id_type: '',
+    id_number: '',
+    civil_status: 'Single',
+    gender: 'Male',
+    occupation: ''
+  };
+
+  itemForm = {
+    name: '',
+    description: '',
+    category: '',
+    appraised_value: null,
+    interest_rate: 3.5
+  };
+
+  appraisalItems: any[] = [];
+  selectedPawner: any = null;
+  searchQuery = '';
+  pawners: any[] = [];
+  isCreatingAppraisal = false;
+  showNewPawnerForm = false;
+  categories: any[] = [];
+  recentAppraisals: any[] = [];
+  cities: any[] = [];
+  barangays: any[] = [];
+  filteredCities: any[] = [];
+  filteredBarangays: any[] = [];
+  isCityDropdownOpen = false;
+  isBarangayDropdownOpen = false;
+  
   // Transaction types
   transactionTypes = [
+    {
+      id: 'create_appraisal',
+      title: 'Create Appraisal',
+      description: 'Appraise items for pawning',
+      icon: 'clipboard-list',
+      color: 'bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-400',
+      bgColor: 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800',
+      iconColor: 'text-indigo-600 dark:text-indigo-400'
+    },
     {
       id: 'new_loan',
       title: 'New Loan',
@@ -85,7 +148,15 @@ export class CashierDashboard implements OnInit {
     }
   ];
 
-  constructor(private appraisalService: AppraisalService) {}
+  constructor(
+    private appraisalService: AppraisalService,
+    private pawnerService: PawnerService,
+    private itemService: ItemService,
+    private addressService: AddressService,
+    private toastService: ToastService,
+    private categoriesService: CategoriesService,
+    private http: HttpClient
+  ) {}
 
   ngOnInit() {
     this.loadDashboardData();
@@ -266,6 +337,268 @@ export class CashierDashboard implements OnInit {
 
   onTransactionTypeSelect(transactionType: any) {
     console.log('Selected transaction type:', transactionType);
-    // Handle transaction type selection - will implement transaction dialog
+    
+    if (transactionType.id === 'create_appraisal') {
+      this.enterAppraisalMode();
+    } else {
+      // Handle other transaction types - will implement transaction dialogs
+      console.log('Other transaction type selected:', transactionType.id);
+    }
+  }
+
+  enterAppraisalMode() {
+    this.isAppraisalMode = true;
+    this.loadAppraisalData();
+  }
+
+  exitAppraisalMode() {
+    this.isAppraisalMode = false;
+    this.resetAppraisalData();
+  }
+
+  private loadAppraisalData() {
+    this.loadCategories();
+    this.loadAddresses();
+    this.loadRecentAppraisals();
+  }
+
+  private resetAppraisalData() {
+    this.selectedPawner = null;
+    this.searchQuery = '';
+    this.pawners = [];
+    this.appraisalItems = [];
+    this.isCreatingAppraisal = false;
+    this.showNewPawnerForm = false;
+    this.resetPawnerForm();
+    this.resetItemForm();
+  }
+
+  private resetPawnerForm() {
+    this.pawnerForm = {
+      first_name: '',
+      last_name: '',
+      address: '',
+      city: '',
+      barangay: '',
+      phone: '',
+      email: '',
+      birth_date: '',
+      id_type: '',
+      id_number: '',
+      civil_status: 'Single',
+      gender: 'Male',
+      occupation: ''
+    };
+  }
+
+  private resetItemForm() {
+    this.itemForm = {
+      name: '',
+      description: '',
+      category: '',
+      appraised_value: null,
+      interest_rate: 3.5
+    };
+  }
+
+  // Appraisal-related methods (simplified for cashier dashboard)
+  loadCategories() {
+    this.categoriesService.getCategories().subscribe({
+      next: (response) => {
+        if (response.success && response.data) {
+          this.categories = response.data;
+        }
+      },
+      error: (error) => {
+        console.error('Error loading categories:', error);
+        this.toastService.showError('Error', 'Failed to load categories');
+      }
+    });
+  }
+
+  loadAddresses() {
+    this.addressService.getCities().subscribe({
+      next: (response: any) => {
+        if (response.success) {
+          this.cities = response.data;
+          this.filteredCities = [...this.cities];
+        }
+      },
+      error: (error: any) => {
+        console.error('Error loading cities:', error);
+      }
+    });
+
+    this.addressService.getBarangays().subscribe({
+      next: (response: any) => {
+        if (response.success) {
+          this.barangays = response.data;
+          this.filteredBarangays = [...this.barangays];
+        }
+      },
+      error: (error: any) => {
+        console.error('Error loading barangays:', error);
+      }
+    });
+  }
+
+  loadRecentAppraisals() {
+    this.appraisalService.getAppraisals().subscribe({
+      next: (response: any) => {
+        if (response.success) {
+          this.recentAppraisals = response.data.slice(0, 10); // Get latest 10
+        }
+      },
+      error: (error: any) => {
+        console.error('Error loading recent appraisals:', error);
+      }
+    });
+  }
+
+  // Pawner search and management
+  searchPawners() {
+    if (this.searchQuery.trim().length < 2) {
+      this.pawners = [];
+      return;
+    }
+
+    this.pawnerService.searchPawners(this.searchQuery).subscribe({
+      next: (response: any) => {
+        if (response.success) {
+          this.pawners = response.data;
+        }
+      },
+      error: (error: any) => {
+        console.error('Error searching pawners:', error);
+        this.toastService.showError('Error', 'Failed to search pawners');
+      }
+    });
+  }
+
+  selectPawner(pawner: any) {
+    this.selectedPawner = pawner;
+    this.searchQuery = `${pawner.first_name} ${pawner.last_name}`;
+    this.pawners = [];
+  }
+
+  showNewPawnerFormToggle() {
+    this.showNewPawnerForm = !this.showNewPawnerForm;
+    if (this.showNewPawnerForm) {
+      this.selectedPawner = null;
+      this.searchQuery = '';
+      this.pawners = [];
+    }
+  }
+
+  // Item management
+  addItemToAppraisal() {
+    if (!this.itemForm.name || !this.itemForm.category || !this.itemForm.appraised_value) {
+      this.toastService.showError('Error', 'Please fill in all required item fields');
+      return;
+    }
+
+    const categoryData = this.categories.find(cat => cat.name === this.itemForm.category);
+
+    const item = {
+      ...this.itemForm,
+      category_description: categoryData?.description || '',
+      id: Date.now()
+    };
+
+    this.appraisalItems.push(item);
+    this.resetItemForm();
+    this.toastService.showSuccess('Success', 'Item added to appraisal');
+  }
+
+  removeItemFromAppraisal(index: number) {
+    this.appraisalItems.splice(index, 1);
+    this.toastService.showSuccess('Success', 'Item removed from appraisal');
+  }
+
+  getTotalAppraisedValue(): number {
+    return this.appraisalItems.reduce((total, item) => total + (item.appraised_value || 0), 0);
+  }
+
+  // Create appraisal (simplified for initial implementation)
+  createAppraisal() {
+    if (this.appraisalItems.length === 0) {
+      this.toastService.showError('Error', 'Please add at least one item to the appraisal');
+      return;
+    }
+
+    if (!this.selectedPawner) {
+      this.toastService.showError('Error', 'Please select a pawner');
+      return;
+    }
+
+    this.submitAppraisal(this.selectedPawner.id);
+  }
+
+  private submitAppraisal(pawnerId: number) {
+    this.isCreatingAppraisal = true;
+
+    // Create appraisal for each item (matching appraiser dashboard approach)
+    let itemsSaved = 0;
+    const totalItems = this.appraisalItems.length;
+
+    this.appraisalItems.forEach((item, index) => {
+      const appraisalRequest: CreateAppraisalRequest = {
+        pawnerId: pawnerId,
+        category: item.category,
+        categoryDescription: item.category_description,
+        description: item.name + (item.description ? ` - ${item.description}` : ''),
+        estimatedValue: item.appraised_value,
+        interestRate: item.interest_rate
+      };
+
+      this.appraisalService.createAppraisal(appraisalRequest).subscribe({
+        next: (response: any) => {
+          if (response.success) {
+            itemsSaved++;
+            
+            if (itemsSaved === totalItems) {
+              this.isCreatingAppraisal = false;
+              this.toastService.showSuccess('Success', 'Appraisal created successfully!');
+              this.resetAppraisalData();
+              this.loadRecentAppraisals();
+              this.loadPendingAppraisals();
+            }
+          } else {
+            this.isCreatingAppraisal = false;
+            this.toastService.showError('Error', 'Failed to create appraisal');
+          }
+        },
+        error: (error: any) => {
+          this.isCreatingAppraisal = false;
+          console.error('Error creating appraisal:', error);
+          this.toastService.showError('Error', 'Failed to create appraisal');
+        }
+      });
+    });
+  }
+
+  // Address management (simplified for cashier dashboard)
+  filterCities() {
+    const query = this.pawnerForm.city.toLowerCase();
+    this.filteredCities = this.cities.filter((city: any) => 
+      city.name.toLowerCase().includes(query)
+    );
+  }
+
+  filterBarangays() {
+    const query = this.pawnerForm.barangay.toLowerCase();
+    this.filteredBarangays = this.barangays.filter((barangay: any) => 
+      barangay.name.toLowerCase().includes(query)
+    );
+  }
+
+  selectCity(city: any) {
+    this.pawnerForm.city = city.name;
+    this.isCityDropdownOpen = false;
+  }
+
+  selectBarangay(barangay: any) {
+    this.pawnerForm.barangay = barangay.name;
+    this.isBarangayDropdownOpen = false;
   }
 }

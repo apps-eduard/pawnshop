@@ -35,6 +35,9 @@ interface AppraisalItem {
   weight?: number;
   karat?: number;
   status: 'pending' | 'approved' | 'rejected';
+  pawnerName?: string;
+  pawnerContact?: string;
+  createdAt?: Date | string;
 }
 
 interface City {
@@ -662,7 +665,10 @@ export class AppraiserDashboard implements OnInit {
             karat: appraisal.karat,
             notes: appraisal.notes || '',
             serialNumber: appraisal.serialNumber || '',
-            status: appraisal.status as 'pending' | 'approved' | 'rejected'
+            status: appraisal.status as 'pending' | 'approved' | 'rejected',
+            pawnerName: appraisal.pawnerName || 'Unknown Customer',
+            pawnerContact: appraisal.pawnerContact || 'No contact',
+            createdAt: appraisal.createdAt || new Date()
           }));
         }
       },
@@ -731,8 +737,8 @@ export class AppraiserDashboard implements OnInit {
 
   // Create pawner then add item
   createPawnerThenAddItem() {
-    if (!this.newPawner.firstName || !this.newPawner.lastName || !this.newPawner.contactNumber) {
-      this.toastService.showWarning('Validation Error', 'Please fill in pawner required fields (First Name, Last Name, Contact Number)');
+    if (!this.newPawner.firstName || !this.newPawner.lastName || !this.newPawner.contactNumber || !this.newPawner.cityId) {
+      this.toastService.showWarning('Validation Error', 'Please fill in pawner required fields (First Name, Last Name, Contact Number, City)');
       return;
     }
 
@@ -832,7 +838,10 @@ export class AppraiserDashboard implements OnInit {
               karat: response.data.karat,
               notes: response.data.notes,
               serialNumber: response.data.serialNumber,
-              status: response.data.status as 'pending' | 'approved' | 'rejected'
+              status: response.data.status as 'pending' | 'approved' | 'rejected',
+              pawnerName: this.selectedPawner ? `${this.selectedPawner.firstName} ${this.selectedPawner.lastName}` : 'Unknown Customer',
+              pawnerContact: this.selectedPawner?.contactNumber || 'No contact',
+              createdAt: new Date()
             });
 
             // Check if all items are saved
@@ -1150,5 +1159,67 @@ export class AppraiserDashboard implements OnInit {
   getCurrentUser(): any {
     const userStr = localStorage.getItem('currentUser');
     return userStr ? JSON.parse(userStr) : null;
+  }
+
+  // Add City and Barangay functionality
+  showAddCityDialog() {
+    const cityName = prompt('Enter new city name:');
+    if (cityName && cityName.trim()) {
+      this.addNewCity(cityName.trim());
+    }
+  }
+
+  showAddBarangayDialog() {
+    if (!this.newPawner.cityId) {
+      this.toastService.showWarning('Validation Error', 'Please select a city first');
+      return;
+    }
+    
+    const barangayName = prompt('Enter new barangay name:');
+    if (barangayName && barangayName.trim()) {
+      this.addNewBarangay(barangayName.trim(), this.newPawner.cityId);
+    }
+  }
+
+  addNewCity(name: string) {
+    this.addressService.createCity({ name, isActive: true }).subscribe({
+      next: (response) => {
+        if (response.success) {
+          this.cities.push(response.data);
+          this.newPawner.cityId = response.data.id;
+          this.toastService.showSuccess('Success', `City "${name}" added successfully`);
+        } else {
+          this.toastService.showError('Error', response.message || 'Failed to add city');
+        }
+      },
+      error: (error) => {
+        console.error('Error adding city:', error);
+        this.toastService.showError('Error', 'Failed to add city');
+      }
+    });
+  }
+
+  addNewBarangay(name: string, cityId: number) {
+    this.addressService.createBarangay({ name, cityId, isActive: true }).subscribe({
+      next: (response) => {
+        if (response.success) {
+          this.filteredBarangays.push(response.data);
+          this.newPawner.barangayId = response.data.id;
+          this.toastService.showSuccess('Success', `Barangay "${name}" added successfully`);
+        } else {
+          this.toastService.showError('Error', response.message || 'Failed to add barangay');
+        }
+      },
+      error: (error) => {
+        console.error('Error adding barangay:', error);
+        this.toastService.showError('Error', 'Failed to add barangay');
+      }
+    });
+  }
+
+  // Get interest rate for category
+  getInterestRateForCategory(categoryName: string): number {
+    const category = this.categories.find(cat => cat.name === categoryName);
+    return category ? category.interestRate : 0;
   }
 }

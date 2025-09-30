@@ -261,7 +261,7 @@ router.post('/', async (req, res) => {
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
       RETURNING *
     `, [
-      pawnerId, req.user.userId, finalCategory, finalCategoryDescription,
+      pawnerId, req.user.id, finalCategory, finalCategoryDescription,
       finalDescription, brand || '', model || '', finalDescription, serialNumber, weight, karat,
       estimatedValue, interestRate || 0.05, finalNotes, finalNotes, 'pending'
     ]);
@@ -275,13 +275,13 @@ router.post('/', async (req, res) => {
       'appraisals',
       appraisal.id,
       'INSERT',
-      req.user.userId,
+      req.user.id,
       null, // no old values for insert
       JSON.stringify(appraisal),
-      `Appraisal created for ${itemType} - Estimated value: ${estimatedValue}`
+      `Appraisal created for ${finalCategory} - Estimated value: ${estimatedValue}`
     ]);
     
-    console.log(`✅ Appraisal created: ${itemType} (ID: ${appraisal.id})`);
+    console.log(`✅ Appraisal created: ${finalCategory} (ID: ${appraisal.id})`);
     
     res.status(201).json({
       success: true,
@@ -364,7 +364,7 @@ router.patch('/:id/status', async (req, res) => {
       'appraisals',
       id,
       'UPDATE',
-      req.user.userId,
+      req.user.id,
       JSON.stringify(oldAppraisal),
       JSON.stringify(updatedAppraisal),
       `Appraisal status changed from ${oldAppraisal.status} to ${status}`
@@ -425,7 +425,7 @@ router.delete('/:id', async (req, res) => {
       'appraisals',
       id,
       'DELETE',
-      req.user.userId,
+      req.user.id,
       JSON.stringify(appraisal),
       null, // no new values for delete
       `Appraisal deleted: ${appraisal.item_type}`
