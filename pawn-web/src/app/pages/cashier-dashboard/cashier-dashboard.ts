@@ -1,7 +1,8 @@
 import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
+import { trigger, state, style, animate, transition } from '@angular/animations';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterModule } from '@angular/router';
+import { RouterModule, Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { AppraisalService } from '../../core/services/appraisal.service';
 import { PawnerService } from '../../core/services/pawner.service';
@@ -34,19 +35,83 @@ interface Transaction {
   templateUrl: './cashier-dashboard.html',
   styleUrl: './cashier-dashboard.css',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule]
+  imports: [CommonModule, FormsModule, RouterModule],
+  animations: [
+    trigger('errorAnimation', [
+      state('show', style({
+        opacity: 1,
+        transform: 'translateY(0)'
+      })),
+      transition(':enter', [
+        style({
+          opacity: 0,
+          transform: 'translateY(-10px)'
+        }),
+        animate('300ms ease-out')
+      ]),
+      transition(':leave', [
+        animate('200ms ease-in', style({
+          opacity: 0,
+          transform: 'translateY(-10px)'
+        }))
+      ])
+    ])
+  ]
 })
 export class CashierDashboard implements OnInit {
   @ViewChild('newPawnerModal') newPawnerModal: any;
   @ViewChild('cityInput') cityInput: any;
   @ViewChild('barangayInput') barangayInput: any;
+  @ViewChild('newLoanModal') newLoanModal: any;
+  @ViewChild('principalInput') principalInput!: ElementRef;
 
   currentDateTime = new Date();
   isLoading = false;
   dashboardCards: DashboardCard[] = [];
   recentTransactions: Transaction[] = [];
   pendingAppraisals: Appraisal[] = [];
-  
+
+  // New Loan Modal Properties
+  showNewLoanModal = false;
+  selectedAppraisal: any = null;
+  selectedPawnerInfo: any = null;
+  loanData = {
+    transactionDate: new Date(),
+    grantedDate: new Date(),
+    maturedDate: new Date(),
+    expiredDate: new Date(),
+    appraisalValue: 0,
+    principalLoan: 0,
+    interestRate: 3.5, // Primary interest rate for display
+    advanceInterest: 0,
+    serviceCharge: 0,
+    netProceed: 0,
+    // For multiple items with different categories
+    itemsBreakdown: [] as Array<{
+      name: string;
+      category: string;
+      appraisalValue: number;
+      principalValue: number; // Portion of the principal allocated to this item
+      interestRate: number;
+      interestAmount: number;
+    }>
+  };
+  displayPrincipalLoan = '0.00'; // For formatted display
+  isEditingPrincipal = false; // Track if user is actively editing
+  auditTrail: any[] = [];
+  principalLoanError = '';
+
+  // Category interest rates configuration
+  categoryInterestRates: { [key: string]: number } = {
+    'jewelry': 3.5,
+    'electronics': 4.0,
+    'gold': 3.0,
+    'silver': 3.2,
+    'gadgets': 4.5,
+    'appliances': 4.0,
+    'default': 3.5
+  };
+
   // Appraisal mode toggle
   isAppraisalMode = false;
 
@@ -89,7 +154,7 @@ export class CashierDashboard implements OnInit {
   filteredBarangays: any[] = [];
   isCityDropdownOpen = false;
   isBarangayDropdownOpen = false;
-  
+
   // Transaction types
   transactionTypes = [
     {
@@ -155,7 +220,8 @@ export class CashierDashboard implements OnInit {
     private addressService: AddressService,
     private toastService: ToastService,
     private categoriesService: CategoriesService,
-    private http: HttpClient
+    private http: HttpClient,
+    private router: Router
   ) {}
 
   ngOnInit() {
@@ -163,6 +229,9 @@ export class CashierDashboard implements OnInit {
     this.loadPendingAppraisals();
     this.updateTime();
     setInterval(() => this.updateTime(), 1000);
+
+    // Load categories to get interest rates from database
+    this.loadCategories();
   }
 
   private loadDashboardData() {
@@ -251,11 +320,95 @@ export class CashierDashboard implements OnInit {
     }, 1000);
   }
 
-  formatCurrency(amount: number): string {
+  formatCurrency(amount: number | undefined | null): string {
+    const validAmount = amount ?? 0;
+    if (isNaN(validAmount)) {
+      console.warn('⚠️ formatCurrency received NaN, using 0:', amount);
+      return new Intl.NumberFormat('en-PH', {
+        style: 'currency',
+        currency: 'PHP'
+      }).format(0);
+    }
     return new Intl.NumberFormat('en-PH', {
       style: 'currency',
       currency: 'PHP'
-    }).format(amount);
+    }).format(validAmount);
+  }
+
+  formatDate(date: Date): string {
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  }
+
+  formatDateTime(date: Date): string {
+    return date.toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  }
+
+  // Helper method to safely get appraisal value
+  getAppraisalValue(appraisal: any): number {
+    // Try totalAppraisedValue first (from new API), then estimatedValue (from old API), then default to 0
+    const value = appraisal.totalAppraisedValue ?? appraisal.estimatedValue ?? 0;
+
+    // Check if we have multiple items with individual values
+    if (appraisal.items?.length) {
+      // Sum up the appraised values of all items
+      return appraisal.items.reduce((sum: number, item: any) => {
+        return sum + (item.appraised_value || 0);
+      }, 0);
+    }
+
+    console.log(`🔍 Getting value for appraisal ${appraisal.id}:`, {
+      totalAppraisedValue: appraisal.totalAppraisedValue,
+      estimatedValue: appraisal.estimatedValue,
+      finalValue: value
+    });
+    return value;
+  }
+
+  // Helper to prepare items breakdown with their respective interest rates
+  prepareItemsBreakdown(appraisal: any) {
+    this.loanData.itemsBreakdown = [];
+
+    if (appraisal.items?.length) {
+      // We have multiple items
+      appraisal.items.forEach((item: any, index: number) => {
+        const itemCategory = (item.category || appraisal.category || 'default').toLowerCase();
+        const interestRate = this.categoryInterestRates[itemCategory] || this.categoryInterestRates['default'];
+
+        this.loanData.itemsBreakdown.push({
+          name: item.name || `Item #${index + 1}`,
+          category: itemCategory,
+          appraisalValue: item.appraised_value || 0,
+          principalValue: 0, // Will be calculated later
+          interestRate: interestRate,
+          interestAmount: 0  // Will be calculated later
+        });
+      });
+    } else {
+      // Single item case
+      const itemCategory = (appraisal.category || 'default').toLowerCase();
+      const interestRate = this.categoryInterestRates[itemCategory] || this.categoryInterestRates['default'];
+
+      this.loanData.itemsBreakdown.push({
+        name: appraisal.itemName || appraisal.description || 'Item',
+        category: itemCategory,
+        appraisalValue: this.getAppraisalValue(appraisal),
+        principalValue: 0, // Will be calculated later
+        interestRate: interestRate,
+        interestAmount: 0  // Will be calculated later
+      });
+    }
+
+    console.log('Items breakdown prepared:', this.loanData.itemsBreakdown);
   }
 
   getCardColorClasses(color: string): string {
@@ -321,29 +474,92 @@ export class CashierDashboard implements OnInit {
   }
 
   loadPendingAppraisals() {
+    console.log('🔄 Loading pending appraisals...');
     this.appraisalService.getAppraisalsByStatus('completed').subscribe({
-      next: (response) => {
+      next: (response: any) => {
+        console.log('📊 API Response:', response);
         if (response.success) {
-          this.pendingAppraisals = response.data.filter((appraisal: any) => 
-            !appraisal.transaction_id
-          );
+          // The API already filters for pending appraisals ready for transaction
+          this.pendingAppraisals = response.data;
+          console.log('✅ Loaded pending appraisals:', this.pendingAppraisals);
+
+          // Debug each appraisal's totalAppraisedValue
+          this.pendingAppraisals.forEach((appraisal: any, index: number) => {
+            console.log(`Appraisal ${index + 1}:`, {
+              id: appraisal.id,
+              pawnerName: appraisal.pawnerName,
+              totalAppraisedValue: appraisal.totalAppraisedValue,
+              valueType: typeof appraisal.totalAppraisedValue,
+              isNaN: isNaN(appraisal.totalAppraisedValue)
+            });
+          });
         }
       },
-      error: (error) => {
-        console.error('Error loading pending appraisals:', error);
+      error: (error: any) => {
+        console.error('❌ Error loading pending appraisals:', error);
       }
     });
   }
 
   onTransactionTypeSelect(transactionType: any) {
     console.log('Selected transaction type:', transactionType);
-    
+
     if (transactionType.id === 'create_appraisal') {
       this.enterAppraisalMode();
     } else {
-      // Handle other transaction types - will implement transaction dialogs
-      console.log('Other transaction type selected:', transactionType.id);
+      // Navigate to transaction page with transaction type
+      this.navigateToTransactionPage(transactionType.id);
     }
+  }
+
+  navigateToTransaction(appraisal: any) {
+    console.log('Opening New Loan modal with appraisal:', appraisal);
+
+    // If we need to fetch additional data for the pawner, we might do that here
+    // For now, let's check if we need to retrieve more details
+    if (appraisal.pawnerId && !appraisal.pawnerContactNumber && !appraisal.phone && !appraisal.contactNumber) {
+      console.log('🔄 Fetching more pawner details for ID:', appraisal.pawnerId);
+      // Here you might want to add a service call to get more pawner details if needed
+      // For example:
+      // this.pawnerService.getPawnerDetails(appraisal.pawnerId).subscribe(...)
+    }
+
+    this.selectedAppraisal = appraisal;
+    this.initializeLoanData(appraisal);
+
+    // Make sure to load pawner info before showing the modal
+    this.loadPawnerInfo(appraisal);
+    this.showNewLoanModal = true;
+
+    // Focus on principal input field after the modal is displayed
+    setTimeout(() => {
+      if (this.principalInput && this.principalInput.nativeElement) {
+        this.principalInput.nativeElement.focus();
+        // Don't select all text since we start with 0.00
+        this.addAuditEntry('Principal input focused', { action: 'focus' });
+      }
+    }, 200); // Increased timeout for more reliable focus
+  }
+
+  navigateToTransactionPage(transactionType: string) {
+    console.log('Navigating to transaction page with type:', transactionType);
+
+    // Show toast for now since transaction page doesn't exist yet
+    const transactionLabels: { [key: string]: string } = {
+      'new_loan': 'New Loan',
+      'additional': 'Additional Loan',
+      'partial': 'Partial Payment',
+      'redeem': 'Loan Redemption',
+      'renew': 'Loan Renewal'
+    };
+
+    const label = transactionLabels[transactionType] || 'Transaction';
+    this.toastService.showInfo('Navigation', `${label} page - Coming Soon`);
+
+    // TODO: Implement actual navigation when transaction pages are ready
+    // this.router.navigate(['/transaction'], {
+    //   queryParams: { type: transactionType }
+    // });
   }
 
   enterAppraisalMode() {
@@ -404,14 +620,39 @@ export class CashierDashboard implements OnInit {
   // Appraisal-related methods (simplified for cashier dashboard)
   loadCategories() {
     this.categoriesService.getCategories().subscribe({
-      next: (response) => {
+      next: (response: any) => {
         if (response.success && response.data) {
           this.categories = response.data;
+
+          // Update interest rates from database values
+          this.updateInterestRatesFromDatabase(response.data);
+          console.log('📊 Categories loaded with interest rates:', this.categoryInterestRates);
         }
       },
-      error: (error) => {
+      error: (error: any) => {
         console.error('Error loading categories:', error);
         this.toastService.showError('Error', 'Failed to load categories');
+      }
+    });
+  }
+
+  // Update interest rates from database categories
+  private updateInterestRatesFromDatabase(categories: Category[]) {
+    if (!categories || !categories.length) return;
+
+    // Reset the interest rates object
+    this.categoryInterestRates = { default: 3.5 }; // Keep a default as fallback
+
+    // Populate with database values
+    categories.forEach(category => {
+      if (category.name && category.interest_rate) {
+        // Convert from string to number and store by lowercase category name
+        const rateName = category.name.toLowerCase();
+        const rateValue = parseFloat(category.interest_rate);
+
+        if (!isNaN(rateValue)) {
+          this.categoryInterestRates[rateName] = rateValue;
+        }
       }
     });
   }
@@ -555,7 +796,7 @@ export class CashierDashboard implements OnInit {
         next: (response: any) => {
           if (response.success) {
             itemsSaved++;
-            
+
             if (itemsSaved === totalItems) {
               this.isCreatingAppraisal = false;
               this.toastService.showSuccess('Success', 'Appraisal created successfully!');
@@ -580,14 +821,14 @@ export class CashierDashboard implements OnInit {
   // Address management (simplified for cashier dashboard)
   filterCities() {
     const query = this.pawnerForm.city.toLowerCase();
-    this.filteredCities = this.cities.filter((city: any) => 
+    this.filteredCities = this.cities.filter((city: any) =>
       city.name.toLowerCase().includes(query)
     );
   }
 
   filterBarangays() {
     const query = this.pawnerForm.barangay.toLowerCase();
-    this.filteredBarangays = this.barangays.filter((barangay: any) => 
+    this.filteredBarangays = this.barangays.filter((barangay: any) =>
       barangay.name.toLowerCase().includes(query)
     );
   }
@@ -600,5 +841,399 @@ export class CashierDashboard implements OnInit {
   selectBarangay(barangay: any) {
     this.pawnerForm.barangay = barangay.name;
     this.isBarangayDropdownOpen = false;
+  }
+
+  // New Loan Modal Methods
+  initializeLoanData(appraisal: any) {
+    const now = new Date();
+    const appraisedValue = this.getAppraisalValue(appraisal);
+
+    // Initialize dates
+    this.loanData.transactionDate = now;
+    this.loanData.grantedDate = now;
+
+    // Matured date: 1 month from transaction date
+    const maturedDate = new Date(now);
+    maturedDate.setMonth(maturedDate.getMonth() + 1);
+    this.loanData.maturedDate = maturedDate;
+
+    // Expired date: 4 months from transaction date
+    const expiredDate = new Date(now);
+    expiredDate.setMonth(expiredDate.getMonth() + 4);
+    this.loanData.expiredDate = expiredDate;
+
+    // Prepare items breakdown with their respective categories and interest rates
+    this.prepareItemsBreakdown(appraisal);
+
+    // Calculate and set the display interest rate (weighted average or primary)
+    if (this.loanData.itemsBreakdown.length === 1) {
+      // Single category - use its interest rate
+      this.loanData.interestRate = this.loanData.itemsBreakdown[0].interestRate;
+      console.log(`Using interest rate: ${this.loanData.interestRate}% for category: ${this.loanData.itemsBreakdown[0].category}`);
+    } else if (this.loanData.itemsBreakdown.length > 1) {
+      // Multiple categories - calculate weighted average
+      this.loanData.interestRate = this.calculateWeightedAverageRate();
+
+      // Check if we have multiple unique categories
+      const uniqueCategories = new Set(this.loanData.itemsBreakdown.map(item => item.category));
+      if (uniqueCategories.size > 1) {
+        console.log(`Multiple categories detected (${uniqueCategories.size}). Using weighted average rate: ${this.loanData.interestRate}%`);
+      } else {
+        console.log(`All items have same category: ${this.loanData.itemsBreakdown[0].category}. Using rate: ${this.loanData.interestRate}%`);
+      }
+    } else {
+      // Fallback to default rate if no items breakdown
+      const defaultCategory = appraisal.category?.toLowerCase() || 'default';
+      this.loanData.interestRate = this.categoryInterestRates[defaultCategory] || this.categoryInterestRates['default'];
+      console.log(`No items breakdown. Using default rate: ${this.loanData.interestRate}%`);
+    }
+
+    // Initialize financial values
+    this.loanData.appraisalValue = appraisedValue;
+    this.loanData.principalLoan = 0; // Default to 0 instead of percentage of appraised value
+    this.loanData.advanceInterest = 0;
+    this.loanData.serviceCharge = 0;
+    this.loanData.netProceed = 0; // Explicitly set to 0
+    this.displayPrincipalLoan = '0.00';
+    this.principalLoanError = '';
+
+    // Load pawner information
+    this.loadPawnerInfo(appraisal);
+
+    this.calculateLoanAmount();
+    this.addAuditEntry('Loan data initialized', {
+      appraisalId: appraisal.id,
+      pawnerName: appraisal.pawnerName,
+      appraisalValue: appraisedValue,
+      principalLoan: this.loanData.principalLoan,
+      interestRate: this.loanData.interestRate,
+      category: this.loanData.itemsBreakdown?.[0]?.category || appraisal.category || 'default'
+    });
+  }
+
+  calculateLoanAmount() {
+    const principal = this.loanData.principalLoan;
+
+    if (this.loanData.itemsBreakdown.length > 0) {
+      // Reset the interest amount
+      this.loanData.advanceInterest = 0;
+
+      // Allocate principal to each item proportionally based on appraisal value
+      const totalAppraisalValue = this.loanData.appraisalValue;
+
+      if (totalAppraisalValue > 0) {
+        // Calculate each item's share of the principal and its interest
+        this.loanData.itemsBreakdown.forEach(item => {
+          const proportion = item.appraisalValue / totalAppraisalValue;
+          item.principalValue = principal * proportion;
+          item.interestAmount = Math.floor(item.principalValue * (item.interestRate / 100));
+
+          // Add to the total interest
+          this.loanData.advanceInterest += item.interestAmount;
+        });
+
+        console.log('Item-level breakdown after calculation:', this.loanData.itemsBreakdown);
+      } else {
+        // Fallback if total appraisal value is 0
+        const rate = this.loanData.interestRate / 100;
+        this.loanData.advanceInterest = Math.floor(principal * rate);
+      }
+    } else {
+      // Fallback for no items breakdown
+      const rate = this.loanData.interestRate / 100;
+      this.loanData.advanceInterest = Math.floor(principal * rate);
+    }
+
+    // Calculate service charge based on principal loan amount
+    // 1-199: 1 PHP, 200-299: 2 PHP, 300-399: 3 PHP, 400-499: 4 PHP, 500+: 5 PHP
+    let serviceCharge = 0;
+
+    // Only apply service charge if principal loan amount is greater than 0
+    if (principal > 0) {
+      if (principal <= 199) {
+        serviceCharge = 1;
+      } else if (principal <= 299) {
+        serviceCharge = 2;
+      } else if (principal <= 399) {
+        serviceCharge = 3;
+      } else if (principal <= 499) {
+        serviceCharge = 4;
+      } else {
+        serviceCharge = 5;
+      }
+    }
+
+    this.loanData.serviceCharge = serviceCharge;
+
+    // Calculate net proceed: Principal Loan - Advance Service Charge - Advance Interest
+    // Ensure it's never negative
+    if (principal === 0) {
+      this.loanData.netProceed = 0; // When principal is 0, net proceed should be 0
+    } else {
+      this.loanData.netProceed = Math.max(0, principal - this.loanData.serviceCharge - this.loanData.advanceInterest);
+    }
+
+    this.addAuditEntry('Loan amount calculated', {
+      principalLoan: this.loanData.principalLoan,
+      totalInterest: this.loanData.advanceInterest,
+      serviceCharge: this.loanData.serviceCharge,
+      netProceed: this.loanData.netProceed,
+      itemsBreakdown: this.loanData.itemsBreakdown
+    });
+  }
+
+  onPrincipalLoanChange() {
+    console.log('Principal loan changed:', this.loanData.principalLoan);
+
+    // Validate principal loan does not exceed appraisal value
+    if (this.loanData.principalLoan > this.loanData.appraisalValue) {
+      const formattedMax = this.formatCurrency(this.loanData.appraisalValue);
+      this.principalLoanError = `Amount exceeds maximum allowable value of ${formattedMax}`;
+      this.toastService.showError('Validation Error', `Principal loan cannot exceed appraisal value of ${formattedMax}`);
+      this.loanData.principalLoan = this.loanData.appraisalValue;
+      // Update the display value to match the capped amount
+      if (!this.isEditingPrincipal) {
+        this.updateDisplayPrincipal();
+      }
+      this.addAuditEntry('Principal loan validation failed', {
+        attemptedAmount: this.loanData.principalLoan,
+        maxAllowed: this.loanData.appraisalValue
+      });
+    } else {
+      this.principalLoanError = '';
+    }
+
+    // Calculate loan amounts with item breakdown
+    this.calculateLoanAmount();
+
+    // Log the calculation results for debugging
+    if (this.loanData.itemsBreakdown.length > 1) {
+      console.log('Multiple items with different rates:', {
+        totalPrincipal: this.loanData.principalLoan,
+        totalInterest: this.loanData.advanceInterest,
+        breakdown: this.loanData.itemsBreakdown.map(item => ({
+          name: item.name,
+          category: item.category,
+          rate: item.interestRate,
+          principalShare: item.principalValue,
+          interestAmount: item.interestAmount
+        }))
+      });
+    }
+  }
+
+  // The interest rate is now fixed based on category, no need for changes
+  // This method is kept for compatibility with existing code
+  onInterestRateChange() {
+    this.calculateLoanAmount();
+  }
+
+  // Get a description of how the interest rate was determined
+  getInterestRateDescription(): string {
+    if (!this.selectedAppraisal) return 'Standard rate';
+
+    // Check if we have multiple items with different categories
+    if (this.loanData.itemsBreakdown && this.loanData.itemsBreakdown.length > 1) {
+      const uniqueCategories = new Set(this.loanData.itemsBreakdown.map(item => item.category));
+      if (uniqueCategories.size > 1) {
+        return `Multiple categories (${uniqueCategories.size})`;
+      }
+    }
+
+    const category = this.selectedAppraisal.category?.toLowerCase() || 'default';
+    return `${category.charAt(0).toUpperCase() + category.slice(1)} rate`;
+  }
+
+  // Calculate weighted average interest rate based on item values
+  calculateWeightedAverageRate(): number {
+    if (!this.loanData.itemsBreakdown || this.loanData.itemsBreakdown.length === 0) {
+      return this.categoryInterestRates['default'] || 3.5;
+    }
+
+    // If only one item, return its rate
+    if (this.loanData.itemsBreakdown.length === 1) {
+      return this.loanData.itemsBreakdown[0].interestRate;
+    }
+
+    // Calculate weighted average
+    const totalValue = this.loanData.itemsBreakdown.reduce((sum, item) => sum + item.appraisalValue, 0);
+
+    if (totalValue <= 0) return this.categoryInterestRates['default'] || 3.5;
+
+    const weightedSum = this.loanData.itemsBreakdown.reduce((sum, item) => {
+      return sum + (item.interestRate * item.appraisalValue / totalValue);
+    }, 0);
+
+    return Math.round(weightedSum * 10) / 10; // Round to 1 decimal place
+  }
+
+  loadPawnerInfo(appraisal: any) {
+    // First log the entire appraisal object to see what we're working with
+    console.log('🔍 DEBUG: Full appraisal object:', JSON.stringify(appraisal, null, 2));
+    console.log('📱 DEBUG: Contact number fields:',
+      {
+        'contactNumber': appraisal.contactNumber,
+        'contact_number': appraisal.contact_number,
+        'phone': appraisal.phone,
+        'mobileNumber': appraisal.mobileNumber,
+        'mobile_number': appraisal.mobile_number,
+        'phoneNumber': appraisal.phoneNumber,
+        'phone_number': appraisal.phone_number,
+        'contact': appraisal.contact,
+        'pawner?.contactNumber': appraisal.pawner?.contactNumber,
+        'pawner?.contact_number': appraisal.pawner?.contact_number,
+        'pawner?.phone': appraisal.pawner?.phone,
+        'pawner?.contact': appraisal.pawner?.contact,
+        'pawner?.mobileNo': appraisal.pawner?.mobileNo,
+        'contact_details?.number': appraisal.contact_details?.number
+      }
+    );
+
+    // Helper function to get contact number from multiple possible field names
+    const getContactNumber = () => {
+      // Check all possible field names for the contact number - expanded to handle more field formats
+      const contactValue =
+        appraisal.contactNumber ||
+        appraisal.contact_number ||
+        appraisal.phone ||
+        appraisal.mobileNumber ||
+        appraisal.mobile_number ||
+        appraisal.phoneNumber ||
+        appraisal.phone_number ||
+        appraisal.contact ||
+        (appraisal.pawner?.contactNumber) ||
+        (appraisal.pawner?.contact_number) ||
+        (appraisal.pawner?.phone) ||
+        (appraisal.pawner?.contact) ||
+        (appraisal.pawner?.mobileNo) ||
+        (appraisal.contact_details?.number) ||
+        (appraisal.contact_info?.number);
+
+      console.log('📞 DEBUG: Final contact value:', contactValue);
+      return contactValue || 'Not provided';
+    };
+
+    // In a real application, this would fetch pawner details from the API
+    // For now, we'll use mock data or extract from appraisal
+    this.selectedPawnerInfo = {
+      fullName: appraisal.pawnerName || (appraisal.pawner?.name) || 'Unknown Pawner',
+      contactNumber: getContactNumber(),
+      // These would come from a proper pawner lookup
+      address: appraisal.address || (appraisal.pawner?.address) || 'Address not available',
+      idType: appraisal.idType || (appraisal.pawner?.idType) || 'Not specified',
+      idNumber: appraisal.idNumber || (appraisal.pawner?.idNumber) || 'Not specified'
+    };
+
+    console.log('📋 DEBUG: Final selectedPawnerInfo:', this.selectedPawnerInfo);
+
+    this.addAuditEntry('Pawner information loaded', {
+      pawnerId: appraisal.pawnerId,
+      pawnerName: this.selectedPawnerInfo.fullName
+    });
+  }
+
+  closeNewLoanModal() {
+    this.addAuditEntry('Modal closed', { action: 'cancel' });
+    this.showNewLoanModal = false;
+    this.selectedAppraisal = null;
+    this.selectedPawnerInfo = null;
+    this.principalLoanError = '';
+    // Keep audit trail for logging purposes, don't clear it
+  }
+
+  resetPrincipalLoan() {
+    this.loanData.principalLoan = 0;
+    this.displayPrincipalLoan = '0.00';
+    this.onPrincipalLoanChange();
+    setTimeout(() => {
+      if (this.principalInput && this.principalInput.nativeElement) {
+        this.principalInput.nativeElement.focus();
+      }
+    }, 100);
+    this.toastService.showInfo('Reset', 'Principal loan amount has been reset to 0');
+    this.addAuditEntry('Principal loan reset', { action: 'reset' });
+  }
+
+  // New methods for handling the formatted principal loan display
+  onDisplayPrincipalChange(value: string) {
+    this.isEditingPrincipal = true;
+    // Remove currency formatting while typing
+    const numericValue = this.parseFormattedNumber(value);
+    this.loanData.principalLoan = numericValue;
+    this.onPrincipalLoanChange();
+  }
+
+  onPrincipalInputFocus() {
+    this.isEditingPrincipal = true;
+    // When focusing, show unformatted number for easier editing
+    if (this.loanData.principalLoan === 0) {
+      this.displayPrincipalLoan = '';
+    } else {
+      this.displayPrincipalLoan = this.loanData.principalLoan.toString();
+    }
+  }
+
+  onPrincipalInputBlur() {
+    this.isEditingPrincipal = false;
+    this.updateDisplayPrincipal();
+  }
+
+  updateDisplayPrincipal() {
+    // Format the principal amount with commas and two decimal places
+    this.displayPrincipalLoan = this.formatNumberWithCommas(this.loanData.principalLoan);
+  }
+
+  // Helper method to parse formatted numbers (remove commas, currency symbols)
+  parseFormattedNumber(value: string): number {
+    // Remove all non-numeric characters except decimal point
+    const numericString = value.replace(/[^0-9.]/g, '');
+    const parsed = parseFloat(numericString);
+    return isNaN(parsed) ? 0 : parsed;
+  }
+
+  // Helper method to format numbers with commas and two decimal places
+  formatNumberWithCommas(value: number): string {
+    return value.toLocaleString('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+  }
+
+  createLoan() {
+    if (!this.selectedAppraisal) {
+      this.toastService.showError('Error', 'No appraisal selected');
+      return;
+    }
+
+    console.log('Creating loan with data:', {
+      appraisal: this.selectedAppraisal,
+      loanData: this.loanData,
+      auditTrail: this.auditTrail
+    });
+
+    this.addAuditEntry('Loan creation initiated', {
+      appraisalId: this.selectedAppraisal.id,
+      pawnerName: this.selectedAppraisal.pawnerName,
+      finalLoanData: { ...this.loanData }
+    });
+
+    // TODO: Implement actual loan creation API call
+    this.toastService.showSuccess(
+      'Loan Created',
+      `New loan created for ${this.selectedAppraisal.pawnerName} - ₱${this.formatCurrency(this.loanData.netProceed)} net proceed`
+    );
+
+    this.closeNewLoanModal();
+  }
+
+  addAuditEntry(action: string, details: any) {
+    const entry = {
+      timestamp: new Date(),
+      action,
+      details,
+      user: 'Current User' // TODO: Get from auth service
+    };
+    this.auditTrail.push(entry);
+    console.log('Audit entry added:', entry);
   }
 }

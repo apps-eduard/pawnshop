@@ -110,7 +110,7 @@ export enum TransactionType {
 export interface Appraisal {
   id: number;
   pawnerId: number;
-  appraiserId: number;
+  appraiserId?: number;
   category: string;
   categoryDescription?: string;
   description: string;
@@ -127,6 +127,10 @@ export interface Appraisal {
   pawnerName?: string;
   pawnerContact?: string;
   appraiserName?: string;
+
+  // Additional properties from API response
+  itemType?: string;
+  totalAppraisedValue?: number;
 }
 
 export interface CreateAppraisalRequest {

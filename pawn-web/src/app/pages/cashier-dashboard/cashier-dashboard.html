@@ -1,4 +1,25 @@
 <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
+  <style>
+    /* Custom scrollbar that only appears when needed */
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 4px;
+      height: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background-color: rgba(156, 163, 175, 0.5);
+      border-radius: 20px;
+    }
+    .custom-scrollbar:hover::-webkit-scrollbar-thumb {
+      background-color: rgba(156, 163, 175, 0.7);
+    }
+    /* Custom class for fixed max height */
+    .max-h-items {
+      max-height: calc(100vh - 180px);
+    }
+  </style>
   <!-- Header -->
   <div class="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -42,60 +63,131 @@
       <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
     </div>
 
-    <!-- Dashboard Cards Grid -->
-    <div *ngIf="!isLoading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-      <div
-        *ngFor="let card of dashboardCards"
-        [routerLink]="card.route"
-        class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 hover:shadow-md transition-all cursor-pointer group">
+    <!-- Transaction Types Section -->
+    <div *ngIf="!isLoading" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-8">
+      <!-- <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-6">Transaction Types</h3> -->
 
-        <!-- Card Header -->
-        <div class="flex items-center justify-between mb-4">
-          <div class="flex items-center space-x-3">
-            <div [class]="'p-2 rounded-lg ' + getCardColorClasses(card.color)">
-              <!-- Dynamic Icons -->
-              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <!-- Loans Icon -->
-                <path *ngIf="card.icon === 'loans'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <button
+          *ngFor="let type of transactionTypes"
+          (click)="onTransactionTypeSelect(type)"
+          class="flex items-center space-x-3 p-4 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-left hover:shadow-md group">
 
-                <!-- Payments Icon -->
-                <path *ngIf="card.icon === 'payments'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path>
+          <div [class]="'p-3 rounded-lg transition-colors ' + type.bgColor">
+            <!-- New Loan Icon -->
+            <svg *ngIf="type.icon === 'plus'" class="w-6 h-6" [class]="type.iconColor" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+            </svg>
 
-                <!-- Renewals Icon -->
-                <path *ngIf="card.icon === 'renewals'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+            <!-- Additional Icon -->
+            <svg *ngIf="type.icon === 'plus-circle'" class="w-6 h-6" [class]="type.iconColor" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
 
-                <!-- Due Icon -->
-                <path *ngIf="card.icon === 'due'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-              </svg>
-            </div>
-          </div>
+            <!-- Partial Icon -->
+            <svg *ngIf="type.icon === 'credit-card'" class="w-6 h-6" [class]="type.iconColor" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+            </svg>
 
-          <!-- Trend Arrow -->
-          <div class="text-green-500 group-hover:scale-110 transition-transform">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11l5-5m0 0l5 5m-5-5v12"></path>
+            <!-- Redeem Icon -->
+            <svg *ngIf="type.icon === 'check-circle'" class="w-6 h-6" [class]="type.iconColor" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+
+            <!-- Renew Icon -->
+            <svg *ngIf="type.icon === 'refresh'" class="w-6 h-6" [class]="type.iconColor" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+            </svg>
+
+            <!-- Create Appraisal Icon -->
+            <svg *ngIf="type.icon === 'clipboard-list'" class="w-6 h-6" [class]="type.iconColor" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
             </svg>
           </div>
-        </div>
 
-        <!-- Card Content -->
-        <div class="space-y-2">
-          <h3 class="text-sm font-medium text-gray-600 dark:text-gray-400">{{ card.title }}</h3>
-          <div class="flex items-end space-x-2">
-            <span class="text-2xl font-bold text-gray-900 dark:text-white">{{ card.count | number }}</span>
-            <span *ngIf="card.amount" class="text-sm text-gray-500 dark:text-gray-400 mb-1">
-              {{ formatCurrency(card.amount) }}
-            </span>
+          <div class="flex-1">
+            <p class="font-medium text-gray-900 dark:text-white group-hover:text-primary-600 transition-colors">{{ type.title }}</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400">{{ type.description }}</p>
           </div>
-        </div>
+
+          <div class="text-gray-400 group-hover:text-primary-600 transition-colors">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+            </svg>
+          </div>`
+        </button>
       </div>
     </div>
 
-    <!-- Main Content Grid -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+    <!-- Main Content: Pending Appraisals (Left) and Recent Transactions (Right) -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
 
-      <!-- Recent Transactions -->
-      <div class="lg:col-span-2 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+      <!-- Pending Appraisals (Left Side) -->
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+        <div class="flex items-center justify-between mb-6">
+          <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Pending Appraisals</h3>
+          <span class="bg-primary-100 text-primary-800 dark:bg-primary-900 dark:text-primary-200 px-2 py-1 rounded-full text-sm font-medium">
+            {{ pendingAppraisals.length }} items
+          </span>
+        </div>
+
+        <div *ngIf="pendingAppraisals.length === 0" class="text-center py-8">
+          <div class="text-gray-400 mb-2">
+            <svg class="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
+            </svg>
+          </div>
+          <p class="text-gray-500 dark:text-gray-400">No pending appraisals</p>
+          <p class="text-sm text-gray-400 dark:text-gray-500">Completed appraisals will appear here</p>
+        </div>
+
+        <div *ngIf="pendingAppraisals.length > 0" class="space-y-4">
+          <div
+            *ngFor="let appraisal of pendingAppraisals"
+            (click)="navigateToTransaction(appraisal)"
+            class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition-all cursor-pointer hover:border-primary-300 dark:hover:border-primary-600 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+
+            <div class="flex items-start justify-between mb-3">
+              <div class="flex-1">
+                <h4 class="font-medium text-gray-900 dark:text-white text-sm hover:text-primary-600 dark:hover:text-primary-400 transition-colors">
+                  {{ appraisal.pawnerName || 'Unknown Pawner' }}
+                </h4>
+                <p class="text-xs text-gray-500 dark:text-gray-400">ID: {{ appraisal.id }}</p>
+              </div>
+              <span class="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 px-2 py-1 rounded-full text-xs font-medium">
+                Ready
+              </span>
+            </div>
+
+            <div class="space-y-2 mb-3">
+              <div class="flex justify-between text-sm">
+                <span class="text-gray-500 dark:text-gray-400">Item:</span>
+                <span class="text-gray-900 dark:text-white font-medium">{{ appraisal.itemType || appraisal.description }}</span>
+              </div>
+              <div class="flex justify-between text-sm">
+                <span class="text-gray-500 dark:text-gray-400">Category:</span>
+                <span class="text-gray-900 dark:text-white">{{ appraisal.category }}</span>
+              </div>
+              <div class="flex justify-between text-sm">
+                <span class="text-gray-500 dark:text-gray-400">Appraised Value:</span>
+                <span class="text-gray-900 dark:text-white font-semibold">{{ formatCurrency(getAppraisalValue(appraisal)) }}</span>
+              </div>
+            </div>
+
+            <div class="flex justify-between items-center pt-3 border-t border-gray-100 dark:border-gray-700">
+              <span class="text-xs text-gray-400">
+                {{ getTimeAgo(appraisal.createdAt) }}
+              </span>
+              <span class="text-xs text-primary-600 dark:text-primary-400 font-medium">
+                Click to process →
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Transactions (Right Side) -->
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
         <div class="flex items-center justify-between mb-6">
           <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Recent Transactions</h3>
           <a routerLink="/transactions" class="text-primary-600 hover:text-primary-700 text-sm font-medium">View All</a>
@@ -128,120 +220,6 @@
           </div>
         </div>
       </div>
-
-      <!-- Transaction Types -->
-      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-6">Transaction Types</h3>
-
-        <div class="space-y-3">
-          <button 
-            *ngFor="let type of transactionTypes" 
-            (click)="onTransactionTypeSelect(type)"
-            class="w-full flex items-center space-x-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-left hover:shadow-md group">
-            
-            <div [class]="'p-2 rounded-lg transition-colors ' + type.bgColor">
-              <!-- New Loan Icon -->
-              <svg *ngIf="type.icon === 'plus'" class="w-5 h-5" [class]="type.iconColor" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-              </svg>
-
-              <!-- Additional Icon -->
-              <svg *ngIf="type.icon === 'plus-circle'" class="w-5 h-5" [class]="type.iconColor" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-              </svg>
-
-              <!-- Partial Icon -->
-              <svg *ngIf="type.icon === 'credit-card'" class="w-5 h-5" [class]="type.iconColor" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
-              </svg>
-
-              <!-- Redeem Icon -->
-              <svg *ngIf="type.icon === 'check-circle'" class="w-5 h-5" [class]="type.iconColor" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-              </svg>
-
-              <!-- Renew Icon -->
-              <svg *ngIf="type.icon === 'refresh'" class="w-5 h-5" [class]="type.iconColor" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-              </svg>
-            </div>
-
-            <div class="flex-1">
-              <p class="font-medium text-gray-900 dark:text-white group-hover:text-primary-600 transition-colors">{{ type.title }}</p>
-              <p class="text-sm text-gray-500 dark:text-gray-400">{{ type.description }}</p>
-            </div>
-
-            <div class="text-gray-400 group-hover:text-primary-600 transition-colors">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-              </svg>
-            </div>
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Pending Appraisals -->
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-8">
-      <div class="flex items-center justify-between mb-6">
-        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Pending Appraisals Ready for Transaction</h3>
-        <span class="bg-primary-100 text-primary-800 dark:bg-primary-900 dark:text-primary-200 px-2 py-1 rounded-full text-sm font-medium">
-          {{ pendingAppraisals.length }} items
-        </span>
-      </div>
-
-      <div *ngIf="pendingAppraisals.length === 0" class="text-center py-8">
-        <div class="text-gray-400 mb-2">
-          <svg class="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
-          </svg>
-        </div>
-        <p class="text-gray-500 dark:text-gray-400">No pending appraisals at the moment</p>
-        <p class="text-sm text-gray-400 dark:text-gray-500">Completed appraisals will appear here for transaction processing</p>
-      </div>
-
-      <div *ngIf="pendingAppraisals.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <div 
-          *ngFor="let appraisal of pendingAppraisals" 
-          class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer hover:border-primary-300 dark:hover:border-primary-600">
-          
-          <div class="flex items-start justify-between mb-3">
-            <div class="flex-1">
-              <h4 class="font-medium text-gray-900 dark:text-white text-sm">{{ appraisal.pawnerName || 'Unknown Pawner' }}</h4>
-              <p class="text-xs text-gray-500 dark:text-gray-400">ID: {{ appraisal.id }}</p>
-            </div>
-            <span class="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 px-2 py-1 rounded-full text-xs font-medium">
-              Ready
-            </span>
-          </div>
-
-          <div class="space-y-2 mb-3">
-            <div class="flex justify-between text-sm">
-              <span class="text-gray-500 dark:text-gray-400">Item:</span>
-              <span class="text-gray-900 dark:text-white font-medium">{{ appraisal.description }}</span>
-            </div>
-            <div class="flex justify-between text-sm">
-              <span class="text-gray-500 dark:text-gray-400">Category:</span>
-              <span class="text-gray-900 dark:text-white">{{ appraisal.category }}</span>
-            </div>
-            <div class="flex justify-between text-sm">
-              <span class="text-gray-500 dark:text-gray-400">Appraised Value:</span>
-              <span class="text-gray-900 dark:text-white font-semibold">{{ formatCurrency(appraisal.estimatedValue) }}</span>
-            </div>
-          </div>
-
-          <div class="flex justify-between items-center pt-3 border-t border-gray-100 dark:border-gray-700">
-            <span class="text-xs text-gray-400">
-              {{ getTimeAgo(appraisal.createdAt) }}
-            </span>
-            <button 
-              (click)="onTransactionTypeSelect({id: 'new_loan', appraisal: appraisal})"
-              class="bg-primary-600 hover:bg-primary-700 text-white px-3 py-1 rounded text-xs font-medium transition-colors">
-              Process
-            </button>
-          </div>
-        </div>
-      </div>
     </div>
 
     <!-- Today's Summary -->
@@ -269,6 +247,319 @@
           <div class="text-sm text-gray-600 dark:text-gray-400 mt-1">Total Transactions</div>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- New Loan Full Page Modal - Optimized for 1366x768 -->
+  <div *ngIf="showNewLoanModal" class="fixed inset-0 bg-white dark:bg-gray-900 z-50 overflow-hidden">
+    <!-- Ultra Compact Header -->
+    <div class="sticky top-0 bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 z-10">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between items-center py-2">
+          <div class="flex items-center">
+            <h1 class="text-lg font-bold text-gray-900 dark:text-white">New Loan</h1>
+            <p class="text-xs text-gray-500 dark:text-gray-400 ml-2">Create a new pawn loan</p>
+          </div>
+          <button (click)="closeNewLoanModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-2" aria-label="Close modal" title="Close modal">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Content - Zero Scroll Optimization for 1366x768 -->
+    <div class="max-w-7xl mx-auto px-2 sm:px-3 lg:px-4 py-2 h-[calc(100vh-45px)]">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-3 h-full">
+
+        <!-- Left Column: Pawner Information (3 columns) -->
+        <div class="lg:col-span-3 flex flex-col h-full space-y-3 overflow-hidden">
+          <!-- Ultra Compact Pawner Information -->
+          <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-2 flex-shrink-0">
+            <h3 class="text-xs font-semibold text-gray-900 dark:text-white mb-1">Pawner Information</h3>
+            <div class="space-y-1">
+              <div>
+                <label class="text-xs font-medium text-gray-700 dark:text-gray-300">Full Name</label>
+                <p class="text-gray-900 dark:text-white font-medium bg-gray-50 dark:bg-gray-700 py-1 px-2 rounded text-xs">
+                  {{ selectedPawnerInfo?.fullName || selectedAppraisal?.pawnerName || 'Unknown Pawner' }}
+                </p>
+              </div>
+              <div>
+                <label class="text-xs font-medium text-gray-700 dark:text-gray-300">Contact Number</label>
+                <p class="text-gray-900 dark:text-white font-medium bg-gray-50 dark:bg-gray-700 py-1 px-2 rounded text-xs">
+                  {{ selectedPawnerInfo?.contactNumber ||
+                     selectedAppraisal?.contactNumber ||
+                     selectedAppraisal?.contact_number ||
+                     selectedAppraisal?.phone ||
+                     selectedAppraisal?.mobileNumber ||
+                     selectedAppraisal?.phoneNumber ||
+                     selectedAppraisal?.contact ||
+                     selectedAppraisal?.pawner?.contactNumber ||
+                     selectedAppraisal?.pawner?.phone ||
+                     selectedAppraisal?.pawner?.mobileNo ||
+                     'Not provided' }}
+                </p>
+              </div>
+              <!-- Removed Appraisal ID as requested -->
+            </div>
+          </div>
+
+          <!-- Ultra Compact Items Display - No Scroll Design -->
+          <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-2 flex-grow overflow-hidden flex flex-col">
+            <h3 class="text-xs font-semibold text-gray-900 dark:text-white mb-1">Item Information</h3>
+
+            <!-- Fixed height item list with auto-hiding scrollbar if needed -->
+            <div class="overflow-y-auto flex-grow pr-1 custom-scrollbar max-h-items">
+              <div *ngIf="selectedAppraisal?.items?.length" class="space-y-2">
+                <div *ngFor="let item of selectedAppraisal?.items; let i = index"
+                  class="border border-gray-200 dark:border-gray-700 rounded p-1.5 bg-gray-50 dark:bg-gray-800">
+                  <div class="flex justify-between items-center">
+                    <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Item #{{i+1}}</span>
+                    <span class="text-xs font-semibold text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20 px-1.5 py-0.5 rounded-sm">
+                      {{ item.category || selectedAppraisal?.category }}
+                    </span>
+                  </div>
+
+                  <p class="text-xs font-medium text-gray-900 dark:text-white truncate">{{ item.name || item.description || selectedAppraisal?.description }}</p>
+
+                  <div class="flex justify-between items-center">
+                    <span class="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[60%]">{{ item.notes || 'No notes' }}</span>
+                    <span class="text-xs font-bold text-green-600 dark:text-green-400">{{ formatCurrency(item.appraised_value || 0) }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- If no items array, fall back to the single item from the appraisal -->
+              <div *ngIf="!selectedAppraisal?.items?.length" class="border border-gray-200 dark:border-gray-700 rounded p-3 bg-gray-50 dark:bg-gray-800">
+                <div class="flex justify-between items-center mb-2">
+                  <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Item #1</span>
+                  <span class="text-xs font-semibold text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20 px-2 py-1 rounded">
+                    {{ selectedAppraisal?.category }}
+                  </span>
+                </div>
+
+                <p class="text-sm font-medium text-gray-900 dark:text-white">{{ selectedAppraisal?.itemType || selectedAppraisal?.description }}</p>
+
+                <div class="mt-2 flex justify-between items-center">
+                  <span class="text-xs text-gray-500 dark:text-gray-400">{{ selectedAppraisal?.notes || 'No notes' }}</span>
+                  <span class="text-sm font-bold text-green-600 dark:text-green-400">{{ formatCurrency(selectedAppraisal?.appraisal_value || selectedAppraisal?.appraisedValue || loanData.appraisalValue) }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Total Value Summary -->
+            <div class="mt-3 border-t border-gray-200 dark:border-gray-700 pt-2">
+              <div class="flex justify-between items-center">
+                <span class="text-xs font-medium text-gray-700 dark:text-gray-300">Total Appraisal Value</span>
+                <span class="text-sm font-bold text-gray-900 dark:text-white">{{ formatCurrency(loanData.appraisalValue) }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Left Column: Important Dates (3 columns) -->
+        <div class="lg:col-span-3 flex flex-col h-full space-y-3 overflow-hidden">
+          <!-- Ultra Compact Dates Card -->
+          <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-2">
+            <h3 class="text-xs font-semibold text-gray-900 dark:text-white mb-1">Important Dates</h3>
+
+            <!-- Ultra compact date format -->
+            <div class="grid grid-cols-2 gap-1.5">
+              <div>
+                <label class="text-xs font-medium text-gray-700 dark:text-gray-300">Transaction Date</label>
+                <p class="text-gray-900 dark:text-white text-xs bg-green-50 dark:bg-green-900/20 py-1 px-1.5 rounded">
+                  {{ formatDate(loanData.transactionDate) }}
+                </p>
+              </div>
+              <div>
+                <label class="text-xs font-medium text-gray-700 dark:text-gray-300">Granted Date</label>
+                <p class="text-gray-900 dark:text-white text-xs bg-green-50 dark:bg-green-900/20 py-1 px-1.5 rounded">
+                  {{ formatDate(loanData.grantedDate) }}
+                </p>
+              </div>
+              <div>
+                <label class="text-xs font-medium text-gray-700 dark:text-gray-300">Matured Date</label>
+                <p class="text-orange-600 dark:text-orange-400 font-bold text-xs bg-orange-50 dark:bg-orange-900/20 py-1 px-1.5 rounded border border-orange-200 dark:border-orange-800">
+                  {{ formatDate(loanData.maturedDate) }}
+                </p>
+              </div>
+              <div>
+                <label class="text-xs font-medium text-gray-700 dark:text-gray-300">Expired Date</label>
+                <p class="text-red-600 dark:text-red-400 font-bold text-xs bg-red-50 dark:bg-red-900/20 py-1 px-1.5 rounded border border-red-200 dark:border-red-800">
+                  {{ formatDate(loanData.expiredDate) }}
+                </p>
+              </div>
+            </div>
+          </div>        <!-- Right Column: Loan Computation (6 columns) - Full Height Vertical Layout -->
+        <div class="lg:col-span-6 flex flex-col h-full">
+          <!-- Full Height Loan Computation Card -->
+          <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-2 h-full flex flex-col">
+            <h3 class="text-xs font-semibold text-gray-900 dark:text-white mb-1">Loan Computation</h3>
+
+            <!-- Full height vertical layout -->
+            <div class="space-y-2 overflow-y-auto flex-grow pr-1 custom-scrollbar">
+              <!-- Appraisal Value -->
+              <div>
+                <label class="text-xs font-medium text-gray-700 dark:text-gray-300">Appraisal Value</label>
+                <p class="text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 py-1 px-1.5 rounded">
+                  {{ formatCurrency(loanData.appraisalValue) }}
+                </p>
+              </div>
+
+              <!-- Principal Loan with validation, autofocus and currency formatting -->
+              <div>
+                <label class="text-xs font-medium text-gray-700 dark:text-gray-300">Principal Loan <span class="text-red-500">*</span></label>
+                <div class="relative">
+                  <span class="absolute inset-y-0 left-0 flex items-center pl-2 text-xs text-gray-500 dark:text-gray-400">₱</span>
+                  <input
+                    #principalInput
+                    type="text"
+                    [(ngModel)]="displayPrincipalLoan"
+                    (blur)="onPrincipalInputBlur()"
+                    (focus)="onPrincipalInputFocus()"
+                    (ngModelChange)="onDisplayPrincipalChange($event)"
+                    [max]="loanData.appraisalValue"
+                    title="Principal Loan Amount"
+                    placeholder="0.00"
+                    autofocus
+                    tabindex="0"
+                    inputmode="decimal"
+                    class="w-full px-2 py-1 pl-5 text-xs font-semibold border border-gray-300 dark:border-gray-600 rounded shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
+                    [class.border-red-500]="principalLoanError">
+                </div>
+                <div *ngIf="principalLoanError" class="mt-1 overflow-hidden">
+                  <p class="text-red-500 text-xs font-medium bg-red-50 dark:bg-red-900/20 px-2 py-1 rounded border border-red-200 dark:border-red-800 animate-pulse"
+                     [@errorAnimation]="'show'">
+                    <i class="fas fa-exclamation-circle mr-1"></i>
+                    {{ principalLoanError }}
+                  </p>
+                </div>
+                <p *ngIf="!principalLoanError" class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Maximum: {{ formatCurrency(loanData.appraisalValue) }}
+                </p>
+              </div>
+
+              <!-- Interest Rate - Using category-based rates from database -->
+              <div>
+                <div class="flex justify-between items-center">
+                  <label class="text-xs font-medium text-gray-700 dark:text-gray-300">Interest Rate (%)</label>
+                </div>
+                <!-- Single interest rate display (when only one category) -->
+                <div class="flex items-center" *ngIf="loanData.itemsBreakdown && loanData.itemsBreakdown.length <= 1">
+                  <input
+                    type="text"
+                    [value]="loanData.interestRate.toFixed(1) + '%'"
+                    title="Interest Rate Percentage (Fixed based on database value for this category)"
+                    readonly
+                    disabled
+                    class="w-full px-2 py-1 text-xs font-semibold border border-gray-200 dark:border-gray-600 bg-gray-100 dark:bg-gray-700/60 rounded shadow-sm focus:outline-none text-gray-700 dark:text-gray-300 cursor-not-allowed">
+                  <div class="ml-1 px-1.5 py-0.5 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-100 dark:border-blue-800">
+                    <span class="text-[10px] font-medium text-blue-600 dark:text-blue-400">{{ (loanData.itemsBreakdown[0] && loanData.itemsBreakdown[0].category || selectedAppraisal?.category || 'Default') }}</span>
+                  </div>
+                </div>
+                <!-- Multiple interest rates (when multiple categories) -->
+                <div *ngIf="loanData.itemsBreakdown && loanData.itemsBreakdown.length > 1">
+                  <div class="flex items-center">
+                    <input
+                      type="text"
+                      [value]="loanData.interestRate.toFixed(1) + '%'"
+                      title="Interest Rate Percentage (Weighted average of multiple categories)"
+                      readonly
+                      disabled
+                      class="w-full px-2 py-1 text-xs font-semibold border border-gray-200 dark:border-gray-600 bg-gray-100 dark:bg-gray-700/60 rounded shadow-sm focus:outline-none text-gray-700 dark:text-gray-300 cursor-not-allowed">
+                    <div class="ml-1 px-1.5 py-0.5 bg-yellow-50 dark:bg-yellow-900/20 rounded border border-yellow-100 dark:border-yellow-800">
+                      <span class="text-[10px] font-medium text-yellow-600 dark:text-yellow-400">Multiple</span>
+                    </div>
+                  </div>
+                  <!-- Breakdown of rates per category -->
+                  <div class="mt-1 p-1 bg-gray-50 dark:bg-gray-700/40 rounded border border-gray-200 dark:border-gray-600 text-[9px] max-h-24 overflow-y-auto custom-scrollbar">
+                    <div *ngFor="let item of loanData.itemsBreakdown" class="flex justify-between items-center py-0.5 border-b border-gray-200 dark:border-gray-600 last:border-b-0">
+                      <div class="flex items-center gap-1">
+                        <span class="font-medium text-gray-700 dark:text-gray-300">{{ item.name }}</span>
+                        <span class="px-1 bg-blue-50 dark:bg-blue-900/20 rounded text-blue-600 dark:text-blue-400">{{ item.category }}</span>
+                      </div>
+                      <div class="flex items-center gap-1">
+                        <span class="font-medium">{{ item.interestRate.toFixed(1) }}%</span>
+                        <span class="font-medium text-green-600 dark:text-green-400">{{ formatCurrency(item.appraisalValue) }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <!-- Removed explanatory text about interest rates -->
+              </div>
+
+              <!-- Advance Interest -->
+              <div>
+                <div class="flex justify-between">
+                  <label class="text-xs font-medium text-gray-700 dark:text-gray-300">Advance Interest</label>
+                </div>
+                <p class="text-xs font-semibold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 py-1 px-1.5 rounded">
+                  {{ formatCurrency(loanData.advanceInterest) }}
+                </p>
+
+                <!-- Interest breakdown for multiple items -->
+                <div *ngIf="loanData.itemsBreakdown && loanData.itemsBreakdown.length > 1 && loanData.principalLoan > 0"
+                     class="mt-1 p-1 bg-gray-50 dark:bg-gray-700/40 rounded border border-gray-200 dark:border-gray-600 max-h-24 overflow-y-auto custom-scrollbar">
+                  <div class="text-[9px] font-medium text-gray-500 dark:text-gray-400 mb-0.5 border-b border-gray-200 dark:border-gray-600 pb-0.5">
+                    Interest breakdown:
+                  </div>
+                  <div *ngFor="let item of loanData.itemsBreakdown" class="flex justify-between items-center text-[9px] py-0.5">
+                    <div class="flex-grow truncate pr-2">{{ item.name }}</div>
+                    <div class="flex items-center gap-1">
+                      <span class="text-gray-700 dark:text-gray-300">{{ formatCurrency(item.principalValue) }}</span>
+                      <span>×</span>
+                      <span class="text-blue-600 dark:text-blue-400">{{ item.interestRate }}%</span>
+                      <span>=</span>
+                      <span class="font-semibold text-red-600 dark:text-red-400">{{ formatCurrency(item.interestAmount) }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Service Charge -->
+              <div>
+                <div class="flex justify-between items-center">
+                  <label class="text-xs font-medium text-gray-700 dark:text-gray-300">Service Charge</label>
+                </div>
+                <p class="text-xs font-semibold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 py-1 px-1.5 rounded">
+                  {{ formatCurrency(loanData.serviceCharge) }}
+                </p>
+              </div>
+
+              <!-- Net Proceed (Bottom-aligned in the flex container) -->
+              <div class="border-t border-gray-200 dark:border-gray-700 pt-1.5 mt-auto">
+                <label class="text-xs font-semibold text-gray-700 dark:text-gray-300">Net Proceed</label>
+                <p class="text-base font-bold text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 py-1 px-1.5 rounded border border-green-200 dark:border-green-800 text-center">
+                  {{ formatCurrency(loanData.netProceed) }}
+                </p>
+
+                <!-- Action Buttons directly under Net Proceed -->
+                <div class="grid grid-cols-3 gap-2 mt-3">
+                  <button
+                    (click)="createLoan()"
+                    [disabled]="principalLoanError"
+                    class="col-span-1 px-3 py-1.5 text-xs font-medium text-white bg-green-600 border border-transparent rounded-md shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center">
+                    <i class="fas fa-save mr-1"></i> Save
+                  </button>
+                  <button
+                    (click)="resetPrincipalLoan()"
+                    class="col-span-1 px-3 py-1.5 text-xs font-medium text-white bg-blue-500 border border-transparent rounded-md shadow-sm hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 flex items-center justify-center">
+                    <i class="fas fa-redo-alt mr-1"></i> Reset
+                  </button>
+                  <button
+                    (click)="closeNewLoanModal()"
+                    class="col-span-1 px-3 py-1.5 text-xs font-medium text-white bg-red-500 border border-transparent rounded-md shadow-sm hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2 flex items-center justify-center">
+                    <i class="fas fa-times mr-1"></i> Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer removed as requested -->
     </div>
   </div>
 </div>

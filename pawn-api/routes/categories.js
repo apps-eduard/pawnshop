@@ -16,7 +16,11 @@ router.get('/', authenticateToken, async (req, res) => {
 
     res.json({
       success: true,
-      data: result.rows,
+      data: result.rows.map(category => ({
+        ...category,
+        displayName: `${category.name} ${category.interest_rate}%`,
+        interest_rate: parseFloat(category.interest_rate)
+      })),
       message: 'Categories retrieved successfully'
     });
 
@@ -143,7 +147,11 @@ router.get('/with-descriptions', authenticateToken, async (req, res) => {
 
     res.json({
       success: true,
-      data: result.rows,
+      data: result.rows.map(category => ({
+        ...category,
+        displayName: `${category.name} ${category.interest_rate}%`,
+        interest_rate: parseFloat(category.interest_rate)
+      })),
       message: 'Categories with descriptions retrieved successfully'
     });
 
