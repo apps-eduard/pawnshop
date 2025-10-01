@@ -20,40 +20,6 @@
       max-height: calc(100vh - 180px);
     }
   </style>
-  <!-- Header -->
-  <div class="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="flex justify-between items-center py-6">
-        <div class="flex items-center space-x-4">
-          <div class="flex-shrink-0">
-            <img class="h-10 w-10" src="/assets/icons/pawnshop-logo.svg" alt="Logo">
-          </div>
-          <div>
-            <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Cashier Dashboard</h1>
-            <p class="text-sm text-gray-500 dark:text-gray-400">
-              {{ currentDateTime | date:'EEEE, MMMM d, y - h:mm a' }}
-            </p>
-          </div>
-        </div>
-
-        <!-- Quick Actions -->
-        <div class="flex items-center space-x-3">
-          <button class="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
-            <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-            </svg>
-            New Loan
-          </button>
-          <button class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
-            <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path>
-            </svg>
-            Payment
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
 
   <!-- Dashboard Content -->
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

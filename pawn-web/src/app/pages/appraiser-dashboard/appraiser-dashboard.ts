@@ -40,6 +40,11 @@ interface AppraisalItem {
   createdAt?: Date | string;
 }
 
+interface CategoryDescription {
+  description: string;
+  id?: number;
+}
+
 interface City {
   id: number;
   name: string;
@@ -60,11 +65,11 @@ interface Barangay {
 })
 export class AppraiserDashboard implements OnInit {
   @ViewChild('searchInput') searchInput!: ElementRef<HTMLInputElement>;
-  
+
   currentDateTime = new Date();
   isLoading = false;
   isSearching = false;
-  
+
   // Authentication properties
   isLoggedIn = false;
   currentUser: any = null;
@@ -112,80 +117,84 @@ export class AppraiserDashboard implements OnInit {
   // Categories loaded from database
   categories: Array<{name: string, interestRate: number, description?: string, id?: number}> = [];
 
+  // Filtered category descriptions
+  filteredCategoryDescriptions: CategoryDescription[] = [];
+
+  // Track loading state for category descriptions
+  isLoadingDescriptions: boolean = false;
+
   // Category descriptions based on selected category
-  categoryDescriptions: { [key: string]: string[] } = {
+  categoryDescriptions: { [key: string]: CategoryDescription[] } = {
     'Jewelry': [
-      'Gold Ring',
-      'Gold Necklace',
-      'Gold Bracelet',
-      'Gold Earrings',
-      'Silver Ring',
-      'Silver Necklace',
-      'Silver Bracelet',
-      'Platinum Ring',
-      'Diamond Ring',
-      'Pearl Necklace',
-      'Watch - Gold',
-      'Watch - Silver',
-      'Other Jewelry'
+      { description: 'Gold Ring' },
+      { description: 'Gold Necklace' },
+      { description: 'Gold Bracelet' },
+      { description: 'Gold Earrings' },
+      { description: 'Silver Ring' },
+      { description: 'Silver Necklace' },
+      { description: 'Silver Bracelet' },
+      { description: 'Platinum Ring' },
+      { description: 'Diamond Ring' },
+      { description: 'Pearl Necklace' },
+      { description: 'Watch - Gold' },
+      { description: 'Watch - Silver' },
+      { description: 'Other Jewelry' }
     ],
     'Appliances': [
-      'Refrigerator',
-      'Washing Machine',
-      'Air Conditioner',
-      'Microwave Oven',
-      'Electric Fan',
-      'Rice Cooker',
-      'Blender',
-      'Oven Toaster',
-      'Iron',
-      'Vacuum Cleaner',
-      'Water Dispenser',
-      'Other Appliance'
+      { description: 'Refrigerator' },
+      { description: 'Washing Machine' },
+      { description: 'Air Conditioner' },
+      { description: 'Microwave Oven' },
+      { description: 'Electric Fan' },
+      { description: 'Rice Cooker' },
+      { description: 'Blender' },
+      { description: 'Oven Toaster' },
+      { description: 'Iron' },
+      { description: 'Vacuum Cleaner' },
+      { description: 'Water Dispenser' },
+      { description: 'Other Appliance' }
     ],
     'Electronics': [
-      'Mobile Phone',
-      'Laptop',
-      'Tablet',
-      'Smart Watch',
-      'Camera',
-      'Gaming Console',
-      'Television',
-      'Sound System',
-      'DVD Player',
-      'Computer Monitor',
-      'Printer',
-      'Other Electronic'
+      { description: 'Mobile Phone' },
+      { description: 'Laptop' },
+      { description: 'Tablet' },
+      { description: 'Smart Watch' },
+      { description: 'Camera' },
+      { description: 'Gaming Console' },
+      { description: 'Television' },
+      { description: 'Sound System' },
+      { description: 'DVD Player' },
+      { description: 'Computer Monitor' },
+      { description: 'Printer' },
+      { description: 'Other Electronic' }
     ],
     'Tools': [
-      'Power Drill',
-      'Generator',
-      'Welding Machine',
-      'Angle Grinder',
-      'Circular Saw',
-      'Hammer Drill',
-      'Compressor',
-      'Other Tool'
+      { description: 'Power Drill' },
+      { description: 'Generator' },
+      { description: 'Welding Machine' },
+      { description: 'Angle Grinder' },
+      { description: 'Circular Saw' },
+      { description: 'Hammer Drill' },
+      { description: 'Compressor' },
+      { description: 'Other Tool' }
     ],
     'Vehicles': [
-      'Motorcycle',
-      'Bicycle',
-      'Car',
-      'Scooter',
-      'ATV',
-      'Other Vehicle'
+      { description: 'Motorcycle' },
+      { description: 'Bicycle' },
+      { description: 'Car' },
+      { description: 'Scooter' },
+      { description: 'ATV' },
+      { description: 'Other Vehicle' }
     ],
     'Other': [
-      'Furniture',
-      'Musical Instrument',
-      'Artwork',
-      'Collectible',
-      'Antique',
-      'Other Item'
+      { description: 'Furniture' },
+      { description: 'Musical Instrument' },
+      { description: 'Artwork' },
+      { description: 'Collectible' },
+      { description: 'Antique' },
+      { description: 'Other Item' }
     ]
   };
-
-  filteredCategoryDescriptions: string[] = [];
 
   // Add Category Description Modal
   showAddCategoryDescriptionModal = false;
@@ -194,12 +203,126 @@ export class AppraiserDashboard implements OnInit {
 
   // Method to handle category selection
   onCategoryChange() {
+    console.log('Category changed to:', this.currentItem.category);
+
     if (this.currentItem.category) {
-      this.filteredCategoryDescriptions = this.categoryDescriptions[this.currentItem.category] || [];
-      this.currentItem.categoryDescription = ''; // Reset category description when category changes
+      // Reset category description when category changes
+      this.currentItem.categoryDescription = '';
+
+      // Check if we have any cached descriptions for this category
+      const cachedDescriptions = this.categoryDescriptions[this.currentItem.category];
+      console.log('Cached descriptions for', this.currentItem.category, ':', cachedDescriptions);
+
+      // Initially set from cache if available
+      this.filteredCategoryDescriptions = cachedDescriptions || [];
+
+      // Force a UI update using setTimeout
+      setTimeout(() => {
+        console.log('After timeout - filtered descriptions:', this.filteredCategoryDescriptions);
+      }, 0);
+
+      // Always fetch fresh descriptions from the server
+      this.loadCategoryDescriptions(this.currentItem.category);
     } else {
       this.filteredCategoryDescriptions = [];
     }
+  }
+
+  // Add default descriptions based on category
+  addDefaultDescriptions(categoryName: string) {
+    console.log('Adding default descriptions for', categoryName);
+    let defaults: {description: string}[] = [];
+
+    switch(categoryName.toLowerCase()) {
+      case 'jewelry':
+        defaults = [
+          { description: '14K Gold Ring' },
+          { description: '18K Gold Necklace' },
+          { description: 'Silver Bracelet' },
+          { description: 'Diamond Earrings' }
+        ];
+        break;
+      case 'appliances':
+        defaults = [
+          { description: 'Refrigerator' },
+          { description: 'Washing Machine' },
+          { description: 'Television' },
+          { description: 'Microwave Oven' }
+        ];
+        break;
+      case 'electronics':
+        defaults = [
+          { description: 'Smartphone' },
+          { description: 'Laptop Computer' },
+          { description: 'Digital Camera' },
+          { description: 'Tablet' }
+        ];
+        break;
+      case 'vehicles':
+        defaults = [
+          { description: 'Motorcycle' },
+          { description: 'Bicycle' },
+          { description: 'Scooter' }
+        ];
+        break;
+      default:
+        defaults = [
+          { description: 'General Item' }
+        ];
+    }
+
+    this.categoryDescriptions[categoryName] = defaults;
+    this.filteredCategoryDescriptions = [...defaults];
+    console.log('Added default descriptions:', this.filteredCategoryDescriptions);
+  }
+
+  // Helper method to load category descriptions from server if not already loaded
+  loadCategoryDescriptions(categoryName: string) {
+    console.log('Loading descriptions for category:', categoryName);
+    this.isLoadingDescriptions = true;
+
+    // Add default descriptions if we don't have any for this category yet
+    if (!this.categoryDescriptions[categoryName] || this.categoryDescriptions[categoryName].length === 0) {
+      this.addDefaultDescriptions(categoryName);
+    }
+
+    this.categoriesService.getCategoriesWithDescriptions().subscribe({
+      next: (response: any) => {
+        if (response.success && response.data) {
+          console.log('API response for descriptions:', response.data);
+
+          // Find the category and its descriptions
+          const category = response.data.find((cat: any) => cat.name === categoryName);
+          console.log('Found category:', category);
+
+          if (category && category.descriptions && category.descriptions.length > 0) {
+            // Update the category descriptions
+            const mappedDescriptions = category.descriptions.map((desc: any) =>
+              ({ description: desc.description }));
+
+            this.categoryDescriptions[categoryName] = mappedDescriptions;
+
+            // Create a new array to force change detection
+            this.filteredCategoryDescriptions = [...mappedDescriptions];
+            console.log('Updated filteredCategoryDescriptions with server data:', this.filteredCategoryDescriptions);
+          } else {
+            console.warn(`No descriptions found in API for category: ${categoryName}`);
+            // We'll keep using the default descriptions we added earlier
+          }
+        } else {
+          console.error('API response error or no data:', response);
+        }
+      },
+      error: (error: any) => {
+        console.error('Error loading category descriptions:', error);
+        // We'll keep using the default descriptions we added earlier
+        this.isLoadingDescriptions = false;
+      },
+      complete: () => {
+        this.isLoadingDescriptions = false;
+        console.log('Category descriptions loading complete, final result:', this.filteredCategoryDescriptions);
+      }
+    });
   }
 
   // Recent Appraisals
@@ -279,14 +402,14 @@ export class AppraiserDashboard implements OnInit {
   checkAuthStatus(): void {
     const token = localStorage.getItem('token');
     const user = localStorage.getItem('currentUser');
-    
+
     console.log(`� [${new Date().toISOString()}] Auth Status Check:`, {
       token: token ? `Present (${token.substring(0, 20)}...)` : 'Missing',
       user: user ? 'Present' : 'Missing',
       tokenLength: token?.length || 0,
       userPreview: user ? JSON.parse(user).username : 'N/A'
     });
-    
+
     if (token && user) {
       this.currentUser = JSON.parse(user);
       this.isLoggedIn = true;
@@ -305,13 +428,13 @@ export class AppraiserDashboard implements OnInit {
   ngOnInit() {
     // Check authentication status on component load
     this.checkAuthStatus();
-    
+
     this.loadCities();
     this.loadCategories();
     this.loadRecentAppraisals();
     this.updateTime();
     setInterval(() => this.updateTime(), 1000);
-    
+
     // Auto-focus search input after view init
     setTimeout(() => {
       if (this.searchInput) {
@@ -336,32 +459,41 @@ export class AppraiserDashboard implements OnInit {
   // Load Categories from Database
   loadCategories() {
     console.log('🏷️ Loading categories from database...');
-    
+
     this.categoriesService.getCategoriesWithDescriptions().subscribe({
       next: (response) => {
         if (response.success && response.data) {
           console.log('✅ Categories loaded:', response.data);
-          
+
           // Transform database categories to component format
-          this.categories = response.data.map(cat => ({
-            id: cat.id,
-            name: cat.name,
-            interestRate: parseFloat(cat.interest_rate), // Keep as decimal (0.03 for 3%, 0.06 for 6%)
-            description: cat.notes || ''
-          }));
-          
+          this.categories = response.data.map(cat => {
+            // Convert interest rate to decimal if needed
+            let rate = parseFloat(cat.interest_rate);
+            // If rate is greater than 1, assume it's already in percentage form and convert to decimal
+            if (rate > 1) {
+              rate = rate / 100;
+            }
+
+            return {
+              id: cat.id,
+              name: cat.name,
+              interestRate: rate, // Keep as decimal (0.03 for 3%, 0.06 for 6%)
+              description: cat.notes || ''
+            };
+          });
+
           // Build category descriptions mapping
           this.categoryDescriptions = {};
           response.data.forEach(cat => {
             if (cat.descriptions && cat.descriptions.length > 0) {
-              this.categoryDescriptions[cat.name] = cat.descriptions.map(desc => desc.description);
+              this.categoryDescriptions[cat.name] = cat.descriptions.map(desc => ({ description: desc.description }));
             } else {
               this.categoryDescriptions[cat.name] = [];
             }
           });
-          
+
           console.log('📋 Category descriptions mapping:', this.categoryDescriptions);
-          
+
         } else {
           console.error('❌ Failed to load categories:', response.message);
           this.toastService.showError('Error', 'Failed to load categories');
@@ -378,11 +510,11 @@ export class AppraiserDashboard implements OnInit {
   searchPawners() {
     console.log(`🔍 [${new Date().toISOString()}] === SEARCH PAWNERS METHOD STARTED ===`);
     console.log(`🔍 [${new Date().toISOString()}] Search query: "${this.searchQuery}"`);
-    
+
     // Check authentication first
     this.checkAuthStatus();
     console.log(`🔍 [${new Date().toISOString()}] After checkAuthStatus - isLoggedIn: ${this.isLoggedIn}`);
-    
+
     if (!this.isLoggedIn) {
       console.error(`❌ [${new Date().toISOString()}] Search blocked - not authenticated`);
       this.toastService.showError('Authentication Required', 'Please login first');
@@ -390,7 +522,7 @@ export class AppraiserDashboard implements OnInit {
     }
 
     console.log(`🔍 [${new Date().toISOString()}] Checking search query: "${this.searchQuery}" (trimmed: "${this.searchQuery.trim()}")`);
-    
+
     if (!this.searchQuery.trim()) {
       console.log(`❌ [${new Date().toISOString()}] Empty search query - showing warning`);
       this.searchResults = [];
@@ -401,7 +533,7 @@ export class AppraiserDashboard implements OnInit {
     console.log(`✅ [${new Date().toISOString()}] Search query valid - proceeding with search`);
     this.isSearching = true;
     console.log('🔍 Searching pawners:', this.searchQuery);
-    
+
     console.log(`📤 [${new Date().toISOString()}] Making API request to search pawners...`);
     console.log(`🔗 API URL: http://localhost:3000/api/pawners/search?q=${encodeURIComponent(this.searchQuery)}`);
     console.log(`🎫 Token: ${localStorage.getItem('token')?.substring(0, 20)}...`);
@@ -412,7 +544,7 @@ export class AppraiserDashboard implements OnInit {
         next: (response) => {
         this.isSearching = false;
         console.log(`📥 [${new Date().toISOString()}] API Response received:`, response);
-        
+
         if (response.success) {
           this.searchResults = response.data;
           console.log(`✅ Found ${this.searchResults.length} pawners:`, this.searchResults);
@@ -436,7 +568,7 @@ export class AppraiserDashboard implements OnInit {
             error: error.error,
             url: error.url
           });
-          
+
           let errorMessage = 'Error searching pawners';
           if (error.status === 401) {
             errorMessage = 'Authentication required. Please log in first.';
@@ -445,7 +577,7 @@ export class AppraiserDashboard implements OnInit {
           } else if (error.error?.message) {
             errorMessage = error.error.message;
           }
-          
+
           this.toastService.showError('Search Error', errorMessage);
         }
       });
@@ -472,19 +604,40 @@ export class AppraiserDashboard implements OnInit {
     this.searchResults = [];
     this.searchQuery = `${pawner.firstName} ${pawner.lastName} - ${pawner.contactNumber}`;
     this.showCreatePawnerForm = false;
-    this.toastService.showSuccess('Pawner Selected', `Selected ${pawner.firstName} ${pawner.lastName}`);
-    
-    // Automatically start item appraisal
-    this.startItemAppraisal();
+
+    // Open the New Appraisal modal for the selected pawner
+    this.showNewAppraisalModal = true;
+
+    // Reset items list
+    this.appraisalItems = [];
+
+    // Show item form
+    this.showItemForm = true;
+
+    // Reset current item for the selected pawner
+    this.currentItem = {
+      pawnerId: this.selectedPawner.id!,
+      category: '',
+      categoryDescription: '',
+      description: '',
+      estimatedValue: 0,
+      notes: '',
+      serialNumber: '',
+      weight: undefined,
+      karat: undefined,
+      status: 'pending'
+    };
+
+    this.toastService.showSuccess('Pawner Selected', `Starting new appraisal for ${pawner.firstName} ${pawner.lastName}`);
   }
 
-  // Start New Appraisal - Show Create Pawner Form and Item Form
+  // Start New Appraisal - Show Modal with Create Pawner Form and Item Form
   startNewAppraisal() {
     // Clear selected pawner
     this.selectedPawner = null;
     this.searchQuery = '';
     this.searchResults = [];
-    
+
     // Reset new pawner form
     this.newPawner = {
       firstName: '',
@@ -495,10 +648,14 @@ export class AppraiserDashboard implements OnInit {
       barangayId: 0,
       addressDetails: ''
     };
-    
-    // Show new pawner form
+
+    // Show new appraisal modal with pawner form for a new pawner
     this.showCreatePawnerForm = true;
-    
+    this.showNewAppraisalModal = true;
+
+    // Reset items list for fresh start
+    this.appraisalItems = [];
+
     // Also show item appraisal form
     this.currentItem = {
       pawnerId: 0, // Will be set after pawner is created
@@ -515,7 +672,7 @@ export class AppraiserDashboard implements OnInit {
     this.filteredCategoryDescriptions = [];
     this.appraisalItems = []; // Clear any existing items
     this.showItemForm = true;
-    
+
     // Auto-focus First Name field after forms are shown
     setTimeout(() => {
       const firstNameInput = document.querySelector('input[name="firstName"]') as HTMLInputElement;
@@ -638,7 +795,7 @@ export class AppraiserDashboard implements OnInit {
     };
     this.filteredCategoryDescriptions = [];
     this.showItemForm = true;
-    
+
     // Auto-focus category field after form is shown
     setTimeout(() => {
       const categorySelect = document.querySelector('select[name="category"]') as HTMLSelectElement;
@@ -680,20 +837,16 @@ export class AppraiserDashboard implements OnInit {
 
   // Add Item to Appraisal List
   addItemToAppraisal() {
-    if (!this.currentItem.category || !this.currentItem.description || !this.currentItem.estimatedValue) {
-      this.toastService.showWarning('Validation Error', 'Please fill in required fields');
+    // Check required fields
+    if (!this.currentItem.category || !this.currentItem.estimatedValue) {
+      this.toastService.showWarning('Validation Error', 'Please fill in required fields: Category and Estimated Value');
       return;
     }
 
-    // If no pawner is selected and the form is filled, create the pawner first
-    if (!this.selectedPawner && this.showCreatePawnerForm) {
-      this.createPawnerThenAddItem();
-      return;
-    }
-
+    // Check if we have a pawner or if we're in the process of creating one
     if (!this.selectedPawner) {
-      this.toastService.showWarning('Validation Error', 'Please select or create a pawner first');
-      return;
+      // Just proceed with adding the item - we'll associate it with pawner later
+      console.log('No pawner selected yet, but continuing to add item to list');
     }
 
     // Get the selected category data for interest rate
@@ -704,16 +857,16 @@ export class AppraiserDashboard implements OnInit {
     const itemToAdd: AppraisalItem = {
       ...this.currentItem,
       id: Date.now(), // Temporary ID for display purposes
-      pawnerId: this.selectedPawner!.id!,
+      pawnerId: this.selectedPawner ? this.selectedPawner.id! : 0, // Use 0 as temp ID if no pawner selected yet
       status: 'pending'
     };
 
     this.appraisalItems.push(itemToAdd);
     this.toastService.showSuccess('Item Added', 'Item added to appraisal list');
 
-    // Reset current item form for next item
+    // Reset only the current item form fields for next item, but keep the form open
     this.currentItem = {
-      pawnerId: this.selectedPawner!.id!,
+      pawnerId: this.selectedPawner ? this.selectedPawner.id! : 0,
       category: '',
       categoryDescription: '',
       description: '',
@@ -737,8 +890,8 @@ export class AppraiserDashboard implements OnInit {
 
   // Create pawner then add item
   createPawnerThenAddItem() {
-    if (!this.newPawner.firstName || !this.newPawner.lastName || !this.newPawner.contactNumber || !this.newPawner.cityId) {
-      this.toastService.showWarning('Validation Error', 'Please fill in pawner required fields (First Name, Last Name, Contact Number, City)');
+    if (!this.newPawner.firstName || !this.newPawner.lastName || !this.newPawner.contactNumber) {
+      this.toastService.showWarning('Validation Error', 'Please fill in required fields (First Name, Last Name, Contact Number)');
       return;
     }
 
@@ -761,7 +914,7 @@ export class AppraiserDashboard implements OnInit {
           this.selectedPawner = response.data;
           this.searchQuery = `${this.newPawner.firstName} ${this.newPawner.lastName} - ${this.newPawner.contactNumber}`;
           this.toastService.showSuccess('Success', 'Pawner created successfully');
-          
+
           // Reset pawner form but keep it visible for further edits if needed
           this.newPawner = {
             firstName: '',
@@ -772,9 +925,54 @@ export class AppraiserDashboard implements OnInit {
             barangayId: undefined,
             addressDetails: ''
           };
-          
+
           // Now add the item
           this.addItemToAppraisal();
+        } else {
+          this.toastService.showError('Create Error', response.message || 'Failed to create pawner');
+        }
+      },
+      error: (error) => {
+        console.error('Error creating pawner:', error);
+        this.toastService.showError('Create Error', 'Error creating pawner');
+      }
+    });
+  }
+
+  // Create pawner then save all appraisal items
+  createPawnerThenSaveAppraisal() {
+    if (!this.newPawner.firstName || !this.newPawner.lastName || !this.newPawner.contactNumber) {
+      this.toastService.showWarning('Validation Error', 'Please fill in required pawner fields (First Name, Last Name, Contact Number)');
+      return;
+    }
+
+    console.log('Creating pawner then saving appraisal:', this.newPawner);
+
+    const pawnerRequest = {
+      firstName: this.newPawner.firstName,
+      lastName: this.newPawner.lastName,
+      contactNumber: this.newPawner.contactNumber,
+      email: this.newPawner.email || '',
+      cityId: this.newPawner.cityId || 0,
+      barangayId: this.newPawner.barangayId || 0,
+      addressDetails: this.newPawner.addressDetails || '',
+      isActive: true
+    };
+
+    this.pawnerService.createPawner(pawnerRequest).subscribe({
+      next: (response) => {
+        if (response.success) {
+          this.selectedPawner = response.data;
+          this.searchQuery = `${this.newPawner.firstName} ${this.newPawner.lastName} - ${this.newPawner.contactNumber}`;
+          this.toastService.showSuccess('Success', 'Pawner created successfully');
+
+          // Update all items with the new pawner ID
+          this.appraisalItems.forEach(item => {
+            item.pawnerId = this.selectedPawner!.id!;
+          });
+
+          // Now save the appraisal items
+          this.saveAppraisal();
         } else {
           this.toastService.showError('Create Error', response.message || 'Failed to create pawner');
         }
@@ -793,8 +991,14 @@ export class AppraiserDashboard implements OnInit {
       return;
     }
 
-    if (!this.selectedPawner) {
-      this.toastService.showError('Error', 'No pawner selected');
+    // If we have items but no pawner selected and the pawner form is open,
+    // we should create the pawner first
+    if (!this.selectedPawner && this.showCreatePawnerForm) {
+      // Create pawner first, then save items
+      this.createPawnerThenSaveAppraisal();
+      return;
+    } else if (!this.selectedPawner) {
+      this.toastService.showWarning('Validation Error', 'Please select or create a pawner first');
       return;
     }
 
@@ -825,7 +1029,7 @@ export class AppraiserDashboard implements OnInit {
         next: (response) => {
           if (response.success) {
             itemsSaved++;
-            
+
             // Add to recent appraisals
             this.recentAppraisals.unshift({
               id: response.data.id,
@@ -848,9 +1052,9 @@ export class AppraiserDashboard implements OnInit {
             if (itemsSaved === totalItems) {
               // Keep only latest 10 recent appraisals
               this.recentAppraisals = this.recentAppraisals.slice(0, 10);
-              
+
               this.toastService.showSuccess('Success', `All ${totalItems} items saved successfully!`);
-              this.resetItemForm();
+              this.resetItemForm(false); // Reset and clear all items
             }
           } else {
             this.toastService.showError('Save Error', response.message || 'Failed to save appraisal item');
@@ -870,22 +1074,30 @@ export class AppraiserDashboard implements OnInit {
     this.toastService.showInfo('Item Removed', 'Item removed from appraisal list');
   }
 
+  // Calculate total value of all items in appraisal
+  calculateTotalValue(): number {
+    return this.appraisalItems.reduce((total, item) => total + (item.estimatedValue || 0), 0);
+  }
+
   // Legacy method for single item save (kept for compatibility)
   saveItemAppraisal() {
     this.addItemToAppraisal();
   }
 
   // Reset Item Form
-  resetItemForm() {
+  resetItemForm(keepItems: boolean = true) {
     this.showItemForm = false;
     this.showCreatePawnerForm = false; // Also close the create pawner form
-    this.selectedPawner = null; // Clear selected pawner
-    this.searchQuery = '';
-    this.searchResults = [];
-    this.appraisalItems = []; // Clear appraisal items
-    
+
+    if (!keepItems) {
+      this.selectedPawner = null; // Clear selected pawner
+      this.searchQuery = '';
+      this.searchResults = [];
+      this.appraisalItems = []; // Clear appraisal items
+    }
+
     this.currentItem = {
-      pawnerId: 0,
+      pawnerId: this.selectedPawner?.id || 0,
       category: '',
       categoryDescription: '',
       description: '',
@@ -952,10 +1164,10 @@ export class AppraiserDashboard implements OnInit {
       this.toastService.showWarning('Selection Required', 'Please select a category first');
       return;
     }
-    
+
     this.newCategoryDescription = '';
     this.showAddCategoryDescriptionModal = true;
-    
+
     // Focus the input field after a short delay
     setTimeout(() => {
       const input = document.querySelector('input[name="newCategoryDescription"]') as HTMLInputElement;
@@ -993,37 +1205,37 @@ export class AppraiserDashboard implements OnInit {
 
     try {
       console.log('Adding category description:', this.newCategoryDescription, 'to category:', selectedCategory.id);
-      
+
       const response = await this.categoriesService.createCategoryDescription(
-        selectedCategory.id, 
+        selectedCategory.id,
         { description: this.newCategoryDescription.trim() }
       ).toPromise();
 
       if (response?.success) {
         this.toastService.showSuccess('Success', 'Category description added successfully');
-        
+
         // Add to the filtered descriptions list immediately
-        this.filteredCategoryDescriptions.push(this.newCategoryDescription.trim());
-        
+        this.filteredCategoryDescriptions.push({ description: this.newCategoryDescription.trim() });
+
         // Also add to the main categoryDescriptions object for future use
         if (!this.categoryDescriptions[this.currentItem.category]) {
           this.categoryDescriptions[this.currentItem.category] = [];
         }
-        this.categoryDescriptions[this.currentItem.category].push(this.newCategoryDescription.trim());
-        
+        this.categoryDescriptions[this.currentItem.category].push({ description: this.newCategoryDescription.trim() });
+
         // Close the modal
         this.closeAddCategoryDescriptionDialog();
-        
+
         // Optionally, reload categories to get fresh data
         // this.loadCategories();
-        
+
       } else {
         throw new Error(response?.message || 'Failed to add category description');
       }
-      
+
     } catch (error: any) {
       console.error('Error adding category description:', error);
-      
+
       if (error.status === 409) {
         this.toastService.showError('Duplicate Entry', 'This description already exists for this category');
       } else {
@@ -1116,21 +1328,21 @@ export class AppraiserDashboard implements OnInit {
 
     console.log(`🔐 [${new Date().toISOString()}] Attempting quick login with:`, loginData.username);
     console.log(`🔗 Login API URL: http://localhost:3000/api/auth/login`);
-    
+
     this.http.post<any>('http://localhost:3000/api/auth/login', loginData).subscribe({
       next: (response) => {
         console.log(`📥 [${new Date().toISOString()}] Login response:`, response);
-        
+
         if (response.success && response.data?.user && response.data?.token) {
           localStorage.setItem('currentUser', JSON.stringify(response.data.user));
           localStorage.setItem('token', response.data.token);
           localStorage.setItem('refreshToken', response.data.refreshToken);
-          
+
           console.log(`✅ [${new Date().toISOString()}] Login successful:`, {
             user: response.data.user,
             tokenPreview: response.data.token.substring(0, 20) + '...'
           });
-          
+
           this.toastService.showSuccess('Login Success', `Logged in as ${response.data.user.firstName} ${response.data.user.lastName}`);
         } else {
           console.error(`❌ [${new Date().toISOString()}] Login failed - invalid response:`, response);
@@ -1161,38 +1373,94 @@ export class AppraiserDashboard implements OnInit {
     return userStr ? JSON.parse(userStr) : null;
   }
 
-  // Add City and Barangay functionality
+  // Add City and Barangay functionality - Modal versions
+  // Properties for the modals
+  showAddCityModal = false;
+  showAddBarangayModal = false;
+  showNewAppraisalModal = false;
+  newCityName = '';
+  newBarangayName = '';
+  isAddingCity = false;
+  isAddingBarangay = false;
+  isCreatingPawner = false;
+  isSavingItem = false;
+
+  // Open the City modal
   showAddCityDialog() {
-    const cityName = prompt('Enter new city name:');
-    if (cityName && cityName.trim()) {
-      this.addNewCity(cityName.trim());
+    this.showAddCityModal = true;
+    this.newCityName = '';
+    setTimeout(() => {
+      const cityInput = document.querySelector('#cityNameInput') as HTMLInputElement;
+      if (cityInput) {
+        cityInput.focus();
+      }
+    }, 100);
+  }
+
+  // Close the City modal
+  closeAddCityModal() {
+    this.showAddCityModal = false;
+  }
+
+  // Submit the new city
+  submitNewCity() {
+    if (this.newCityName && this.newCityName.trim()) {
+      this.isAddingCity = true;
+      this.addNewCity(this.newCityName.trim());
     }
   }
 
+  // Open the Barangay modal
   showAddBarangayDialog() {
     if (!this.newPawner.cityId) {
       this.toastService.showWarning('Validation Error', 'Please select a city first');
       return;
     }
-    
-    const barangayName = prompt('Enter new barangay name:');
-    if (barangayName && barangayName.trim()) {
-      this.addNewBarangay(barangayName.trim(), this.newPawner.cityId);
+
+    this.showAddBarangayModal = true;
+    this.newBarangayName = '';
+    setTimeout(() => {
+      const barangayInput = document.querySelector('#barangayNameInput') as HTMLInputElement;
+      if (barangayInput) {
+        barangayInput.focus();
+      }
+    }, 100);
+  }
+
+  // Close the Barangay modal
+  closeAddBarangayModal() {
+    this.showAddBarangayModal = false;
+  }
+
+  // Submit the new barangay
+  submitNewBarangay() {
+    if (this.newBarangayName && this.newBarangayName.trim() && this.newPawner.cityId) {
+      this.isAddingBarangay = true;
+      this.addNewBarangay(this.newBarangayName.trim(), this.newPawner.cityId);
     }
+  }
+
+  // Get the name of the selected city for display in the barangay modal
+  getSelectedCityName() {
+    const city = this.cities.find(c => c.id === this.newPawner.cityId);
+    return city ? city.name : 'Unknown';
   }
 
   addNewCity(name: string) {
     this.addressService.createCity({ name, isActive: true }).subscribe({
       next: (response) => {
+        this.isAddingCity = false;
         if (response.success) {
           this.cities.push(response.data);
           this.newPawner.cityId = response.data.id;
           this.toastService.showSuccess('Success', `City "${name}" added successfully`);
+          this.showAddCityModal = false;
         } else {
           this.toastService.showError('Error', response.message || 'Failed to add city');
         }
       },
       error: (error) => {
+        this.isAddingCity = false;
         console.error('Error adding city:', error);
         this.toastService.showError('Error', 'Failed to add city');
       }
@@ -1200,21 +1468,51 @@ export class AppraiserDashboard implements OnInit {
   }
 
   addNewBarangay(name: string, cityId: number) {
-    this.addressService.createBarangay({ name, cityId, isActive: true }).subscribe({
+    this.addressService.createBarangay({ name, cityId: cityId, isActive: true }).subscribe({
       next: (response) => {
+        this.isAddingBarangay = false;
         if (response.success) {
           this.filteredBarangays.push(response.data);
           this.newPawner.barangayId = response.data.id;
           this.toastService.showSuccess('Success', `Barangay "${name}" added successfully`);
+          this.showAddBarangayModal = false;
         } else {
           this.toastService.showError('Error', response.message || 'Failed to add barangay');
         }
       },
       error: (error) => {
+        this.isAddingBarangay = false;
         console.error('Error adding barangay:', error);
         this.toastService.showError('Error', 'Failed to add barangay');
       }
     });
+  }
+
+  // Close New Appraisal modal
+  closeNewAppraisalModal() {
+    this.showNewAppraisalModal = false;
+    this.showCreatePawnerForm = false;
+    this.showItemForm = false;
+    this.appraisalItems = [];
+
+    // If we're in a new pawner scenario, also reset the selected pawner
+    if (this.showCreatePawnerForm) {
+      this.selectedPawner = null;
+    }
+
+    // Reset current item form
+    this.currentItem = {
+      pawnerId: 0,
+      category: '',
+      categoryDescription: '',
+      description: '',
+      estimatedValue: 0,
+      notes: '',
+      serialNumber: '',
+      weight: undefined,
+      karat: undefined,
+      status: 'pending'
+    };
   }
 
   // Get interest rate for category

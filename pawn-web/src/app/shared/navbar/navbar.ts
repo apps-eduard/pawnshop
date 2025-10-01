@@ -24,6 +24,7 @@ export class NavbarComponent implements OnInit, OnDestroy {
   userMenuOpen = false;
   isOnLoginPage = false;
   currentDateTime = new Date();
+  currentPageTitle = '';
   private destroy$ = new Subject<void>();
 
   constructor(
@@ -53,8 +54,23 @@ export class NavbarComponent implements OnInit, OnDestroy {
         filter(event => event instanceof NavigationEnd),
         takeUntil(this.destroy$)
       )
-      .subscribe((event: NavigationEnd) => {
+      .subscribe((event: any) => {
         this.isOnLoginPage = event.url === '/login' || event.url.startsWith('/login');
+
+        // Set page title based on URL
+        if (event.url.includes('/appraiser-dashboard')) {
+          this.currentPageTitle = 'Appraiser Dashboard';
+        } else if (event.url.includes('/manager-dashboard')) {
+          this.currentPageTitle = 'Manager Dashboard';
+        } else if (event.url.includes('/auctioneer-dashboard')) {
+          this.currentPageTitle = 'Auctioneer Dashboard';
+        } else if (event.url.includes('/cashier-dashboard')) {
+          this.currentPageTitle = 'Cashier Dashboard';
+        } else if (event.url.includes('/admin-dashboard')) {
+          this.currentPageTitle = 'Admin Dashboard';
+        } else {
+          this.currentPageTitle = '';
+        }
       });
 
     // Set initial state

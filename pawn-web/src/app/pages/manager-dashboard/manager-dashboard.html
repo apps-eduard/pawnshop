@@ -1,42 +1,4 @@
 <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
-  <!-- Header -->
-  <div class="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="flex justify-between items-center py-6">
-        <div class="flex items-center space-x-4">
-          <div class="flex-shrink-0">
-            <img class="h-10 w-10" src="/assets/icons/pawnshop-logo.svg" alt="Logo">
-          </div>
-          <div>
-            <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Manager Dashboard</h1>
-            <p class="text-sm text-gray-500 dark:text-gray-400">
-              {{ currentDateTime | date:'EEEE, MMMM d, y - h:mm a' }}
-            </p>
-          </div>
-        </div>
-
-        <!-- Period Selector -->
-        <div class="flex items-center space-x-3">
-          <select
-            [value]="selectedPeriod"
-            (change)="onPeriodChange($event)"
-            title="Select time period for reports"
-            class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm">
-            <option value="day">Today</option>
-            <option value="week">This Week</option>
-            <option value="month">This Month</option>
-            <option value="year">This Year</option>
-          </select>
-          <button class="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
-            <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-            </svg>
-            Generate Report
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
 
   <!-- Dashboard Content -->
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

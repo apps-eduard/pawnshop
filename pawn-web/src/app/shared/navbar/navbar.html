@@ -25,6 +25,13 @@
           <h1 class="ml-2 text-xl font-bold text-gray-900 dark:text-white">
             <span class="text-yellow-600 dark:text-yellow-400">Gold</span> <span class="text-yellow-500 dark:text-yellow-300">Win</span>
           </h1>
+
+          <!-- Dashboard Title -->
+          <div *ngIf="currentPageTitle" class="ml-4 pl-4 border-l border-gray-300 dark:border-gray-700">
+            <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-200">
+              {{ currentPageTitle }}
+            </h2>
+          </div>
         </div>
 
         <!-- Current DateTime (Desktop only) -->
