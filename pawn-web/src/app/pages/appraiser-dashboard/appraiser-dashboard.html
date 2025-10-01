@@ -237,6 +237,7 @@
                   <button
                     type="button"
                     (click)="showAddCityDialog()"
+                    tabindex="-1"
                     class="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors flex items-center justify-center"
                     title="Add New City">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -261,6 +262,7 @@
                     type="button"
                     (click)="showAddBarangayDialog()"
                     [disabled]="!newPawner.cityId"
+                    tabindex="-1"
                     class="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors flex items-center justify-center disabled:bg-gray-400"
                     title="Add New Barangay">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -354,7 +356,8 @@
                   type="button"
                   (click)="openAddCategoryDescriptionDialog()"
                   class="px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md transition-colors flex items-center justify-center"
-                  title="Add New Category Description">
+                  title="Add New Category Description"
+                  tabindex="-1">
                   <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
                   </svg>
@@ -378,11 +381,13 @@
             <div>
               <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Estimated Value (PHP) <span class="text-red-500">*</span></label>
               <input
-                type="number"
-                step="0.01"
+                type="text"
                 [(ngModel)]="currentItem.estimatedValue"
                 name="estimatedValue"
                 required
+                (input)="onEstimatedValueInput($event)"
+                (focus)="onEstimatedValueFocus($event)"
+                (blur)="onEstimatedValueBlur($event)"
                 class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
                 placeholder="0.00">
             </div>
@@ -759,7 +764,6 @@
 
               <!-- Pawner Form -->
               <div *ngIf="showCreatePawnerForm" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-3">
-            <h4 class="font-medium text-gray-900 dark:text-gray-300 mb-3">Create New Pawner</h4>
             <form (ngSubmit)="createPawner()" class="space-y-4">
               <!-- Name Fields -->
               <div class="grid grid-cols-2 gap-4">
@@ -772,9 +776,11 @@
                     [(ngModel)]="newPawner.firstName"
                     name="firstName"
                     required
+                    [readonly]="selectedPawner"
                     title="Enter pawner's first name"
                     placeholder="First name"
-                    class="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-gray-700 dark:text-white">
+                    [class]="'w-full px-2 py-1 text-sm border rounded-md focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-gray-700 dark:text-white ' + 
+                             (selectedPawner ? 'bg-gray-100 dark:bg-gray-600 border-gray-300 dark:border-gray-600 cursor-not-allowed' : 'border-gray-300 dark:border-gray-600')">
                 </div>
                 <div>
                   <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-0.5">
@@ -785,9 +791,11 @@
                     [(ngModel)]="newPawner.lastName"
                     name="lastName"
                     required
+                    [readonly]="selectedPawner"
                     title="Enter pawner's last name"
                     placeholder="Last name"
-                    class="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-gray-700 dark:text-white text-sm">
+                    [class]="'w-full px-2 py-1 text-sm border rounded-md focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-gray-700 dark:text-white ' + 
+                             (selectedPawner ? 'bg-gray-100 dark:bg-gray-600 border-gray-300 dark:border-gray-600 cursor-not-allowed' : 'border-gray-300 dark:border-gray-600')">
                 </div>
               </div>
 
@@ -802,7 +810,12 @@
                     [(ngModel)]="newPawner.contactNumber"
                     name="contactNumber"
                     required
-                    class="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-gray-700 dark:text-white text-sm"
+                    [readonly]="selectedPawner"
+                    pattern="[0-9+\-\s\(\)]+"
+                    (input)="formatContactNumber($event)"
+                    title="Enter a valid phone number (numbers only with optional +, -, spaces, or parentheses)"
+                    [class]="'w-full px-2 py-1 text-sm border rounded-md focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-gray-700 dark:text-white ' + 
+                             (selectedPawner ? 'bg-gray-100 dark:bg-gray-600 border-gray-300 dark:border-gray-600 cursor-not-allowed' : 'border-gray-300 dark:border-gray-600')"
                     placeholder="+63 900 000 0000">
                 </div>
                 <div>
@@ -811,13 +824,20 @@
                     type="email"
                     [(ngModel)]="newPawner.email"
                     name="email"
-                    class="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-gray-700 dark:text-white text-sm"
-                    placeholder="optional">
+                    [readonly]="selectedPawner"
+                    [class]="'w-full px-2 py-1 border rounded-md focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-gray-700 dark:text-white text-sm ' + 
+                             (selectedPawner ? 'bg-gray-100 dark:bg-gray-600 border-gray-300 dark:border-gray-600 cursor-not-allowed' : '') + ' ' +
+                             (newPawner.email && !isValidEmail(newPawner.email) ? 'border-red-500 dark:border-red-400' : 'border-gray-300 dark:border-gray-600')"
+                    title="Enter a valid email address (optional)"
+                    placeholder="optional@example.com">
+                  <p *ngIf="newPawner.email && !isValidEmail(newPawner.email)" class="text-xs text-red-500 mt-1">
+                    Please enter a valid email address
+                  </p>
                 </div>
               </div>
 
-              <!-- Address Information -->
-              <div class="grid grid-cols-2 gap-4">
+              <!-- Address Information - Hidden for existing pawners -->
+              <div *ngIf="!selectedPawner" class="grid grid-cols-2 gap-4">
                 <div>
                   <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-0.5">
                     City <span class="text-red-500">*</span>
@@ -836,6 +856,7 @@
                     <button
                       type="button"
                       (click)="showAddCityDialog()"
+                      tabindex="-1"
                       class="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors flex items-center justify-center"
                       title="Add New City">
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -860,6 +881,7 @@
                       type="button"
                       (click)="showAddBarangayDialog()"
                       [disabled]="!newPawner.cityId"
+                      tabindex="-1"
                       class="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors flex items-center justify-center disabled:bg-gray-400"
                       title="Add New Barangay">
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -870,7 +892,7 @@
                 </div>
               </div>
 
-              <div>
+              <div *ngIf="!selectedPawner">
                 <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-0.5">Address Details</label>
                 <textarea
                   [(ngModel)]="newPawner.addressDetails"
@@ -884,28 +906,10 @@
             </form>
           </div>
 
-          <!-- Selected Pawner Info (if available) -->
-          <div *ngIf="selectedPawner" class="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800 mb-4">
-            <div class="flex justify-between">
-              <h4 class="font-medium text-green-900 dark:text-green-300">Existing Pawner Selected:</h4>
-              <button
-                (click)="clearSelection()"
-                class="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300"
-                title="Clear selection">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                </svg>
-              </button>
-            </div>
-            <div class="mt-2 text-sm text-green-800 dark:text-green-400">
-              <p class="font-bold">{{ selectedPawner.firstName }} {{ selectedPawner.lastName }}</p>
-              <p><span class="font-semibold">Contact:</span> {{ selectedPawner.contactNumber }}</p>
-              <p *ngIf="selectedPawner.email"><span class="font-semibold">Email:</span> {{ selectedPawner.email }}</p>
-              <p *ngIf="selectedPawner.cityName || selectedPawner.barangayName">
-                <span class="font-semibold">Address:</span> {{ selectedPawner.barangayName ? selectedPawner.barangayName + ', ' : '' }}{{ selectedPawner.cityName }}
-              </p>
-            </div>
-          </div>
+          <!-- Selected Pawner Info (if available) - Hidden as requested -->
+          <!-- <div *ngIf="selectedPawner" class="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800 mb-4">
+            ... Hidden existing pawner card ...
+          </div> -->
 
           </div>
 
@@ -974,10 +978,6 @@
                   class="text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
               Adding item for {{ selectedPawner.firstName }} {{ selectedPawner.lastName }}
             </span>
-            <span *ngIf="!selectedPawner && showCreatePawnerForm"
-                  class="text-sm bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full">
-              Fill pawner details first
-            </span>
           </div>
 
           <!-- Item Form -->
@@ -996,6 +996,7 @@
                   required
                   aria-label="Select item category"
                   title="Select item category"
+                  #categorySelect
                   class="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-gray-700 dark:text-white">
                   <option value="">Select Category</option>
                   <option *ngFor="let category of categories" [value]="category.name">{{ category.name }} ({{ (category.interestRate * 100) | number:'1.0-2' }}% interest)</option>
@@ -1022,6 +1023,7 @@
                       *ngIf="currentItem.category"
                       type="button"
                       (click)="openAddCategoryDescriptionDialog()"
+                      tabindex="-1"
                       title="Add new description"
                       class="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors flex items-center justify-center">
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1055,11 +1057,13 @@
                       <span class="text-gray-500 sm:text-sm">₱</span>
                     </div>
                     <input
-                      type="number"
+                      type="text"
                       [(ngModel)]="currentItem.estimatedValue"
                       name="estimatedValue"
                       required
-                      min="1"
+                      (input)="onEstimatedValueInput($event)"
+                      (focus)="onEstimatedValueFocus($event)"
+                      (blur)="onEstimatedValueBlur($event)"
                       class="w-full pl-7 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
                       placeholder="0.00">
                   </div>
@@ -1124,12 +1128,13 @@
                   placeholder="Condition notes, identifying marks, etc."></textarea>
               </div>
 
-              <!-- Submit Button -->
-              <div class="pt-2">
+              <!-- Item Action Buttons -->
+              <div class="pt-2 grid grid-cols-2 gap-2">
+                <!-- Add Item Button -->
                 <button
                   type="submit"
                   [disabled]="!currentItem.category || !currentItem.estimatedValue || isSavingItem"
-                  class="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white py-1.5 rounded-lg font-medium transition-colors flex items-center justify-center"
+                  class="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white py-1.5 rounded-lg font-medium transition-colors flex items-center justify-center"
                   title="Add item to appraisal">
                   <svg *ngIf="isSavingItem" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -1137,32 +1142,77 @@
                   </svg>
                   <span>{{ isSavingItem ? 'Adding...' : 'Add Item' }}</span>
                 </button>
+                
+                <!-- Reset Item Button -->
+                <button
+                  type="button"
+                  (click)="resetCurrentItem()"
+                  class="bg-gray-500 hover:bg-gray-600 text-white py-1.5 rounded-lg font-medium transition-colors flex items-center justify-center"
+                  title="Reset current item form">
+                  <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                  </svg>
+                  <span>Reset</span>
+                </button>
               </div>
                 </form>
           </div>
 
+          <!-- Validation Status -->
+          <div class="mt-4">
+            <!-- Pawner Info Status -->
+            <div class="flex items-center text-sm mb-2">
+              <div class="flex items-center mr-4">
+                <svg *ngIf="isPawnerFormValid()" class="w-4 h-4 text-green-500 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+                <svg *ngIf="!isPawnerFormValid()" class="w-4 h-4 text-red-500 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+                <span [class]="isPawnerFormValid() ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'">
+                  Pawner Information {{ isPawnerFormValid() ? 'Complete' : 'Required' }}
+                </span>
+              </div>
+              
+              <!-- Items Status -->
+              <div class="flex items-center">
+                <svg *ngIf="hasItemsInTable()" class="w-4 h-4 text-green-500 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+                <svg *ngIf="!hasItemsInTable()" class="w-4 h-4 text-red-500 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+                <span [class]="hasItemsInTable() ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'">
+                  Items Added ({{ appraisalItems.length }})
+                </span>
+              </div>
+            </div>
+          </div>
+
           <!-- Action Buttons -->
-          <div class="mt-6 grid grid-cols-3 gap-4">
+          <div class="mt-4 grid grid-cols-3 gap-4">
             <!-- Save Button -->
             <button
               (click)="saveAppraisal()"
-              [disabled]="!selectedPawner || appraisalItems.length === 0"
-              class="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white py-2 px-4 rounded-lg font-medium transition-colors flex items-center justify-center">
+              [disabled]="!isSaveEnabled()"
+              [title]="!isSaveEnabled() ? 'Please complete pawner information and add at least one item' : 'Save appraisal'"
+              class="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white py-2 px-4 rounded-lg font-medium transition-colors flex items-center justify-center">
               <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
               </svg>
-              <span>Save</span>
+              <span>Save Appraisal</span>
             </button>
 
             <!-- Reset Button -->
             <button
               type="button"
-              (click)="resetItemForm()"
+              (click)="resetAll()"
+              title="Clear all items and input fields"
               class="bg-amber-500 hover:bg-amber-600 text-white py-2 px-4 rounded-lg font-medium transition-colors flex items-center justify-center">
               <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
               </svg>
-              <span>Reset</span>
+              <span>Reset All</span>
             </button>
 
             <!-- Cancel Button -->

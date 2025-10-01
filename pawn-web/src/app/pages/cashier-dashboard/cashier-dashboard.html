@@ -5,16 +5,20 @@
       width: 4px;
       height: 4px;
     }
+
     .custom-scrollbar::-webkit-scrollbar-track {
       background: transparent;
     }
+
     .custom-scrollbar::-webkit-scrollbar-thumb {
       background-color: rgba(156, 163, 175, 0.5);
       border-radius: 20px;
     }
+
     .custom-scrollbar:hover::-webkit-scrollbar-thumb {
       background-color: rgba(156, 163, 175, 0.7);
     }
+
     /* Custom class for fixed max height */
     .max-h-items {
       max-height: calc(100vh - 180px);
@@ -29,50 +33,168 @@
       <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
     </div>
 
+    <!-- Find Pawner Section (positioned at top with reasonable width) -->
+    <div *ngIf="showFindPawnerModal" class="max-w-4xl mx-auto mb-8">
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Find Pawner</h3>
+
+        <div class="space-y-4">
+          <!-- Search Input -->
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center">
+              <svg *ngIf="!isSearching" class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor"
+                viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+              </svg>
+              <div *ngIf="isSearching"
+                class="animate-spin h-5 w-5 border-2 border-primary-600 border-t-transparent rounded-full"></div>
+            </div>
+            <input type="text" [(ngModel)]="searchQuery" (keydown.enter)="searchPawners()" [disabled]="isSearching"
+              class="w-full pl-10 pr-12 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white disabled:opacity-50"
+              placeholder="Search by name, email, or mobile... (Press Enter to search)" #searchInput>
+
+            <!-- Clear Button -->
+            <button *ngIf="searchQuery" (click)="clearSearch()" type="button" title="Clear search"
+              class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+              <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
+
+          <!-- Start New Loan Action -->
+          <div class="mt-4 flex gap-3">
+            <button (click)="startNewLoanWithPawner()"
+              class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg font-medium transition-colors flex items-center justify-center">
+              <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6">
+                </path>
+              </svg>
+              Start New Loan
+            </button>
+            <button (click)="cancelFindPawner()"
+              class="px-6 py-3 bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-300 rounded-lg font-medium transition-colors flex items-center justify-center">
+              <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+              Cancel
+            </button>
+          </div>
+
+          <!-- Search Results -->
+          <div *ngIf="searchResults.length > 0" class="mb-4 max-h-60 overflow-y-auto">
+            <div class="flex items-center justify-between mb-2">
+              <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300">Search Results:</h3>
+              <span class="text-xs text-gray-500 dark:text-gray-400">{{ searchResults.length }} found</span>
+            </div>
+            <div class="space-y-2">
+              <button *ngFor="let pawner of searchResults; let i = index" (click)="selectPawnerForLoan(pawner)"
+                class="w-full text-left p-3 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg transition-colors border border-transparent hover:border-primary-200 dark:hover:border-primary-800">
+                <div class="flex items-center justify-between">
+                  <div class="flex-1">
+                    <div class="font-medium text-gray-900 dark:text-white">{{ pawner.firstName || pawner.first_name }}
+                      {{ pawner.lastName || pawner.last_name }}</div>
+                    <div class="text-sm text-gray-600 dark:text-gray-400">{{ pawner.contactNumber ||
+                      pawner.contact_number || pawner.phone }}</div>
+                    <div class="text-xs text-gray-500 dark:text-gray-500" *ngIf="pawner.email">{{ pawner.email }}</div>
+                  </div>
+                  <div class="text-primary-600 dark:text-primary-400">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                    </svg>
+                  </div>
+                </div>
+              </button>
+            </div>
+            <div class="mt-2 text-xs text-gray-500 dark:text-gray-400 text-center">
+              Click on a pawner to start loan process
+            </div>
+          </div>
+
+          <!-- Selected Pawner -->
+          <div *ngIf="selectedPawner"
+            class="mb-4 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+            <div class="flex justify-between items-start">
+              <div>
+                <h3 class="font-medium text-green-900 dark:text-green-300">Selected Pawner:</h3>
+                <div class="text-sm text-green-800 dark:text-green-400 mt-1">
+                  <div>{{ selectedPawner.firstName || selectedPawner.first_name }} {{ selectedPawner.lastName ||
+                    selectedPawner.last_name }}</div>
+                  <div>{{ selectedPawner.contactNumber || selectedPawner.contact_number || selectedPawner.phone }}</div>
+                  <div *ngIf="selectedPawner.email">{{ selectedPawner.email }}</div>
+                </div>
+              </div>
+              <button (click)="clearSelection()" title="Clear selection"
+                class="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Transaction Types Section -->
-    <div *ngIf="!isLoading" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-8">
+    <div *ngIf="!isLoading"
+      class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-8">
       <!-- <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-6">Transaction Types</h3> -->
 
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <button
-          *ngFor="let type of transactionTypes"
-          (click)="onTransactionTypeSelect(type)"
+        <button *ngFor="let type of transactionTypes" (click)="onTransactionTypeSelect(type)"
           class="flex items-center space-x-3 p-4 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-left hover:shadow-md group">
 
           <div [class]="'p-3 rounded-lg transition-colors ' + type.bgColor">
             <!-- New Loan Icon -->
-            <svg *ngIf="type.icon === 'plus'" class="w-6 h-6" [class]="type.iconColor" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+            <svg *ngIf="type.icon === 'plus'" class="w-6 h-6" [class]="type.iconColor" fill="none" stroke="currentColor"
+              viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6">
+              </path>
             </svg>
 
             <!-- Additional Icon -->
-            <svg *ngIf="type.icon === 'plus-circle'" class="w-6 h-6" [class]="type.iconColor" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            <svg *ngIf="type.icon === 'plus-circle'" class="w-6 h-6" [class]="type.iconColor" fill="none"
+              stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"></path>
             </svg>
 
             <!-- Partial Icon -->
-            <svg *ngIf="type.icon === 'credit-card'" class="w-6 h-6" [class]="type.iconColor" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+            <svg *ngIf="type.icon === 'credit-card'" class="w-6 h-6" [class]="type.iconColor" fill="none"
+              stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
             </svg>
 
             <!-- Redeem Icon -->
-            <svg *ngIf="type.icon === 'check-circle'" class="w-6 h-6" [class]="type.iconColor" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            <svg *ngIf="type.icon === 'check-circle'" class="w-6 h-6" [class]="type.iconColor" fill="none"
+              stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
             </svg>
 
             <!-- Renew Icon -->
-            <svg *ngIf="type.icon === 'refresh'" class="w-6 h-6" [class]="type.iconColor" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+            <svg *ngIf="type.icon === 'refresh'" class="w-6 h-6" [class]="type.iconColor" fill="none"
+              stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15">
+              </path>
             </svg>
 
             <!-- Create Appraisal Icon -->
-            <svg *ngIf="type.icon === 'clipboard-list'" class="w-6 h-6" [class]="type.iconColor" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
+            <svg *ngIf="type.icon === 'clipboard-list'" class="w-6 h-6" [class]="type.iconColor" fill="none"
+              stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4">
+              </path>
             </svg>
           </div>
 
           <div class="flex-1">
-            <p class="font-medium text-gray-900 dark:text-white group-hover:text-primary-600 transition-colors">{{ type.title }}</p>
+            <p class="font-medium text-gray-900 dark:text-white group-hover:text-primary-600 transition-colors">{{
+              type.title }}</p>
             <p class="text-sm text-gray-500 dark:text-gray-400">{{ type.description }}</p>
           </div>
 
@@ -85,6 +207,7 @@
       </div>
     </div>
 
+
     <!-- Main Content: Pending Appraisals (Left) and Recent Transactions (Right) -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
 
@@ -92,7 +215,8 @@
       <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
         <div class="flex items-center justify-between mb-6">
           <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Pending Appraisals</h3>
-          <span class="bg-primary-100 text-primary-800 dark:bg-primary-900 dark:text-primary-200 px-2 py-1 rounded-full text-sm font-medium">
+          <span
+            class="bg-primary-100 text-primary-800 dark:bg-primary-900 dark:text-primary-200 px-2 py-1 rounded-full text-sm font-medium">
             {{ pendingAppraisals.length }} items
           </span>
         </div>
@@ -100,7 +224,9 @@
         <div *ngIf="pendingAppraisals.length === 0" class="text-center py-8">
           <div class="text-gray-400 mb-2">
             <svg class="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4">
+              </path>
             </svg>
           </div>
           <p class="text-gray-500 dark:text-gray-400">No pending appraisals</p>
@@ -108,19 +234,19 @@
         </div>
 
         <div *ngIf="pendingAppraisals.length > 0" class="space-y-4">
-          <div
-            *ngFor="let appraisal of pendingAppraisals"
-            (click)="navigateToTransaction(appraisal)"
+          <div *ngFor="let appraisal of pendingAppraisals" (click)="navigateToTransaction(appraisal)"
             class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition-all cursor-pointer hover:border-primary-300 dark:hover:border-primary-600 hover:bg-gray-50 dark:hover:bg-gray-700/50">
 
             <div class="flex items-start justify-between mb-3">
               <div class="flex-1">
-                <h4 class="font-medium text-gray-900 dark:text-white text-sm hover:text-primary-600 dark:hover:text-primary-400 transition-colors">
+                <h4
+                  class="font-medium text-gray-900 dark:text-white text-sm hover:text-primary-600 dark:hover:text-primary-400 transition-colors">
                   {{ appraisal.pawnerName || 'Unknown Pawner' }}
                 </h4>
                 <p class="text-xs text-gray-500 dark:text-gray-400">ID: {{ appraisal.id }}</p>
               </div>
-              <span class="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 px-2 py-1 rounded-full text-xs font-medium">
+              <span
+                class="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 px-2 py-1 rounded-full text-xs font-medium">
                 Ready
               </span>
             </div>
@@ -128,7 +254,8 @@
             <div class="space-y-2 mb-3">
               <div class="flex justify-between text-sm">
                 <span class="text-gray-500 dark:text-gray-400">Item:</span>
-                <span class="text-gray-900 dark:text-white font-medium">{{ appraisal.itemType || appraisal.description }}</span>
+                <span class="text-gray-900 dark:text-white font-medium">{{ appraisal.itemType || appraisal.description
+                  }}</span>
               </div>
               <div class="flex justify-between text-sm">
                 <span class="text-gray-500 dark:text-gray-400">Category:</span>
@@ -136,7 +263,8 @@
               </div>
               <div class="flex justify-between text-sm">
                 <span class="text-gray-500 dark:text-gray-400">Appraised Value:</span>
-                <span class="text-gray-900 dark:text-white font-semibold">{{ formatCurrency(getAppraisalValue(appraisal)) }}</span>
+                <span class="text-gray-900 dark:text-white font-semibold">{{
+                  formatCurrency(getAppraisalValue(appraisal)) }}</span>
               </div>
             </div>
 
@@ -160,7 +288,8 @@
         </div>
 
         <div class="space-y-4">
-          <div *ngFor="let transaction of recentTransactions" class="flex items-center justify-between py-3 border-b border-gray-100 dark:border-gray-700 last:border-b-0">
+          <div *ngFor="let transaction of recentTransactions"
+            class="flex items-center justify-between py-3 border-b border-gray-100 dark:border-gray-700 last:border-b-0">
             <div class="flex items-center space-x-3">
               <div class="w-10 h-10 bg-primary-100 dark:bg-primary-900 rounded-full flex items-center justify-center">
                 <span class="text-xs font-medium text-primary-600 dark:text-primary-400">
@@ -170,7 +299,8 @@
               <div>
                 <div class="flex items-center space-x-2 mb-1">
                   <p class="text-sm font-medium text-gray-900 dark:text-white">{{ transaction.customer_name }}</p>
-                  <span [class]="'inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ' + getTransactionTypeColor(transaction.type)">
+                  <span
+                    [class]="'inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ' + getTransactionTypeColor(transaction.type)">
                     {{ getTransactionTypeLabel(transaction.type) }}
                   </span>
                 </div>
@@ -179,7 +309,8 @@
             </div>
             <div class="text-right">
               <p class="text-sm font-medium text-gray-900 dark:text-white">{{ formatCurrency(transaction.amount) }}</p>
-              <span [class]="'inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ' + getStatusColor(transaction.status)">
+              <span
+                [class]="'inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ' + getStatusColor(transaction.status)">
                 {{ transaction.status | titlecase }}
               </span>
             </div>
@@ -216,6 +347,8 @@
     </div>
   </div>
 
+
+
   <!-- New Loan Full Page Modal - Optimized for 1366x768 -->
   <div *ngIf="showNewLoanModal" class="fixed inset-0 bg-white dark:bg-gray-900 z-50 overflow-hidden">
     <!-- Ultra Compact Header -->
@@ -226,7 +359,8 @@
             <h1 class="text-lg font-bold text-gray-900 dark:text-white">New Loan</h1>
             <p class="text-xs text-gray-500 dark:text-gray-400 ml-2">Create a new pawn loan</p>
           </div>
-          <button (click)="closeNewLoanModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-2" aria-label="Close modal" title="Close modal">
+          <button (click)="closeNewLoanModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-2"
+            aria-label="Close modal" title="Close modal">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
             </svg>
@@ -242,29 +376,32 @@
         <!-- Left Column: Pawner Information (3 columns) -->
         <div class="lg:col-span-3 flex flex-col h-full space-y-3 overflow-hidden">
           <!-- Ultra Compact Pawner Information -->
-          <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-2 flex-shrink-0">
+          <div
+            class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-2 flex-shrink-0">
             <h3 class="text-xs font-semibold text-gray-900 dark:text-white mb-1">Pawner Information</h3>
             <div class="space-y-1">
               <div>
                 <label class="text-xs font-medium text-gray-700 dark:text-gray-300">Full Name</label>
-                <p class="text-gray-900 dark:text-white font-medium bg-gray-50 dark:bg-gray-700 py-1 px-2 rounded text-xs">
+                <p
+                  class="text-gray-900 dark:text-white font-medium bg-gray-50 dark:bg-gray-700 py-1 px-2 rounded text-xs">
                   {{ selectedPawnerInfo?.fullName || selectedAppraisal?.pawnerName || 'Unknown Pawner' }}
                 </p>
               </div>
               <div>
                 <label class="text-xs font-medium text-gray-700 dark:text-gray-300">Contact Number</label>
-                <p class="text-gray-900 dark:text-white font-medium bg-gray-50 dark:bg-gray-700 py-1 px-2 rounded text-xs">
+                <p
+                  class="text-gray-900 dark:text-white font-medium bg-gray-50 dark:bg-gray-700 py-1 px-2 rounded text-xs">
                   {{ selectedPawnerInfo?.contactNumber ||
-                     selectedAppraisal?.contactNumber ||
-                     selectedAppraisal?.contact_number ||
-                     selectedAppraisal?.phone ||
-                     selectedAppraisal?.mobileNumber ||
-                     selectedAppraisal?.phoneNumber ||
-                     selectedAppraisal?.contact ||
-                     selectedAppraisal?.pawner?.contactNumber ||
-                     selectedAppraisal?.pawner?.phone ||
-                     selectedAppraisal?.pawner?.mobileNo ||
-                     'Not provided' }}
+                  selectedAppraisal?.contactNumber ||
+                  selectedAppraisal?.contact_number ||
+                  selectedAppraisal?.phone ||
+                  selectedAppraisal?.mobileNumber ||
+                  selectedAppraisal?.phoneNumber ||
+                  selectedAppraisal?.contact ||
+                  selectedAppraisal?.pawner?.contactNumber ||
+                  selectedAppraisal?.pawner?.phone ||
+                  selectedAppraisal?.pawner?.mobileNo ||
+                  'Not provided' }}
                 </p>
               </div>
               <!-- Removed Appraisal ID as requested -->
@@ -272,7 +409,8 @@
           </div>
 
           <!-- Ultra Compact Items Display - No Scroll Design -->
-          <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-2 flex-grow overflow-hidden flex flex-col">
+          <div
+            class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-2 flex-grow overflow-hidden flex flex-col">
             <h3 class="text-xs font-semibold text-gray-900 dark:text-white mb-1">Item Information</h3>
 
             <!-- Fixed height item list with auto-hiding scrollbar if needed -->
@@ -282,34 +420,44 @@
                   class="border border-gray-200 dark:border-gray-700 rounded p-1.5 bg-gray-50 dark:bg-gray-800">
                   <div class="flex justify-between items-center">
                     <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Item #{{i+1}}</span>
-                    <span class="text-xs font-semibold text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20 px-1.5 py-0.5 rounded-sm">
+                    <span
+                      class="text-xs font-semibold text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20 px-1.5 py-0.5 rounded-sm">
                       {{ item.category || selectedAppraisal?.category }}
                     </span>
                   </div>
 
-                  <p class="text-xs font-medium text-gray-900 dark:text-white truncate">{{ item.name || item.description || selectedAppraisal?.description }}</p>
+                  <p class="text-xs font-medium text-gray-900 dark:text-white truncate">{{ item.name || item.description
+                    || selectedAppraisal?.description }}</p>
 
                   <div class="flex justify-between items-center">
-                    <span class="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[60%]">{{ item.notes || 'No notes' }}</span>
-                    <span class="text-xs font-bold text-green-600 dark:text-green-400">{{ formatCurrency(item.appraised_value || 0) }}</span>
+                    <span class="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[60%]">{{ item.notes || 'No
+                      notes' }}</span>
+                    <span class="text-xs font-bold text-green-600 dark:text-green-400">{{
+                      formatCurrency(item.appraised_value || 0) }}</span>
                   </div>
                 </div>
               </div>
 
               <!-- If no items array, fall back to the single item from the appraisal -->
-              <div *ngIf="!selectedAppraisal?.items?.length" class="border border-gray-200 dark:border-gray-700 rounded p-3 bg-gray-50 dark:bg-gray-800">
+              <div *ngIf="!selectedAppraisal?.items?.length"
+                class="border border-gray-200 dark:border-gray-700 rounded p-3 bg-gray-50 dark:bg-gray-800">
                 <div class="flex justify-between items-center mb-2">
                   <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Item #1</span>
-                  <span class="text-xs font-semibold text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20 px-2 py-1 rounded">
+                  <span
+                    class="text-xs font-semibold text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20 px-2 py-1 rounded">
                     {{ selectedAppraisal?.category }}
                   </span>
                 </div>
 
-                <p class="text-sm font-medium text-gray-900 dark:text-white">{{ selectedAppraisal?.itemType || selectedAppraisal?.description }}</p>
+                <p class="text-sm font-medium text-gray-900 dark:text-white">{{ selectedAppraisal?.itemType ||
+                  selectedAppraisal?.description }}</p>
 
                 <div class="mt-2 flex justify-between items-center">
-                  <span class="text-xs text-gray-500 dark:text-gray-400">{{ selectedAppraisal?.notes || 'No notes' }}</span>
-                  <span class="text-sm font-bold text-green-600 dark:text-green-400">{{ formatCurrency(selectedAppraisal?.appraisal_value || selectedAppraisal?.appraisedValue || loanData.appraisalValue) }}</span>
+                  <span class="text-xs text-gray-500 dark:text-gray-400">{{ selectedAppraisal?.notes || 'No notes'
+                    }}</span>
+                  <span class="text-sm font-bold text-green-600 dark:text-green-400">{{
+                    formatCurrency(selectedAppraisal?.appraisal_value || selectedAppraisal?.appraisedValue ||
+                    loanData.appraisalValue) }}</span>
                 </div>
               </div>
             </div>
@@ -318,7 +466,8 @@
             <div class="mt-3 border-t border-gray-200 dark:border-gray-700 pt-2">
               <div class="flex justify-between items-center">
                 <span class="text-xs font-medium text-gray-700 dark:text-gray-300">Total Appraisal Value</span>
-                <span class="text-sm font-bold text-gray-900 dark:text-white">{{ formatCurrency(loanData.appraisalValue) }}</span>
+                <span class="text-sm font-bold text-gray-900 dark:text-white">{{ formatCurrency(loanData.appraisalValue)
+                  }}</span>
               </div>
             </div>
           </div>
@@ -346,186 +495,615 @@
               </div>
               <div>
                 <label class="text-xs font-medium text-gray-700 dark:text-gray-300">Matured Date</label>
-                <p class="text-orange-600 dark:text-orange-400 font-bold text-xs bg-orange-50 dark:bg-orange-900/20 py-1 px-1.5 rounded border border-orange-200 dark:border-orange-800">
+                <p
+                  class="text-orange-600 dark:text-orange-400 font-bold text-xs bg-orange-50 dark:bg-orange-900/20 py-1 px-1.5 rounded border border-orange-200 dark:border-orange-800">
                   {{ formatDate(loanData.maturedDate) }}
                 </p>
               </div>
               <div>
                 <label class="text-xs font-medium text-gray-700 dark:text-gray-300">Expired Date</label>
-                <p class="text-red-600 dark:text-red-400 font-bold text-xs bg-red-50 dark:bg-red-900/20 py-1 px-1.5 rounded border border-red-200 dark:border-red-800">
+                <p
+                  class="text-red-600 dark:text-red-400 font-bold text-xs bg-red-50 dark:bg-red-900/20 py-1 px-1.5 rounded border border-red-200 dark:border-red-800">
                   {{ formatDate(loanData.expiredDate) }}
                 </p>
               </div>
             </div>
-          </div>        <!-- Right Column: Loan Computation (6 columns) - Full Height Vertical Layout -->
-        <div class="lg:col-span-6 flex flex-col h-full">
-          <!-- Full Height Loan Computation Card -->
-          <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-2 h-full flex flex-col">
-            <h3 class="text-xs font-semibold text-gray-900 dark:text-white mb-1">Loan Computation</h3>
+          </div> <!-- Right Column: Loan Computation (6 columns) - Full Height Vertical Layout -->
+          <div class="lg:col-span-6 flex flex-col h-full">
+            <!-- Full Height Loan Computation Card -->
+            <div
+              class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-2 h-full flex flex-col">
+              <h3 class="text-xs font-semibold text-gray-900 dark:text-white mb-1">Loan Computation</h3>
 
-            <!-- Full height vertical layout -->
-            <div class="space-y-2 overflow-y-auto flex-grow pr-1 custom-scrollbar">
-              <!-- Appraisal Value -->
-              <div>
-                <label class="text-xs font-medium text-gray-700 dark:text-gray-300">Appraisal Value</label>
-                <p class="text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 py-1 px-1.5 rounded">
-                  {{ formatCurrency(loanData.appraisalValue) }}
-                </p>
-              </div>
-
-              <!-- Principal Loan with validation, autofocus and currency formatting -->
-              <div>
-                <label class="text-xs font-medium text-gray-700 dark:text-gray-300">Principal Loan <span class="text-red-500">*</span></label>
-                <div class="relative">
-                  <span class="absolute inset-y-0 left-0 flex items-center pl-2 text-xs text-gray-500 dark:text-gray-400">₱</span>
-                  <input
-                    #principalInput
-                    type="text"
-                    [(ngModel)]="displayPrincipalLoan"
-                    (blur)="onPrincipalInputBlur()"
-                    (focus)="onPrincipalInputFocus()"
-                    (ngModelChange)="onDisplayPrincipalChange($event)"
-                    [max]="loanData.appraisalValue"
-                    title="Principal Loan Amount"
-                    placeholder="0.00"
-                    autofocus
-                    tabindex="0"
-                    inputmode="decimal"
-                    class="w-full px-2 py-1 pl-5 text-xs font-semibold border border-gray-300 dark:border-gray-600 rounded shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
-                    [class.border-red-500]="principalLoanError">
-                </div>
-                <div *ngIf="principalLoanError" class="mt-1 overflow-hidden">
-                  <p class="text-red-500 text-xs font-medium bg-red-50 dark:bg-red-900/20 px-2 py-1 rounded border border-red-200 dark:border-red-800 animate-pulse"
-                     [@errorAnimation]="'show'">
-                    <i class="fas fa-exclamation-circle mr-1"></i>
-                    {{ principalLoanError }}
+              <!-- Full height vertical layout -->
+              <div class="space-y-2 overflow-y-auto flex-grow pr-1 custom-scrollbar">
+                <!-- Appraisal Value -->
+                <div>
+                  <label class="text-xs font-medium text-gray-700 dark:text-gray-300">Appraisal Value</label>
+                  <p
+                    class="text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 py-1 px-1.5 rounded">
+                    {{ formatCurrency(loanData.appraisalValue) }}
                   </p>
                 </div>
-                <p *ngIf="!principalLoanError" class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  Maximum: {{ formatCurrency(loanData.appraisalValue) }}
-                </p>
-              </div>
 
-              <!-- Interest Rate - Using category-based rates from database -->
-              <div>
-                <div class="flex justify-between items-center">
-                  <label class="text-xs font-medium text-gray-700 dark:text-gray-300">Interest Rate (%)</label>
-                </div>
-                <!-- Single interest rate display (when only one category) -->
-                <div class="flex items-center" *ngIf="loanData.itemsBreakdown && loanData.itemsBreakdown.length <= 1">
-                  <input
-                    type="text"
-                    [value]="loanData.interestRate.toFixed(1) + '%'"
-                    title="Interest Rate Percentage (Fixed based on database value for this category)"
-                    readonly
-                    disabled
-                    class="w-full px-2 py-1 text-xs font-semibold border border-gray-200 dark:border-gray-600 bg-gray-100 dark:bg-gray-700/60 rounded shadow-sm focus:outline-none text-gray-700 dark:text-gray-300 cursor-not-allowed">
-                  <div class="ml-1 px-1.5 py-0.5 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-100 dark:border-blue-800">
-                    <span class="text-[10px] font-medium text-blue-600 dark:text-blue-400">{{ (loanData.itemsBreakdown[0] && loanData.itemsBreakdown[0].category || selectedAppraisal?.category || 'Default') }}</span>
+                <!-- Principal Loan with validation, autofocus and currency formatting -->
+                <div>
+                  <label class="text-xs font-medium text-gray-700 dark:text-gray-300">Principal Loan <span
+                      class="text-red-500">*</span></label>
+                  <div class="relative">
+                    <span
+                      class="absolute inset-y-0 left-0 flex items-center pl-2 text-xs text-gray-500 dark:text-gray-400">₱</span>
+                    <input #principalInput type="text" [(ngModel)]="displayPrincipalLoan"
+                      (blur)="onPrincipalInputBlur()" (focus)="onPrincipalInputFocus()"
+                      (ngModelChange)="onDisplayPrincipalChange($event)" [max]="loanData.appraisalValue"
+                      title="Principal Loan Amount" placeholder="0.00" autofocus tabindex="0" inputmode="decimal"
+                      class="w-full px-2 py-1 pl-5 text-xs font-semibold border border-gray-300 dark:border-gray-600 rounded shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
+                      [class.border-red-500]="principalLoanError">
                   </div>
+                  <div *ngIf="principalLoanError" class="mt-1 overflow-hidden">
+                    <p class="text-red-500 text-xs font-medium bg-red-50 dark:bg-red-900/20 px-2 py-1 rounded border border-red-200 dark:border-red-800 animate-pulse"
+                      [@errorAnimation]="'show'">
+                      <i class="fas fa-exclamation-circle mr-1"></i>
+                      {{ principalLoanError }}
+                    </p>
+                  </div>
+                  <p *ngIf="!principalLoanError" class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Maximum: {{ formatCurrency(loanData.appraisalValue) }}
+                  </p>
                 </div>
-                <!-- Multiple interest rates (when multiple categories) -->
-                <div *ngIf="loanData.itemsBreakdown && loanData.itemsBreakdown.length > 1">
-                  <div class="flex items-center">
-                    <input
-                      type="text"
-                      [value]="loanData.interestRate.toFixed(1) + '%'"
-                      title="Interest Rate Percentage (Weighted average of multiple categories)"
-                      readonly
+
+                <!-- Interest Rate - Using category-based rates from database -->
+                <div>
+                  <div class="flex justify-between items-center">
+                    <label class="text-xs font-medium text-gray-700 dark:text-gray-300">Interest Rate (%)</label>
+                  </div>
+                  <!-- Single interest rate display (when only one category) -->
+                  <div class="flex items-center" *ngIf="loanData.itemsBreakdown && loanData.itemsBreakdown.length <= 1">
+                    <input type="text" [value]="loanData.interestRate.toFixed(1) + '%'"
+                      title="Interest Rate Percentage (Fixed based on database value for this category)" readonly
                       disabled
                       class="w-full px-2 py-1 text-xs font-semibold border border-gray-200 dark:border-gray-600 bg-gray-100 dark:bg-gray-700/60 rounded shadow-sm focus:outline-none text-gray-700 dark:text-gray-300 cursor-not-allowed">
-                    <div class="ml-1 px-1.5 py-0.5 bg-yellow-50 dark:bg-yellow-900/20 rounded border border-yellow-100 dark:border-yellow-800">
-                      <span class="text-[10px] font-medium text-yellow-600 dark:text-yellow-400">Multiple</span>
+                    <div
+                      class="ml-1 px-1.5 py-0.5 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-100 dark:border-blue-800">
+                      <span class="text-[10px] font-medium text-blue-600 dark:text-blue-400">{{
+                        (loanData.itemsBreakdown[0] && loanData.itemsBreakdown[0].category ||
+                        selectedAppraisal?.category || 'Default') }}</span>
                     </div>
                   </div>
-                  <!-- Breakdown of rates per category -->
-                  <div class="mt-1 p-1 bg-gray-50 dark:bg-gray-700/40 rounded border border-gray-200 dark:border-gray-600 text-[9px] max-h-24 overflow-y-auto custom-scrollbar">
-                    <div *ngFor="let item of loanData.itemsBreakdown" class="flex justify-between items-center py-0.5 border-b border-gray-200 dark:border-gray-600 last:border-b-0">
-                      <div class="flex items-center gap-1">
-                        <span class="font-medium text-gray-700 dark:text-gray-300">{{ item.name }}</span>
-                        <span class="px-1 bg-blue-50 dark:bg-blue-900/20 rounded text-blue-600 dark:text-blue-400">{{ item.category }}</span>
+                  <!-- Multiple interest rates (when multiple categories) -->
+                  <div *ngIf="loanData.itemsBreakdown && loanData.itemsBreakdown.length > 1">
+                    <div class="flex items-center">
+                      <input type="text" [value]="loanData.interestRate.toFixed(1) + '%'"
+                        title="Interest Rate Percentage (Weighted average of multiple categories)" readonly disabled
+                        class="w-full px-2 py-1 text-xs font-semibold border border-gray-200 dark:border-gray-600 bg-gray-100 dark:bg-gray-700/60 rounded shadow-sm focus:outline-none text-gray-700 dark:text-gray-300 cursor-not-allowed">
+                      <div
+                        class="ml-1 px-1.5 py-0.5 bg-yellow-50 dark:bg-yellow-900/20 rounded border border-yellow-100 dark:border-yellow-800">
+                        <span class="text-[10px] font-medium text-yellow-600 dark:text-yellow-400">Multiple</span>
                       </div>
+                    </div>
+                    <!-- Breakdown of rates per category -->
+                    <div
+                      class="mt-1 p-1 bg-gray-50 dark:bg-gray-700/40 rounded border border-gray-200 dark:border-gray-600 text-[9px] max-h-24 overflow-y-auto custom-scrollbar">
+                      <div *ngFor="let item of loanData.itemsBreakdown"
+                        class="flex justify-between items-center py-0.5 border-b border-gray-200 dark:border-gray-600 last:border-b-0">
+                        <div class="flex items-center gap-1">
+                          <span class="font-medium text-gray-700 dark:text-gray-300">{{ item.name }}</span>
+                          <span class="px-1 bg-blue-50 dark:bg-blue-900/20 rounded text-blue-600 dark:text-blue-400">{{
+                            item.category }}</span>
+                        </div>
+                        <div class="flex items-center gap-1">
+                          <span class="font-medium">{{ item.interestRate.toFixed(1) }}%</span>
+                          <span class="font-medium text-green-600 dark:text-green-400">{{
+                            formatCurrency(item.appraisalValue) }}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <!-- Removed explanatory text about interest rates -->
+                </div>
+
+                <!-- Advance Interest -->
+                <div>
+                  <div class="flex justify-between">
+                    <label class="text-xs font-medium text-gray-700 dark:text-gray-300">Advance Interest</label>
+                  </div>
+                  <p
+                    class="text-xs font-semibold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 py-1 px-1.5 rounded">
+                    {{ formatCurrency(loanData.advanceInterest) }}
+                  </p>
+
+                  <!-- Interest breakdown for multiple items -->
+                  <div
+                    *ngIf="loanData.itemsBreakdown && loanData.itemsBreakdown.length > 1 && loanData.principalLoan > 0"
+                    class="mt-1 p-1 bg-gray-50 dark:bg-gray-700/40 rounded border border-gray-200 dark:border-gray-600 max-h-24 overflow-y-auto custom-scrollbar">
+                    <div
+                      class="text-[9px] font-medium text-gray-500 dark:text-gray-400 mb-0.5 border-b border-gray-200 dark:border-gray-600 pb-0.5">
+                      Interest breakdown:
+                    </div>
+                    <div *ngFor="let item of loanData.itemsBreakdown"
+                      class="flex justify-between items-center text-[9px] py-0.5">
+                      <div class="flex-grow truncate pr-2">{{ item.name }}</div>
                       <div class="flex items-center gap-1">
-                        <span class="font-medium">{{ item.interestRate.toFixed(1) }}%</span>
-                        <span class="font-medium text-green-600 dark:text-green-400">{{ formatCurrency(item.appraisalValue) }}</span>
+                        <span class="text-gray-700 dark:text-gray-300">{{ formatCurrency(item.principalValue) }}</span>
+                        <span>×</span>
+                        <span class="text-blue-600 dark:text-blue-400">{{ item.interestRate }}%</span>
+                        <span>=</span>
+                        <span class="font-semibold text-red-600 dark:text-red-400">{{
+                          formatCurrency(item.interestAmount) }}</span>
                       </div>
                     </div>
                   </div>
                 </div>
-                <!-- Removed explanatory text about interest rates -->
-              </div>
 
-              <!-- Advance Interest -->
-              <div>
-                <div class="flex justify-between">
-                  <label class="text-xs font-medium text-gray-700 dark:text-gray-300">Advance Interest</label>
-                </div>
-                <p class="text-xs font-semibold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 py-1 px-1.5 rounded">
-                  {{ formatCurrency(loanData.advanceInterest) }}
-                </p>
-
-                <!-- Interest breakdown for multiple items -->
-                <div *ngIf="loanData.itemsBreakdown && loanData.itemsBreakdown.length > 1 && loanData.principalLoan > 0"
-                     class="mt-1 p-1 bg-gray-50 dark:bg-gray-700/40 rounded border border-gray-200 dark:border-gray-600 max-h-24 overflow-y-auto custom-scrollbar">
-                  <div class="text-[9px] font-medium text-gray-500 dark:text-gray-400 mb-0.5 border-b border-gray-200 dark:border-gray-600 pb-0.5">
-                    Interest breakdown:
+                <!-- Service Charge -->
+                <div>
+                  <div class="flex justify-between items-center">
+                    <label class="text-xs font-medium text-gray-700 dark:text-gray-300">Service Charge</label>
                   </div>
-                  <div *ngFor="let item of loanData.itemsBreakdown" class="flex justify-between items-center text-[9px] py-0.5">
-                    <div class="flex-grow truncate pr-2">{{ item.name }}</div>
-                    <div class="flex items-center gap-1">
-                      <span class="text-gray-700 dark:text-gray-300">{{ formatCurrency(item.principalValue) }}</span>
-                      <span>×</span>
-                      <span class="text-blue-600 dark:text-blue-400">{{ item.interestRate }}%</span>
-                      <span>=</span>
-                      <span class="font-semibold text-red-600 dark:text-red-400">{{ formatCurrency(item.interestAmount) }}</span>
-                    </div>
+                  <p
+                    class="text-xs font-semibold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 py-1 px-1.5 rounded">
+                    {{ formatCurrency(loanData.serviceCharge) }}
+                  </p>
+                </div>
+
+                <!-- Net Proceed (Bottom-aligned in the flex container) -->
+                <div class="border-t border-gray-200 dark:border-gray-700 pt-1.5 mt-auto">
+                  <label class="text-xs font-semibold text-gray-700 dark:text-gray-300">Net Proceed</label>
+                  <p
+                    class="text-base font-bold text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 py-1 px-1.5 rounded border border-green-200 dark:border-green-800 text-center">
+                    {{ formatCurrency(loanData.netProceed) }}
+                  </p>
+
+                  <!-- Action Buttons directly under Net Proceed -->
+                  <div class="grid grid-cols-3 gap-2 mt-3">
+                    <button (click)="createLoan()" [disabled]="principalLoanError"
+                      class="col-span-1 px-3 py-1.5 text-xs font-medium text-white bg-green-600 border border-transparent rounded-md shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center">
+                      <i class="fas fa-save mr-1"></i> Save
+                    </button>
+                    <button (click)="resetPrincipalLoan()"
+                      class="col-span-1 px-3 py-1.5 text-xs font-medium text-white bg-blue-500 border border-transparent rounded-md shadow-sm hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 flex items-center justify-center">
+                      <i class="fas fa-redo-alt mr-1"></i> Reset
+                    </button>
+                    <button (click)="closeNewLoanModal()"
+                      class="col-span-1 px-3 py-1.5 text-xs font-medium text-white bg-red-500 border border-transparent rounded-md shadow-sm hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2 flex items-center justify-center">
+                      <i class="fas fa-times mr-1"></i> Cancel
+                    </button>
                   </div>
-                </div>
-              </div>
-
-              <!-- Service Charge -->
-              <div>
-                <div class="flex justify-between items-center">
-                  <label class="text-xs font-medium text-gray-700 dark:text-gray-300">Service Charge</label>
-                </div>
-                <p class="text-xs font-semibold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 py-1 px-1.5 rounded">
-                  {{ formatCurrency(loanData.serviceCharge) }}
-                </p>
-              </div>
-
-              <!-- Net Proceed (Bottom-aligned in the flex container) -->
-              <div class="border-t border-gray-200 dark:border-gray-700 pt-1.5 mt-auto">
-                <label class="text-xs font-semibold text-gray-700 dark:text-gray-300">Net Proceed</label>
-                <p class="text-base font-bold text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 py-1 px-1.5 rounded border border-green-200 dark:border-green-800 text-center">
-                  {{ formatCurrency(loanData.netProceed) }}
-                </p>
-
-                <!-- Action Buttons directly under Net Proceed -->
-                <div class="grid grid-cols-3 gap-2 mt-3">
-                  <button
-                    (click)="createLoan()"
-                    [disabled]="principalLoanError"
-                    class="col-span-1 px-3 py-1.5 text-xs font-medium text-white bg-green-600 border border-transparent rounded-md shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center">
-                    <i class="fas fa-save mr-1"></i> Save
-                  </button>
-                  <button
-                    (click)="resetPrincipalLoan()"
-                    class="col-span-1 px-3 py-1.5 text-xs font-medium text-white bg-blue-500 border border-transparent rounded-md shadow-sm hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 flex items-center justify-center">
-                    <i class="fas fa-redo-alt mr-1"></i> Reset
-                  </button>
-                  <button
-                    (click)="closeNewLoanModal()"
-                    class="col-span-1 px-3 py-1.5 text-xs font-medium text-white bg-red-500 border border-transparent rounded-md shadow-sm hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2 flex items-center justify-center">
-                    <i class="fas fa-times mr-1"></i> Cancel
-                  </button>
                 </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- Footer removed as requested -->
+        <!-- Footer removed as requested -->
+      </div>
+    </div>
+
+    <!-- New Loan Modal -->
+    <div *ngIf="showNewLoanModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-[98vw] h-[98vh] flex flex-col">
+        <!-- Modal Body -->
+        <div class="flex-grow overflow-hidden">
+          <div class="grid grid-cols-2 h-full">
+
+            <!-- LEFT COLUMN: Pawner Info + Added Items -->
+            <div class="p-6 border-r border-gray-200 dark:border-gray-700 h-full flex flex-col">
+
+              <!-- Pawner Information (non-scrollable section) -->
+              <div class="flex-1 pr-2">
+                <h4 class="text-md font-medium text-gray-900 dark:text-white mb-2">Pawner Information</h4>
+
+                <!-- Pawner Form -->
+                <div *ngIf="showCreatePawnerForm"
+                  class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-3">
+                  <form (ngSubmit)="createPawner()" class="space-y-4">
+                    <!-- Name Fields -->
+                    <div class="grid grid-cols-2 gap-4">
+                      <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          First Name <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text" [(ngModel)]="newPawner.firstName" name="firstName" required
+                          [readonly]="selectedPawner" title="Enter pawner's first name" placeholder="First name"
+                          [class]="'w-full px-2 py-1 text-sm border rounded-md focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-gray-700 dark:text-white ' + 
+                                 (selectedPawner ? 'bg-gray-100 dark:bg-gray-600 border-gray-300 dark:border-gray-600 cursor-not-allowed' : 'border-gray-300 dark:border-gray-600')">
+                      </div>
+                      <div>
+                        <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-0.5">
+                          Last Name <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text" [(ngModel)]="newPawner.lastName" name="lastName" required
+                          [readonly]="selectedPawner" title="Enter pawner's last name" placeholder="Last name"
+                          [class]="'w-full px-2 py-1 text-sm border rounded-md focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-gray-700 dark:text-white ' + 
+                                 (selectedPawner ? 'bg-gray-100 dark:bg-gray-600 border-gray-300 dark:border-gray-600 cursor-not-allowed' : 'border-gray-300 dark:border-gray-600')">
+                      </div>
+                    </div>
+
+                    <!-- Contact Information -->
+                    <div class="grid grid-cols-2 gap-4">
+                      <div>
+                        <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-0.5">
+                          Contact Number <span class="text-red-500">*</span>
+                        </label>
+                        <input type="tel" [(ngModel)]="newPawner.contactNumber" name="contactNumber" required
+                          [readonly]="selectedPawner" pattern="[0-9+\-\s\(\)]+" (input)="formatContactNumber($event)"
+                          title="Enter a valid phone number (numbers only with optional +, -, spaces, or parentheses)"
+                          [class]="'w-full px-2 py-1 text-sm border rounded-md focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-gray-700 dark:text-white ' + 
+                                 (selectedPawner ? 'bg-gray-100 dark:bg-gray-600 border-gray-300 dark:border-gray-600 cursor-not-allowed' : 'border-gray-300 dark:border-gray-600')"
+                          placeholder="+63 900 000 0000">
+                      </div>
+                      <div>
+                        <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-0.5">Email</label>
+                        <input type="email" [(ngModel)]="newPawner.email" name="email" [readonly]="selectedPawner"
+                          [class]="'w-full px-2 py-1 border rounded-md focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-gray-700 dark:text-white text-sm ' + 
+                                 (selectedPawner ? 'bg-gray-100 dark:bg-gray-600 border-gray-300 dark:border-gray-600 cursor-not-allowed' : '') + ' ' +
+                                 (newPawner.email && !isValidEmail(newPawner.email) ? 'border-red-500 dark:border-red-400' : 'border-gray-300 dark:border-gray-600')"
+                          title="Enter a valid email address (optional)" placeholder="optional@example.com">
+                        <p *ngIf="newPawner.email && !isValidEmail(newPawner.email)" class="text-xs text-red-500 mt-1">
+                          Please enter a valid email address
+                        </p>
+                      </div>
+                    </div>
+
+                    <!-- Address Information - Hidden for existing pawners -->
+                    <div *ngIf="!selectedPawner" class="grid grid-cols-2 gap-4">
+                      <div>
+                        <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-0.5">
+                          City <span class="text-red-500">*</span>
+                        </label>
+                        <div class="flex gap-2">
+                          <select [(ngModel)]="newPawner.cityId" name="cityId" (change)="onCityChange()" required
+                            title="Select a city"
+                            class="flex-1 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-gray-700 dark:text-white">
+                            <option value="">Select City</option>
+                            <option *ngFor="let city of cities" [value]="city.id">{{ city.name }}</option>
+                          </select>
+                          <button type="button" (click)="showAddCityDialog()" tabindex="-1"
+                            class="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors flex items-center justify-center"
+                            title="Add New City">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4">
+                              </path>
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                      <div>
+                        <label
+                          class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-0.5">Barangay</label>
+                        <div class="flex gap-2">
+                          <select [(ngModel)]="newPawner.barangayId" name="barangayId" [disabled]="!newPawner.cityId"
+                            title="Select a barangay"
+                            class="flex-1 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-gray-700 dark:text-white disabled:bg-gray-100 disabled:dark:bg-gray-600">
+                            <option value="">Select Barangay</option>
+                            <option *ngFor="let barangay of filteredBarangays" [value]="barangay.id">{{ barangay.name }}
+                            </option>
+                          </select>
+                          <button type="button" (click)="showAddBarangayDialog()" [disabled]="!newPawner.cityId"
+                            tabindex="-1"
+                            class="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors flex items-center justify-center disabled:bg-gray-400"
+                            title="Add New Barangay">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4">
+                              </path>
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div *ngIf="!selectedPawner">
+                      <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-0.5">Address
+                        Details</label>
+                      <textarea [(ngModel)]="newPawner.addressDetails" name="addressDetails" rows="2"
+                        class="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                        placeholder="Street, house number, etc."></textarea>
+                    </div>
+                  </form>
+                </div>
+              </div>
+
+              <!-- Added Items (bottom section) -->
+              <div class="mt-3 border-t pt-3">
+                <div class="flex justify-between items-center mb-2">
+                  <h4 class="text-md font-medium text-gray-900 dark:text-white">Added Items</h4>
+                  <div class="text-sm font-medium" *ngIf="loanItems.length > 0">
+                    <span class="text-gray-700 dark:text-gray-300">Total Value:</span>
+                    <span class="font-bold text-gray-900 dark:text-white ml-1">₱{{ calculateTotalValue() |
+                      number:'1.2-2' }}</span>
+                  </div>
+                </div>
+                <div *ngIf="loanItems.length > 0">
+                  <div
+                    class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-3">
+                    <div class="flex flex-col">
+                      <!-- Header -->
+                      <div class="w-full bg-gray-100 dark:bg-gray-700 flex">
+                        <div
+                          class="py-0.5 px-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider w-2/6">
+                          Category</div>
+                        <div
+                          class="py-0.5 px-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider w-2/6">
+                          Description</div>
+                        <div
+                          class="py-0.5 px-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider w-1/6">
+                          Value</div>
+                        <div
+                          class="py-0.5 px-2 text-center text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider w-1/6">
+                          Actions</div>
+                      </div>
+
+                      <!-- Scrollable Body -->
+                      <div class="overflow-y-auto max-h-40 min-h-[5rem]">
+                        <div *ngFor="let item of loanItems; let i = index"
+                          class="border-t border-gray-200 dark:border-gray-700 flex">
+                          <div class="py-0.5 px-2 text-sm text-gray-900 dark:text-white w-2/6">
+                            <span class="font-medium">{{ item.category }}</span>
+                            <span *ngIf="item.categoryDescription"
+                              class="block text-xs text-gray-500 dark:text-gray-400">{{ item.categoryDescription
+                              }}</span>
+                          </div>
+                          <div class="py-0.5 px-2 text-sm text-gray-900 dark:text-white w-2/6">{{ item.description }}
+                          </div>
+                          <div class="py-0.5 px-2 text-sm text-gray-900 dark:text-white w-1/6">₱{{ item.estimatedValue |
+                            number:'1.2-2' }}</div>
+                          <div class="py-0.5 px-2 text-center w-1/6">
+                            <button (click)="removeItemFromLoan(i)" class="text-red-500 hover:text-red-700"
+                              title="Remove Item">
+                              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16">
+                                </path>
+                              </svg>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Footer (empty line for visual separation) -->
+                      <div class="border-t border-gray-200 dark:border-gray-700 py-0.5"></div>
+                    </div>
+
+                    <!-- Warning message if no pawner selected -->
+                    <div *ngIf="!selectedPawner && !showCreatePawnerForm"
+                      class="mt-2 p-2 bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded-md">
+                      <p class="text-xs text-yellow-700 dark:text-yellow-300">Please select or create a pawner before
+                        saving these items.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- No items message -->
+                <div *ngIf="loanItems.length === 0"
+                  class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 text-center text-gray-500 dark:text-gray-400 mt-3">
+                  <p>No items added yet. Add items from the form on the right.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- RIGHT COLUMN: Item Information -->
+            <div class="p-6 overflow-y-auto h-full">
+              <div class="flex justify-between items-center mb-2">
+                <h4 class="text-md font-medium text-gray-900 dark:text-white">Item Information</h4>
+                <span *ngIf="selectedPawner" class="text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                  Adding item for {{ selectedPawner.firstName }} {{ selectedPawner.lastName }}
+                </span>
+              </div>
+
+              <!-- Item Form -->
+              <div *ngIf="showItemForm"
+                class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-3 overflow-y-auto">
+                <form (ngSubmit)="saveItemLoan()" class="space-y-2">
+                  <!-- Category -->
+                  <div>
+                    <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-0.5">
+                      Category <span class="text-red-500">*</span>
+                    </label>
+                    <select [(ngModel)]="currentItem.category" name="category" (change)="onCategoryChange()" required
+                      aria-label="Select item category" title="Select item category" #categorySelect
+                      class="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-gray-700 dark:text-white">
+                      <option value="">Select Category</option>
+                      <option *ngFor="let category of categories" [value]="category.name">{{ category.name }} ({{
+                        (category.interestRate * 100) | number:'1.0-2' }}% interest)</option>
+                    </select>
+                  </div>
+
+                  <!-- Category Description -->
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-0.5">
+                        Description <span class="text-red-500">*</span>
+                      </label>
+                      <div class="flex gap-2">
+                        <select [(ngModel)]="currentItem.categoryDescription" name="categoryDescription"
+                          [disabled]="!currentItem.category || isLoadingDescriptions"
+                          aria-label="Select item description"
+                          class="flex-1 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-gray-700 dark:text-white disabled:bg-gray-100 dark:disabled:bg-gray-600 disabled:cursor-not-allowed">
+                          <option value="">{{ isLoadingDescriptions ? 'Loading descriptions...' : (currentItem.category
+                            ? (filteredCategoryDescriptions.length ? 'Select Description' : 'No descriptions available')
+                            : 'Select a category first') }}</option>
+                          <option *ngFor="let desc of filteredCategoryDescriptions" [value]="desc.description">{{
+                            desc.description }}</option>
+                        </select>
+                        <button *ngIf="currentItem.category" type="button" (click)="openAddCategoryDescriptionDialog()"
+                          tabindex="-1" title="Add new description"
+                          class="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors flex items-center justify-center">
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4">
+                            </path>
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-0.5">
+                        Detailed Description
+                      </label>
+                      <input type="text" [(ngModel)]="currentItem.description" name="description"
+                        class="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                        placeholder="e.g., 14K Gold Ring with Ruby">
+                    </div>
+                  </div>
+
+                  <!-- Additional Fields -->
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-0.5">
+                        Estimated Value <span class="text-red-500">*</span>
+                      </label>
+                      <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                          <span class="text-xs text-gray-500 dark:text-gray-400">₱</span>
+                        </div>
+                        <input type="text" [(ngModel)]="currentItem.estimatedValue" name="estimatedValue" required
+                          (input)="onEstimatedValueInput($event)" (focus)="onEstimatedValueFocus($event)"
+                          (blur)="onEstimatedValueBlur($event)"
+                          class="w-full px-2 py-1 pl-8 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                          placeholder="0.00">
+                      </div>
+                      <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Appraised value in Philippine Peso</p>
+                    </div>
+
+                    <div>
+                      <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-0.5">
+                        Serial Number
+                      </label>
+                      <input type="text" [(ngModel)]="currentItem.serialNumber" name="serialNumber"
+                        class="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                        placeholder="Enter serial number if available">
+                    </div>
+                  </div>
+
+                  <!-- Jewelry Specific Fields -->
+                  <div *ngIf="currentItem.category && currentItem.category.toLowerCase().includes('jewelry')"
+                    class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div>
+                      <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-0.5">
+                        Weight (grams)
+                      </label>
+                      <input type="number" step="0.001" [(ngModel)]="currentItem.weight" name="weight"
+                        class="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                        placeholder="0.000">
+                    </div>
+                    <div>
+                      <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-0.5">
+                        Karat
+                      </label>
+                      <input type="number" [(ngModel)]="currentItem.karat" name="karat"
+                        class="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                        placeholder="Enter karat (e.g., 18, 21, 24)">
+                    </div>
+                  </div>
+
+                  <!-- Notes -->
+                  <div>
+                    <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-0.5">
+                      Notes
+                    </label>
+                    <textarea [(ngModel)]="currentItem.notes" name="notes" rows="2"
+                      class="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                      placeholder="Notes about condition, loan reasoning, or special considerations"></textarea>
+                  </div>
+
+                  <!-- Item Action Buttons -->
+                  <div class="pt-2 grid grid-cols-2 gap-2">
+                    <!-- Add Item Button -->
+                    <button type="button" (click)="addItemToLoan()"
+                      class="px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center">
+                      <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                      </svg>
+                      Add Item
+                    </button>
+
+                    <!-- Reset Item Button -->
+                    <button type="button" (click)="resetItemForm()"
+                      class="px-3 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center">
+                      <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15">
+                        </path>
+                      </svg>
+                      Reset
+                    </button>
+                  </div>
+                </form>
+              </div>
+
+              <!-- Validation Status -->
+              <div class="mt-4">
+                <!-- Pawner Info Status -->
+                <div class="flex items-center text-sm mb-2">
+                  <div class="flex items-center mr-4">
+                    <svg *ngIf="selectedPawner || showCreatePawnerForm" class="w-4 h-4 text-green-500 mr-1" fill="none"
+                      stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    <svg *ngIf="!selectedPawner && !showCreatePawnerForm" class="w-4 h-4 text-red-500 mr-1" fill="none"
+                      stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                      </path>
+                    </svg>
+                    <span [class]="(selectedPawner || showCreatePawnerForm) ? 'text-green-600' : 'text-red-600'">
+                      Pawner Info: {{ (selectedPawner || showCreatePawnerForm) ? 'Ready' : 'Required' }}
+                    </span>
+                  </div>
+                  <div class="flex items-center">
+                    <svg *ngIf="loanItems.length > 0" class="w-4 h-4 text-green-500 mr-1" fill="none"
+                      stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    <svg *ngIf="loanItems.length === 0" class="w-4 h-4 text-red-500 mr-1" fill="none"
+                      stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                      </path>
+                    </svg>
+                    <span [class]="loanItems.length > 0 ? 'text-green-600' : 'text-red-600'">
+                      Items: {{ loanItems.length > 0 ? loanItems.length + ' added' : 'None added' }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Action Buttons -->
+              <div class="mt-4 grid grid-cols-3 gap-4">
+                <!-- Save Button -->
+                <button (click)="saveLoan()" [disabled]="!canSaveLoan()"
+                  class="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors flex items-center justify-center">
+                  <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4">
+                    </path>
+                  </svg>
+                  Save Loan ({{ loanItems.length }} items)
+                </button>
+
+                <!-- Reset Button -->
+                <button (click)="resetLoanForm()"
+                  class="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg font-medium transition-colors flex items-center justify-center">
+                  <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15">
+                    </path>
+                  </svg>
+                  Reset All
+                </button>
+
+                <!-- Close Button -->
+                <button (click)="closeNewLoanModal()"
+                  class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium transition-colors flex items-center justify-center">
+                  <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                    </path>
+                  </svg>
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
-</div>

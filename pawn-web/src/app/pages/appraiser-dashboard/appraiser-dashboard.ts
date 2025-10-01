@@ -65,6 +65,7 @@ interface Barangay {
 })
 export class AppraiserDashboard implements OnInit {
   @ViewChild('searchInput') searchInput!: ElementRef<HTMLInputElement>;
+  @ViewChild('categorySelect') categorySelect!: ElementRef<HTMLSelectElement>;
 
   currentDateTime = new Date();
   isLoading = false;
@@ -603,7 +604,25 @@ export class AppraiserDashboard implements OnInit {
     this.selectedPawner = pawner;
     this.searchResults = [];
     this.searchQuery = `${pawner.firstName} ${pawner.lastName} - ${pawner.contactNumber}`;
-    this.showCreatePawnerForm = false;
+    
+    // Populate the form fields with selected pawner data
+    this.newPawner = {
+      firstName: pawner.firstName || '',
+      lastName: pawner.lastName || '',
+      contactNumber: pawner.contactNumber || '',
+      email: pawner.email || '',
+      cityId: pawner.cityId || 0,
+      barangayId: pawner.barangayId || 0,
+      addressDetails: pawner.addressDetails || ''
+    };
+
+    // Show the pawner form so user can see and edit the details
+    this.showCreatePawnerForm = true;
+
+    // Load barangays for the selected city if cityId exists
+    if (pawner.cityId) {
+      this.onCityChange();
+    }
 
     // Open the New Appraisal modal for the selected pawner
     this.showNewAppraisalModal = true;
@@ -627,6 +646,13 @@ export class AppraiserDashboard implements OnInit {
       karat: undefined,
       status: 'pending'
     };
+
+    // Auto-focus on category select after modal opens
+    setTimeout(() => {
+      if (this.categorySelect && this.categorySelect.nativeElement) {
+        this.categorySelect.nativeElement.focus();
+      }
+    }, 300);
 
     this.toastService.showSuccess('Pawner Selected', `Starting new appraisal for ${pawner.firstName} ${pawner.lastName}`);
   }
@@ -673,13 +699,14 @@ export class AppraiserDashboard implements OnInit {
     this.appraisalItems = []; // Clear any existing items
     this.showItemForm = true;
 
-    // Auto-focus First Name field after forms are shown
+    // Auto-focus First Name field in the modal after forms are shown
     setTimeout(() => {
-      const firstNameInput = document.querySelector('input[name="firstName"]') as HTMLInputElement;
-      if (firstNameInput) {
-        firstNameInput.focus();
+      // Target the firstName input specifically within the modal
+      const modalFirstNameInput = document.querySelector('.fixed.inset-0 input[name="firstName"]') as HTMLInputElement;
+      if (modalFirstNameInput) {
+        modalFirstNameInput.focus();
       }
-    }, 100);
+    }, 200);
   }
 
   // Show Create Pawner Form (keeping for backward compatibility)
@@ -1053,8 +1080,26 @@ export class AppraiserDashboard implements OnInit {
               // Keep only latest 10 recent appraisals
               this.recentAppraisals = this.recentAppraisals.slice(0, 10);
 
-              this.toastService.showSuccess('Success', `All ${totalItems} items saved successfully!`);
-              this.resetItemForm(false); // Reset and clear all items
+              // Show success message with proper details
+              const pawnerName = this.selectedPawner ? `${this.selectedPawner.firstName} ${this.selectedPawner.lastName}` : 'Customer';
+              const totalValue = this.formatCurrency(this.calculateTotalValue());
+              
+              this.toastService.showSuccess(
+                'Appraisal Saved Successfully!', 
+                `${totalItems} item${totalItems > 1 ? 's' : ''} appraised for ${pawnerName} with total value of ${totalValue}. Status: Pending approval.`
+              );
+
+              // Clear selected pawner
+              this.selectedPawner = null;
+              this.searchQuery = '';
+              this.searchResults = [];
+              
+              // Close modal and reset everything
+              this.closeNewAppraisalModal();
+              this.resetAll(); // Clear everything for next appraisal
+              
+              // Refresh dashboard data to show updated counts and recent appraisals
+              this.loadRecentAppraisals();
             }
           } else {
             this.toastService.showError('Save Error', response.message || 'Failed to save appraisal item');
@@ -1077,6 +1122,57 @@ export class AppraiserDashboard implements OnInit {
   // Calculate total value of all items in appraisal
   calculateTotalValue(): number {
     return this.appraisalItems.reduce((total, item) => total + (item.estimatedValue || 0), 0);
+  }
+
+  // Validation methods
+  isPawnerFormValid(): boolean {
+    if (this.selectedPawner) {
+      return true; // If we have a selected pawner, form is valid
+    }
+    
+    if (this.showCreatePawnerForm) {
+      return !!(
+        this.newPawner.firstName?.trim() &&
+        this.newPawner.lastName?.trim() &&
+        this.newPawner.contactNumber?.trim() &&
+        this.newPawner.cityId
+      );
+    }
+    
+    return false;
+  }
+
+  hasItemsInTable(): boolean {
+    return this.appraisalItems.length > 0;
+  }
+
+  isSaveEnabled(): boolean {
+    return this.isPawnerFormValid() && this.hasItemsInTable();
+  }
+
+  // Auto-focus on category after adding item
+  focusOnCategory() {
+    setTimeout(() => {
+      if (this.categorySelect?.nativeElement) {
+        this.categorySelect.nativeElement.focus();
+      }
+    }, 100);
+  }
+
+  // Format and validate contact number
+  formatContactNumber(event: any) {
+    let value = event.target.value;
+    // Remove all non-numeric characters except +, -, spaces, and parentheses
+    value = value.replace(/[^\d+\-\s\(\)]/g, '');
+    event.target.value = value;
+    this.newPawner.contactNumber = value;
+  }
+
+  // Validate email format
+  isValidEmail(email: string): boolean {
+    if (!email) return true; // Email is optional
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
   }
 
   // Legacy method for single item save (kept for compatibility)
@@ -1111,6 +1207,80 @@ export class AppraiserDashboard implements OnInit {
     this.filteredCategoryDescriptions = [];
   }
 
+  // Reset everything - clear table and all input fields
+  resetAll() {
+    // Clear all appraisal items (table)
+    this.appraisalItems = [];
+    
+    // Always clear pawner selection and form when resetAll is called
+    this.selectedPawner = null;
+    this.searchQuery = '';
+    this.searchResults = [];
+    
+    // Reset new pawner form completely
+    this.newPawner = {
+      firstName: '',
+      lastName: '',
+      contactNumber: '',
+      email: '',
+      cityId: undefined,
+      barangayId: undefined,
+      addressDetails: ''
+    };
+    
+    // Reset current item form
+    this.currentItem = {
+      pawnerId: 0,
+      category: '',
+      categoryDescription: '',
+      description: '',
+      estimatedValue: 0,
+      notes: '',
+      serialNumber: '',
+      weight: undefined,
+      karat: undefined,
+      status: 'pending'
+    };
+    
+    // Clear all filters and selections
+    this.filteredCategoryDescriptions = [];
+    this.filteredBarangays = [...this.barangays];
+    
+    // Force Angular to refresh the view and focus on category field
+    setTimeout(() => {
+      // This ensures the form fields are visually cleared and then focus on category
+      if (this.categorySelect?.nativeElement) {
+        this.categorySelect.nativeElement.focus();
+      }
+    }, 100);
+    
+    this.toastService.showInfo('Reset Complete', 'All fields and items have been cleared');
+  }
+
+  // Reset only the current item form (not the pawner info or table)
+  resetCurrentItem() {
+    this.currentItem = {
+      pawnerId: this.selectedPawner?.id || 0,
+      category: '',
+      categoryDescription: '',
+      description: '',
+      estimatedValue: 0,
+      notes: '',
+      serialNumber: '',
+      weight: undefined,
+      karat: undefined,
+      status: 'pending'
+    };
+    
+    // Clear category descriptions
+    this.filteredCategoryDescriptions = [];
+    
+    // Focus back to category field
+    this.focusOnCategory();
+    
+    this.toastService.showInfo('Item Form Reset', 'Current item form has been cleared');
+  }
+
   // Get total estimated value of all items in appraisal
   getTotalEstimatedValue(): number {
     return this.appraisalItems.reduce((total, item) => total + (item.estimatedValue || 0), 0);
@@ -1131,6 +1301,61 @@ export class AppraiserDashboard implements OnInit {
       style: 'currency',
       currency: 'PHP'
     }).format(amount);
+  }
+
+  // Format number with commas for display (without currency symbol)
+  formatNumberWithCommas(value: number): string {
+    return new Intl.NumberFormat('en-PH', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(value);
+  }
+
+  // Handle input formatting for estimated value
+  onEstimatedValueInput(event: any): void {
+    const input = event.target;
+    let value = input.value.replace(/[^0-9.]/g, ''); // Remove non-numeric characters except decimal
+    
+    // Ensure only one decimal point
+    const decimalCount = (value.match(/\./g) || []).length;
+    if (decimalCount > 1) {
+      value = value.substring(0, value.lastIndexOf('.'));
+    }
+    
+    // Update the model value
+    const numericValue = parseFloat(value) || 0;
+    this.currentItem.estimatedValue = numericValue;
+    
+    // Format for display
+    if (numericValue > 0) {
+      const formatted = this.formatNumberWithCommas(numericValue);
+      input.value = formatted;
+    }
+  }
+
+  // Handle blur event to ensure proper formatting
+  onEstimatedValueBlur(event: any): void {
+    const input = event.target;
+    const numericValue = this.currentItem.estimatedValue || 0;
+    
+    if (numericValue > 0) {
+      input.value = this.formatNumberWithCommas(numericValue);
+    } else {
+      input.value = '0.00';
+      this.currentItem.estimatedValue = 0;
+    }
+  }
+
+  // Handle focus event to show raw number for editing
+  onEstimatedValueFocus(event: any): void {
+    const input = event.target;
+    const numericValue = this.currentItem.estimatedValue || 0;
+    
+    if (numericValue > 0) {
+      input.value = numericValue.toString();
+    } else {
+      input.value = '';
+    }
   }
 
   // Get Item Type Category
@@ -1495,10 +1720,10 @@ export class AppraiserDashboard implements OnInit {
     this.showItemForm = false;
     this.appraisalItems = [];
 
-    // If we're in a new pawner scenario, also reset the selected pawner
-    if (this.showCreatePawnerForm) {
-      this.selectedPawner = null;
-    }
+    // Always clear selected pawner when closing modal
+    this.selectedPawner = null;
+    this.searchQuery = '';
+    this.searchResults = [];
 
     // Reset current item form
     this.currentItem = {
@@ -1513,6 +1738,9 @@ export class AppraiserDashboard implements OnInit {
       karat: undefined,
       status: 'pending'
     };
+
+    // Refresh dashboard data to show updated counts and recent appraisals
+    this.loadRecentAppraisals();
   }
 
   // Get interest rate for category

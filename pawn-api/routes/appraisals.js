@@ -200,6 +200,107 @@ router.get('/', async (req, res) => {
   }
 });
 
-module.exports = router;
+// Create new appraisal
+router.post('/', async (req, res) => {
+  try {
+    const {
+      pawnerId,
+      category,
+      categoryDescription,
+      description,
+      serialNumber,
+      weight,
+      karat,
+      estimatedValue,
+      interestRate,
+      notes
+    } = req.body;
+
+    console.log(`💎 [${new Date().toISOString()}] APPRAISAL CREATE - Creating new appraisal for pawner ${pawnerId} - User: ${req.user.username}`);
+    console.log(`📋 [APPRAISAL DATA] Category: ${category}, Value: ₱${estimatedValue}, Description: ${description}`);
+
+    // Validation
+    if (!pawnerId || !category || !description || !estimatedValue) {
+      console.log('❌ [APPRAISAL VALIDATION] Missing required fields');
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required fields: pawnerId, category, description, and estimatedValue are required'
+      });
+    }
+
+    // Verify pawner exists
+    const pawnerCheck = await pool.query('SELECT id FROM pawners WHERE id = $1', [pawnerId]);
+    if (pawnerCheck.rows.length === 0) {
+      console.log(`❌ [APPRAISAL VALIDATION] Pawner with ID ${pawnerId} not found`);
+      return res.status(404).json({
+        success: false,
+        message: 'Pawner not found'
+      });
+    }
+
+    // Insert new appraisal with 'pending' status
+    const insertQuery = `
+      INSERT INTO appraisals (
+        pawner_id, appraiser_id, item_category, item_category_description, 
+        item_type, description, serial_number, weight, karat, 
+        estimated_value, condition_notes, status, created_at, updated_at
+      ) VALUES (
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'pending', 
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+      ) RETURNING *
+    `;
+
+    const values = [
+      pawnerId,
+      req.user.id, // appraiser_id from authenticated user
+      category,
+      categoryDescription || null,
+      description, // Using description as item_type for compatibility
+      description, // description field
+      serialNumber || null,
+      weight || null,
+      karat || null,
+      parseFloat(estimatedValue),
+      notes || null
+    ];
+
+    const result = await pool.query(insertQuery, values);
+    const newAppraisal = result.rows[0];
+
+    console.log(`✅ [APPRAISAL SUCCESS] Created appraisal ID: ${newAppraisal.id} with status: ${newAppraisal.status}`);
+
+    // Format response to match expected interface
+    const responseData = {
+      id: newAppraisal.id,
+      pawnerId: newAppraisal.pawner_id,
+      appraiserId: newAppraisal.appraiser_id,
+      category: newAppraisal.item_category,
+      categoryDescription: newAppraisal.item_category_description,
+      description: newAppraisal.description,
+      serialNumber: newAppraisal.serial_number,
+      weight: newAppraisal.weight,
+      karat: newAppraisal.karat,
+      estimatedValue: parseFloat(newAppraisal.estimated_value),
+      notes: newAppraisal.condition_notes,
+      status: newAppraisal.status,
+      createdAt: newAppraisal.created_at,
+      updatedAt: newAppraisal.updated_at
+    };
+
+    res.status(201).json({
+      success: true,
+      message: 'Appraisal created successfully with pending status',
+      data: responseData
+    });
+
+  } catch (error) {
+    console.error('❌ [Appraisals API] Error creating appraisal:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error creating appraisal',
+      error: error.message
+    });
+  }
+});
 
 module.exports = router;

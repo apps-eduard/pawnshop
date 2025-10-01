@@ -82,10 +82,29 @@ export class CashierDashboard implements OnInit {
     expiredDate: new Date(),
     appraisalValue: 0,
     principalLoan: 0,
+    principalAmount: '', // New property for the modal
     interestRate: 3.5, // Primary interest rate for display
     advanceInterest: 0,
     serviceCharge: 0,
     netProceed: 0,
+    // New calculated properties for the modal
+    calculatedPrincipal: 0,
+    calculatedInterest: 0,
+    calculatedServiceCharge: 0,
+    calculatedNetProceed: 0,
+    loanTermValue: 30,
+    loanTermUnit: 'days',
+    dueDate: new Date(),
+    notes: '',
+    collateralItems: [] as Array<{
+      category: string;
+      categoryDescription?: string;
+      description: string;
+      estimatedValue: number;
+      weight?: number;
+      karat?: number;
+      serialNumber?: string;
+    }>,
     // For multiple items with different categories
     itemsBreakdown: [] as Array<{
       name: string;
@@ -100,6 +119,46 @@ export class CashierDashboard implements OnInit {
   isEditingPrincipal = false; // Track if user is actively editing
   auditTrail: any[] = [];
   principalLoanError = '';
+
+  // Find Pawner Modal Properties (similar to appraisal dashboard)
+  showFindPawnerModal = false;
+  searchResults: any[] = [];
+  isSearching = false;
+  isLoggedIn = false;
+  showCreatePawnerForm = false;
+  showStartNewLoanModal = false;
+  isEditMode = false; // Track if we're editing an existing appraisal or creating new
+
+  // New Loan Modal specific properties (missing from template)
+  loanItems: any[] = []; // Items added to the loan
+  showItemForm = true; // Show item form by default
+  currentItem = {
+    category: '',
+    categoryDescription: '',
+    description: '',
+    estimatedValue: 0,
+    weight: 0,
+    karat: 0,
+    serialNumber: '',
+    notes: ''
+  };
+  isLoadingDescriptions = false;
+  filteredCategoryDescriptions: any[] = [];
+
+  // Pawner form for creating new pawners
+  newPawner = {
+    firstName: '',
+    lastName: '',
+    contactNumber: '',
+    email: '',
+    cityId: undefined as number | undefined,
+    barangayId: undefined as number | undefined,
+    addressDetails: ''
+  };
+
+  // ViewChild references for auto-focus
+  @ViewChild('searchInput') searchInput!: ElementRef;
+  @ViewChild('firstNameInput') firstNameInput!: ElementRef;
 
   // Category interest rates configuration
   categoryInterestRates: { [key: string]: number } = {
@@ -232,6 +291,10 @@ export class CashierDashboard implements OnInit {
 
     // Load categories to get interest rates from database
     this.loadCategories();
+    
+    // Load cities and barangays for pawner form
+    this.loadCities();
+    this.loadBarangays();
   }
 
   private loadDashboardData() {
@@ -411,6 +474,37 @@ export class CashierDashboard implements OnInit {
     console.log('Items breakdown prepared:', this.loanData.itemsBreakdown);
   }
 
+  populateLoanItemsFromAppraisal(appraisal: any) {
+    // Clear existing loan items
+    this.loanItems = [];
+
+    if (appraisal.items?.length) {
+      // Multiple items case
+      appraisal.items.forEach((item: any, index: number) => {
+        this.loanItems.push({
+          category: item.category || appraisal.category || 'default',
+          categoryDescription: item.categoryDescription || item.description || `Item #${index + 1}`,
+          description: item.description || item.name || `Item #${index + 1}`,
+          estimatedValue: item.appraised_value || item.estimatedValue || 0,
+          condition: item.condition || 'Good',
+          remarks: item.remarks || ''
+        });
+      });
+    } else {
+      // Single item case
+      this.loanItems.push({
+        category: appraisal.category || 'default',
+        categoryDescription: appraisal.itemType || appraisal.description || 'Item',
+        description: appraisal.description || appraisal.itemName || 'Item',
+        estimatedValue: this.getAppraisalValue(appraisal),
+        condition: appraisal.condition || 'Good',
+        remarks: appraisal.remarks || ''
+      });
+    }
+
+    console.log('Loan items populated from appraisal:', this.loanItems);
+  }
+
   getCardColorClasses(color: string): string {
     const colorMap: { [key: string]: string } = {
       blue: 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400',
@@ -506,6 +600,9 @@ export class CashierDashboard implements OnInit {
 
     if (transactionType.id === 'create_appraisal') {
       this.enterAppraisalMode();
+    } else if (transactionType.id === 'new_loan') {
+      // Show Find Pawner modal for New Loan
+      this.startNewLoan();
     } else {
       // Navigate to transaction page with transaction type
       this.navigateToTransactionPage(transactionType.id);
@@ -529,6 +626,16 @@ export class CashierDashboard implements OnInit {
 
     // Make sure to load pawner info before showing the modal
     this.loadPawnerInfo(appraisal);
+    
+    // Populate loan items from the appraisal data
+    this.populateLoanItemsFromAppraisal(appraisal);
+    
+    // Ensure the pawner form is visible in the modal
+    this.showCreatePawnerForm = true;
+    this.isEditMode = false;
+    this.showItemForm = true;
+    
+    // Show the modal
     this.showNewLoanModal = true;
 
     // Focus on principal input field after the modal is displayed
@@ -604,16 +711,6 @@ export class CashierDashboard implements OnInit {
       civil_status: 'Single',
       gender: 'Male',
       occupation: ''
-    };
-  }
-
-  private resetItemForm() {
-    this.itemForm = {
-      name: '',
-      description: '',
-      category: '',
-      appraised_value: null,
-      interest_rate: 3.5
     };
   }
 
@@ -696,30 +793,113 @@ export class CashierDashboard implements OnInit {
     });
   }
 
+  // Authentication check method
+  checkAuthStatus() {
+    const token = localStorage.getItem('token');
+    this.isLoggedIn = !!token;
+  }
+
   // Pawner search and management
   searchPawners() {
-    if (this.searchQuery.trim().length < 2) {
-      this.pawners = [];
+    console.log(`🔍 [${new Date().toISOString()}] === SEARCH PAWNERS METHOD STARTED ===`);
+    console.log(`🔍 [${new Date().toISOString()}] Search query: "${this.searchQuery}"`);
+
+    // Check authentication first
+    this.checkAuthStatus();
+    console.log(`🔍 [${new Date().toISOString()}] After checkAuthStatus - isLoggedIn: ${this.isLoggedIn}`);
+
+    if (!this.isLoggedIn) {
+      console.error(`❌ [${new Date().toISOString()}] Search blocked - not authenticated`);
+      this.toastService.showError('Authentication Required', 'Please login first');
       return;
     }
 
-    this.pawnerService.searchPawners(this.searchQuery).subscribe({
-      next: (response: any) => {
+    console.log(`🔍 [${new Date().toISOString()}] Checking search query: "${this.searchQuery}" (trimmed: "${this.searchQuery.trim()}")`);
+
+    if (!this.searchQuery.trim()) {
+      console.log(`❌ [${new Date().toISOString()}] Empty search query - showing warning`);
+      this.searchResults = [];
+      this.toastService.showWarning('Search', 'Please enter a search term');
+      return;
+    }
+
+    console.log(`✅ [${new Date().toISOString()}] Search query valid - proceeding with search`);
+    this.isSearching = true;
+    console.log('🔍 Searching pawners:', this.searchQuery);
+
+    console.log(`📤 [${new Date().toISOString()}] Making API request to search pawners...`);
+    console.log(`🔗 API URL: http://localhost:3000/api/pawners/search?q=${encodeURIComponent(this.searchQuery)}`);
+    console.log(`🎫 Token: ${localStorage.getItem('token')?.substring(0, 20)}...`);
+    console.log(`🔧 [${new Date().toISOString()}] About to call pawnerService.searchPawners("${this.searchQuery}")`);
+
+    try {
+      this.pawnerService.searchPawners(this.searchQuery).subscribe({
+        next: (response) => {
+        this.isSearching = false;
+        console.log(`📥 [${new Date().toISOString()}] API Response received:`, response);
+
         if (response.success) {
-          this.pawners = response.data;
+          this.searchResults = response.data;
+          console.log(`✅ Found ${this.searchResults.length} pawners:`, this.searchResults);
+
+          if (this.searchResults.length === 0) {
+            this.toastService.showInfo('Search Results', 'No pawners found. You can create a new one.');
+          } else {
+            this.toastService.showSuccess('Search Results', `Found ${this.searchResults.length} pawner(s)`);
+          }
+        } else {
+          console.error('❌ API returned unsuccessful response:', response);
+          this.toastService.showError('Search Error', response.message || 'Failed to search pawners');
         }
-      },
-      error: (error: any) => {
-        console.error('Error searching pawners:', error);
-        this.toastService.showError('Error', 'Failed to search pawners');
-      }
-    });
+        },
+        error: (error) => {
+          this.isSearching = false;
+          console.error(`❌ [${new Date().toISOString()}] Network/API Error:`, {
+            status: error.status,
+            statusText: error.statusText,
+            message: error.message,
+            error: error.error,
+            url: error.url
+          });
+
+          let errorMessage = 'Error searching pawners';
+          if (error.status === 401) {
+            errorMessage = 'Authentication required. Please log in first.';
+          } else if (error.status === 0) {
+            errorMessage = 'Cannot connect to server. Please check if the API server is running.';
+          } else if (error.error?.message) {
+            errorMessage = error.error.message;
+          }
+
+          this.toastService.showError('Search Error', errorMessage);
+        }
+      });
+    } catch (error) {
+      console.error(`❌ [${new Date().toISOString()}] Exception in searchPawners:`, error);
+      this.isSearching = false;
+      this.toastService.showError('Search Error', 'An unexpected error occurred');
+    }
   }
 
+  // Select Pawner (adapted from appraisal dashboard for loan workflow)
   selectPawner(pawner: any) {
     this.selectedPawner = pawner;
-    this.searchQuery = `${pawner.first_name} ${pawner.last_name}`;
-    this.pawners = [];
+    this.searchResults = [];
+    this.searchQuery = `${pawner.firstName || pawner.first_name} ${pawner.lastName || pawner.last_name} - ${pawner.contactNumber || pawner.contact_number}`;
+    
+    // Populate the form fields with selected pawner data
+    this.newPawner = {
+      firstName: pawner.firstName || pawner.first_name || '',
+      lastName: pawner.lastName || pawner.last_name || '',
+      contactNumber: pawner.contactNumber || pawner.contact_number || pawner.phone || '',
+      email: pawner.email || '',
+      cityId: pawner.cityId || pawner.city_id || undefined,
+      barangayId: pawner.barangayId || pawner.barangay_id || undefined,
+      addressDetails: pawner.addressDetails || pawner.address_details || pawner.address || ''
+    };
+
+    console.log('Selected pawner for loan:', pawner);
+    this.toastService.showSuccess('Pawner Selected', `Selected ${pawner.firstName || pawner.first_name} ${pawner.lastName || pawner.last_name} for loan processing`);
   }
 
   showNewPawnerFormToggle() {
@@ -1022,11 +1202,7 @@ export class CashierDashboard implements OnInit {
     }
   }
 
-  // The interest rate is now fixed based on category, no need for changes
-  // This method is kept for compatibility with existing code
-  onInterestRateChange() {
-    this.calculateLoanAmount();
-  }
+
 
   // Get a description of how the interest rate was determined
   getInterestRateDescription(): string {
@@ -1124,7 +1300,28 @@ export class CashierDashboard implements OnInit {
       idNumber: appraisal.idNumber || (appraisal.pawner?.idNumber) || 'Not specified'
     };
 
+    // Also populate the pawner form with available data for display in the modal
+    const fullName = this.selectedPawnerInfo.fullName || '';
+    const nameParts = fullName.split(' ');
+    
+    this.pawnerForm = {
+      first_name: nameParts[0] || '',
+      last_name: nameParts.slice(1).join(' ') || '',
+      address: appraisal.address || (appraisal.pawner?.address) || '',
+      city: appraisal.city || (appraisal.pawner?.city) || '',
+      barangay: appraisal.barangay || (appraisal.pawner?.barangay) || '',
+      phone: getContactNumber(),
+      email: appraisal.email || (appraisal.pawner?.email) || '',
+      birth_date: appraisal.birthDate || appraisal.birth_date || (appraisal.pawner?.birthDate) || '',
+      id_type: appraisal.idType || (appraisal.pawner?.idType) || '',
+      id_number: appraisal.idNumber || (appraisal.pawner?.idNumber) || '',
+      civil_status: appraisal.civilStatus || appraisal.civil_status || (appraisal.pawner?.civilStatus) || 'Single',
+      gender: appraisal.gender || (appraisal.pawner?.gender) || 'Male',
+      occupation: appraisal.occupation || (appraisal.pawner?.occupation) || ''
+    };
+
     console.log('📋 DEBUG: Final selectedPawnerInfo:', this.selectedPawnerInfo);
+    console.log('📝 DEBUG: Populated pawnerForm:', this.pawnerForm);
 
     this.addAuditEntry('Pawner information loaded', {
       pawnerId: appraisal.pawnerId,
@@ -1235,5 +1432,543 @@ export class CashierDashboard implements OnInit {
     };
     this.auditTrail.push(entry);
     console.log('Audit entry added:', entry);
+  }
+
+  // ==================== NEW LOAN - FIND PAWNER FUNCTIONALITY ====================
+  
+  startNewLoan() {
+    console.log('startNewLoan() called - setting showFindPawnerModal to true');
+    this.showFindPawnerModal = true;
+    this.resetPawnerSelection();
+    
+    console.log('showFindPawnerModal is now:', this.showFindPawnerModal);
+    
+    // Auto-focus on search input
+    setTimeout(() => {
+      if (this.searchInput) {
+        this.searchInput.nativeElement.focus();
+        console.log('Focus set on search input');
+      } else {
+        console.log('searchInput not found');
+      }
+    }, 100);
+  }
+
+  resetPawnerSelection() {
+    this.selectedPawner = null;
+    this.searchQuery = '';
+    this.searchResults = [];
+    this.newPawner = {
+      firstName: '',
+      lastName: '',
+      contactNumber: '',
+      email: '',
+      cityId: undefined,
+      barangayId: undefined,
+      addressDetails: ''
+    };
+  }
+
+  // Clear Search
+  clearSearch() {
+    this.searchQuery = '';
+    this.searchResults = [];
+    this.isSearching = false;
+    if (this.searchInput) {
+      this.searchInput.nativeElement.focus();
+    }
+  }
+
+  // Clear Selection (updated to match appraisal dashboard)
+  clearSelection() {
+    this.selectedPawner = null;
+    this.searchQuery = '';
+    this.searchResults = [];
+    this.showCreatePawnerForm = false;
+  }
+
+  cancelFindPawner() {
+    // Hide the find pawner modal
+    this.showFindPawnerModal = false;
+    
+    // Clear all search data
+    this.searchQuery = '';
+    this.searchResults = [];
+    this.selectedPawner = null;
+    
+    // Reset the new pawner form
+    this.resetPawnerSelection();
+    
+    console.log('Find Pawner cancelled');
+  }
+
+  selectPawnerForLoan(pawner: any) {
+    this.selectedPawner = pawner;
+    console.log('Selected pawner for loan:', pawner);
+    
+    // Show the pawner form in the loan modal
+    this.showCreatePawnerForm = true;
+    
+    // Populate the form with selected pawner data
+    this.newPawner = {
+      firstName: pawner.firstName || pawner.first_name || '',
+      lastName: pawner.lastName || pawner.last_name || '',
+      contactNumber: pawner.contactNumber || pawner.contact_number || pawner.phone || '',
+      email: pawner.email || '',
+      cityId: pawner.cityId || pawner.city_id || null,
+      barangayId: pawner.barangayId || pawner.barangay_id || null,
+      addressDetails: pawner.addressDetails || pawner.address_details || pawner.address || ''
+    };
+    
+    // Clear search results after selection
+    this.searchResults = [];
+    
+    // Set the selected pawner info for the loan
+    this.selectedPawnerInfo = {
+      fullName: `${this.newPawner.firstName} ${this.newPawner.lastName}`,
+      contactNumber: this.newPawner.contactNumber,
+      email: this.newPawner.email,
+      address: this.newPawner.addressDetails
+    };
+
+    // Initialize loan data with default values
+    this.initializeLoanDataForNewLoan();
+    
+    // Show the loan modal
+    this.showNewLoanModal = true;
+    this.showFindPawnerModal = false;
+    
+    // Auto-focus on the principal input
+    setTimeout(() => {
+      if (this.principalInput) {
+        this.principalInput.nativeElement.focus();
+      }
+    }, 100);
+    
+    this.toastService.showSuccess('Success', 'Pawner selected successfully!');
+  }
+
+  changePawner() {
+    // Reset selection and go back to find pawner
+    this.selectedPawner = null;
+    this.selectedPawnerInfo = null;
+    this.showNewLoanModal = false;
+    this.showFindPawnerModal = true;
+    
+    // Focus on search input
+    setTimeout(() => {
+      if (this.searchInput) {
+        this.searchInput.nativeElement.focus();
+      }
+    }, 100);
+  }
+
+  onPrincipalAmountChange() {
+    // Parse and format the principal amount
+    const amount = parseFloat(this.loanData.principalAmount?.toString().replace(/[^\d.]/g, '') || '0');
+    this.loanData.calculatedPrincipal = amount;
+    this.calculateLoanValues();
+  }
+
+  onInterestRateChange() {
+    this.calculateLoanValues();
+  }
+
+  // Missing methods for pawner management
+  createPawner() {
+    console.log('Creating pawner:', this.newPawner);
+    // Implementation would create a new pawner record
+    this.toastService.showSuccess('Success', 'Pawner created successfully!');
+  }
+
+  formatContactNumber(event: any) {
+    // Simple formatting for contact numbers
+    let value = event.target.value.replace(/\D/g, '');
+    if (value.length > 11) value = value.substring(0, 11);
+    event.target.value = value;
+    this.newPawner.contactNumber = value;
+  }
+
+  showAddCityDialog() {
+    console.log('Show add city dialog');
+    // Implementation would show city dialog
+  }
+
+  showAddBarangayDialog() {
+    console.log('Show add barangay dialog');
+    // Implementation would show barangay dialog
+  }
+
+  // Missing methods for item management
+  calculateTotalValue(): number {
+    return this.loanItems.reduce((total, item) => total + (item.estimatedValue || 0), 0);
+  }
+
+  removeItemFromLoan(index: number) {
+    this.loanItems.splice(index, 1);
+    this.toastService.showInfo('Item Removed', 'Item removed from loan');
+  }
+
+  saveItemLoan() {
+    // Validate item form
+    if (!this.currentItem.category || !this.currentItem.estimatedValue) {
+      this.toastService.showError('Validation Error', 'Please fill in required fields');
+      return;
+    }
+    
+    // Add to loan items array
+    this.addItemToLoan();
+  }
+
+  addItemToLoan() {
+    if (!this.currentItem.category || !this.currentItem.estimatedValue) {
+      this.toastService.showError('Validation Error', 'Please fill in category and estimated value');
+      return;
+    }
+
+    const newItem = { ...this.currentItem };
+    this.loanItems.push(newItem);
+    
+    // Reset form
+    this.resetItemForm();
+    
+    this.toastService.showSuccess('Success', 'Item added to loan');
+  }
+
+  onCategoryChange() {
+    // Load category descriptions when category changes
+    console.log('Category changed:', this.currentItem.category);
+    this.loadCategoryDescriptions();
+  }
+
+  loadCategoryDescriptions() {
+    // Mock implementation
+    this.isLoadingDescriptions = true;
+    setTimeout(() => {
+      this.filteredCategoryDescriptions = [
+        { description: '18K Gold Ring' },
+        { description: '21K Gold Necklace' },
+        { description: '24K Gold Bracelet' }
+      ];
+      this.isLoadingDescriptions = false;
+    }, 500);
+  }
+
+  openAddCategoryDescriptionDialog() {
+    console.log('Open add category description dialog');
+  }
+
+  onEstimatedValueInput(event: any) {
+    // Format currency input
+    let value = event.target.value.replace(/[^\d.]/g, '');
+    this.currentItem.estimatedValue = parseFloat(value) || 0;
+  }
+
+  onEstimatedValueFocus(event: any) {
+    // Clear formatting on focus
+    event.target.select();
+  }
+
+  onEstimatedValueBlur(event: any) {
+    // Format on blur
+    const value = parseFloat(event.target.value) || 0;
+    event.target.value = value.toFixed(2);
+    this.currentItem.estimatedValue = value;
+  }
+
+  resetItemForm() {
+    this.currentItem = {
+      category: '',
+      categoryDescription: '',
+      description: '',
+      estimatedValue: 0,
+      weight: 0,
+      karat: 0,
+      serialNumber: '',
+      notes: ''
+    };
+  }
+
+  saveLoan() {
+    if (!this.canSaveLoan()) {
+      this.toastService.showError('Validation Error', 'Please complete all required fields');
+      return;
+    }
+
+    console.log('Saving loan with items:', this.loanItems);
+    this.toastService.showSuccess('Success', 'Loan saved successfully!');
+    this.closeNewLoanModal();
+  }
+
+  canSaveLoan(): boolean {
+    return (this.selectedPawner || this.showCreatePawnerForm) && 
+           this.loanItems.length > 0 &&
+           this.newPawner.firstName && 
+           this.newPawner.lastName && 
+           this.newPawner.contactNumber;
+  }
+
+  resetLoanForm() {
+    this.loanItems = [];
+    this.resetItemForm();
+    this.selectedPawner = null;
+    this.showCreatePawnerForm = false;
+    this.newPawner = {
+      firstName: '',
+      lastName: '',
+      contactNumber: '',
+      email: '',
+      cityId: undefined,
+      barangayId: undefined,
+      addressDetails: ''
+    };
+  }
+
+  // Email validation helper (removed duplicate - keeping the one that handles optional emails)
+
+  onLoanTermChange() {
+    this.calculateLoanValues();
+    this.calculateDueDate();
+  }
+
+  calculateLoanValues() {
+    const principal = this.loanData.calculatedPrincipal || 0;
+    const rate = this.loanData.interestRate || 3.5;
+    
+    // Calculate interest
+    this.loanData.calculatedInterest = (principal * rate) / 100;
+    
+    // Calculate service charge (example: 2% of principal)
+    this.loanData.calculatedServiceCharge = principal * 0.02;
+    
+    // Calculate net proceed
+    this.loanData.calculatedNetProceed = principal - this.loanData.calculatedServiceCharge;
+  }
+
+  calculateDueDate() {
+    const today = new Date();
+    const termValue = this.loanData.loanTermValue || 30;
+    const termUnit = this.loanData.loanTermUnit || 'days';
+    
+    let dueDate = new Date(today);
+    
+    if (termUnit === 'days') {
+      dueDate.setDate(today.getDate() + termValue);
+    } else if (termUnit === 'months') {
+      dueDate.setMonth(today.getMonth() + termValue);
+    }
+    
+    this.loanData.dueDate = dueDate;
+  }
+
+  addCollateralItem() {
+    // This would typically open an item entry form/modal
+    // For now, we'll add a placeholder item
+    if (!this.loanData.collateralItems) {
+      this.loanData.collateralItems = [];
+    }
+    
+    // You would implement a proper item entry modal here
+    this.toastService.showInfo('Info', 'Item entry functionality would be implemented here');
+  }
+
+  removeCollateralItem(index: number) {
+    if (this.loanData.collateralItems) {
+      this.loanData.collateralItems.splice(index, 1);
+    }
+  }
+
+  getTotalCollateralValue(): number {
+    if (!this.loanData.collateralItems) return 0;
+    return this.loanData.collateralItems.reduce((total, item) => total + (item.estimatedValue || 0), 0);
+  }
+
+  getCategoryIcon(category: string): string {
+    const icons: { [key: string]: string } = {
+      'Jewelry': '💎',
+      'Electronics': '📱',
+      'Appliances': '🔌',
+      'Vehicles': '🚗',
+      'Tools': '🔧',
+      'Watches': '⌚',
+      'Gadgets': '💻',
+      'Other': '📦'
+    };
+    return icons[category] || '📦';
+  }
+
+  isLoanFormValid(): boolean {
+    return !!(
+      this.loanData.calculatedPrincipal && 
+      this.loanData.calculatedPrincipal > 0 &&
+      this.loanData.interestRate &&
+      this.loanData.loanTermValue &&
+      this.loanData.loanTermUnit
+    );
+  }
+
+  saveLoanApplication() {
+    if (!this.isLoanFormValid()) {
+      this.toastService.showWarning('Invalid Form', 'Please complete all required fields');
+      return;
+    }
+
+    // Here you would save the loan application
+    console.log('Saving loan application:', {
+      pawner: this.selectedPawnerInfo,
+      loanData: this.loanData
+    });
+
+    this.toastService.showSuccess('Success', 'Loan application created successfully!');
+    this.closeNewLoanModal();
+  }
+
+  closeFindPawnerModal() {
+    this.showFindPawnerModal = false;
+    this.resetPawnerSelection();
+  }
+
+  startNewLoanWithPawner() {
+    // Always show the pawner form in the loan modal
+    this.showCreatePawnerForm = true;
+    
+    // If there's a selected pawner, use their info
+    if (this.selectedPawner) {
+      // Set the selected pawner info for the loan
+      this.selectedPawnerInfo = {
+        fullName: `${this.selectedPawner.firstName || this.selectedPawner.first_name} ${this.selectedPawner.lastName || this.selectedPawner.last_name}`,
+        contactNumber: this.selectedPawner.contactNumber || this.selectedPawner.contact_number || this.selectedPawner.phone,
+        email: this.selectedPawner.email || '',
+        address: this.selectedPawner.addressDetails || this.selectedPawner.address_details || this.selectedPawner.address || ''
+      };
+      
+      // Populate form with selected pawner data
+      this.newPawner = {
+        firstName: this.selectedPawner.firstName || this.selectedPawner.first_name || '',
+        lastName: this.selectedPawner.lastName || this.selectedPawner.last_name || '',
+        contactNumber: this.selectedPawner.contactNumber || this.selectedPawner.contact_number || this.selectedPawner.phone || '',
+        email: this.selectedPawner.email || '',
+        cityId: this.selectedPawner.cityId || this.selectedPawner.city_id,
+        barangayId: this.selectedPawner.barangayId || this.selectedPawner.barangay_id,
+        addressDetails: this.selectedPawner.addressDetails || this.selectedPawner.address_details || this.selectedPawner.address || ''
+      };
+    } else {
+      // No pawner selected, create new loan with empty pawner info
+      this.selectedPawnerInfo = {
+        fullName: 'New Customer',
+        contactNumber: '',
+        email: '',
+        address: ''
+      };
+      
+      // Reset form for new pawner
+      this.newPawner = {
+        firstName: '',
+        lastName: '',
+        contactNumber: '',
+        email: '',
+        cityId: undefined,
+        barangayId: undefined,
+        addressDetails: ''
+      };
+    }
+
+    // Initialize loan data with default values
+    this.initializeLoanDataForNewLoan();
+    
+    // Close find pawner modal and open loan modal
+    this.showFindPawnerModal = false;
+    this.showNewLoanModal = true;
+    
+    // Auto-focus on the principal input
+    setTimeout(() => {
+      if (this.principalInput) {
+        this.principalInput.nativeElement.focus();
+      }
+    }, 100);
+  }
+
+  isPawnerFormValid(): boolean {
+    return !!(
+      this.newPawner.firstName &&
+      this.newPawner.lastName &&
+      this.newPawner.contactNumber
+    );
+  }
+
+  initializeLoanDataForNewLoan() {
+    // Initialize with default loan data
+    const today = new Date();
+    const dueDate = new Date(today.getTime() + (30 * 24 * 60 * 60 * 1000)); // 30 days default
+    
+    this.loanData = {
+      transactionDate: today,
+      grantedDate: today,
+      maturedDate: new Date(today.getTime() + (4 * 30 * 24 * 60 * 60 * 1000)), // 4 months
+      expiredDate: new Date(today.getTime() + (6 * 30 * 24 * 60 * 60 * 1000)), // 6 months
+      appraisalValue: 0,
+      principalLoan: 0,
+      principalAmount: '',
+      interestRate: 3.5,
+      advanceInterest: 0,
+      serviceCharge: 0,
+      netProceed: 0,
+      calculatedPrincipal: 0,
+      calculatedInterest: 0,
+      calculatedServiceCharge: 0,
+      calculatedNetProceed: 0,
+      loanTermValue: 30,
+      loanTermUnit: 'days',
+      dueDate: dueDate,
+      notes: '',
+      collateralItems: [],
+      itemsBreakdown: []
+    };
+    
+    this.displayPrincipalLoan = '0.00';
+    this.principalLoanError = '';
+  }
+
+  // City and Barangay functionality
+  onCityChange() {
+    if (this.newPawner.cityId) {
+      this.filteredBarangays = this.barangays.filter(b => b.cityId === this.newPawner.cityId);
+      this.newPawner.barangayId = undefined; // Reset barangay selection
+    } else {
+      this.filteredBarangays = [];
+    }
+  }
+
+  loadCities() {
+    this.addressService.getCities().subscribe({
+      next: (response: any) => {
+        if (response.success) {
+          this.cities = response.data;
+        }
+      },
+      error: (error: any) => {
+        console.error('Error loading cities:', error);
+      }
+    });
+  }
+
+  loadBarangays() {
+    this.addressService.getBarangays().subscribe({
+      next: (response: any) => {
+        if (response.success) {
+          this.barangays = response.data;
+          this.filteredBarangays = [...this.barangays];
+        }
+      },
+      error: (error: any) => {
+        console.error('Error loading barangays:', error);
+      }
+    });
+  }
+
+  isValidEmail(email: string): boolean {
+    if (!email) return true; // Email is optional
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
   }
 }
