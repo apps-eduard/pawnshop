@@ -1,0 +1,27 @@
+<!-- ADDITIONAL LOAN PAGE - FULL SCREEN -->
+<div class="h-[calc(100vh-4rem)] bg-gray-50 dark:bg-gray-900 flex flex-col">
+  <!-- Main Content - Full Height -->
+  <div class="flex-1 p-4 overflow-hidden">
+    <div class="h-full max-h-full overflow-hidden">
+      <div class="max-w-4xl mx-auto h-full">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 h-full max-h-full overflow-hidden flex flex-col">
+          <div class="flex-1">
+            <p class="text-gray-600 dark:text-gray-400 mb-4">Additional loan functionality will be implemented here.</p>
+          </div>
+          
+          <!-- Action Buttons -->
+          <div class="flex gap-3 flex-shrink-0">
+            <button (click)="createAdditionalLoan()" 
+              class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors">
+              Create Additional Loan
+            </button>
+            <button (click)="goBack()" 
+              class="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg font-medium transition-colors">
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

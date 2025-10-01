@@ -1,6 +1,7 @@
 import { Component, OnInit, OnDestroy, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router, NavigationEnd } from '@angular/router';
+import { Location } from '@angular/common';
 import { Subject, takeUntil, filter } from 'rxjs';
 import { AuthService } from '../../core/auth/auth';
 import { ThemeService } from '../../core/theme/theme';
@@ -30,7 +31,8 @@ export class NavbarComponent implements OnInit, OnDestroy {
   constructor(
     private authService: AuthService,
     private themeService: ThemeService,
-    private router: Router
+    private router: Router,
+    private location: Location
   ) {}
 
   ngOnInit(): void {
@@ -68,6 +70,10 @@ export class NavbarComponent implements OnInit, OnDestroy {
           this.currentPageTitle = 'Cashier Dashboard';
         } else if (event.url.includes('/admin-dashboard')) {
           this.currentPageTitle = 'Admin Dashboard';
+        } else if (event.url.includes('/transactions/appraisal')) {
+          this.currentPageTitle = 'Create Appraisal';
+        } else if (event.url.includes('/transactions/')) {
+          this.currentPageTitle = 'Transaction';
         } else {
           this.currentPageTitle = '';
         }
@@ -120,5 +126,10 @@ export class NavbarComponent implements OnInit, OnDestroy {
   // Close menus when clicking outside
   onClickOutside(): void {
     this.userMenuOpen = false;
+  }
+
+  // Go back navigation
+  goBack(): void {
+    this.location.back();
   }
 }

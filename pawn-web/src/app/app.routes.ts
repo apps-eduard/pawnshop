@@ -12,6 +12,14 @@ import { ManagerDashboard } from './pages/manager-dashboard/manager-dashboard';
 import { AuctioneerDashboard } from './pages/auctioneer-dashboard/auctioneer-dashboard';
 import { PawnerDashboard } from './pages/pawner-dashboard/pawner-dashboard';
 
+// Transaction Components
+import { Appraisal } from './features/transactions/appraisal/appraisal';
+import { NewLoan } from './features/transactions/new-loan/new-loan';
+import { AdditionalLoan } from './features/transactions/additional-loan/additional-loan';
+import { PartialPayment } from './features/transactions/partial-payment/partial-payment';
+import { Redeem } from './features/transactions/redeem/redeem';
+import { Renew } from './features/transactions/renew/renew';
+
 export const routes: Routes = [
   { path: '', redirectTo: '/login', pathMatch: 'full' },
   { path: 'login', component: LoginComponent },
@@ -83,5 +91,44 @@ export const routes: Routes = [
     // canActivate: [AuthGuard],
     data: { roles: ['pawner'] }
   },
+
+  // Transaction Routes
+  {
+    path: 'transactions/appraisal',
+    component: Appraisal,
+    // canActivate: [AuthGuard],
+    data: { roles: ['appraiser', 'cashier', 'manager', 'administrator'] }
+  },
+  {
+    path: 'transactions/new-loan',
+    component: NewLoan,
+    // canActivate: [AuthGuard],
+    data: { roles: ['cashier', 'manager', 'administrator'] }
+  },
+  {
+    path: 'transactions/additional-loan',
+    component: AdditionalLoan,
+    // canActivate: [AuthGuard],
+    data: { roles: ['cashier', 'manager', 'administrator'] }
+  },
+  {
+    path: 'transactions/partial-payment',
+    component: PartialPayment,
+    // canActivate: [AuthGuard],
+    data: { roles: ['cashier', 'manager', 'administrator'] }
+  },
+  {
+    path: 'transactions/redeem',
+    component: Redeem,
+    // canActivate: [AuthGuard],
+    data: { roles: ['cashier', 'manager', 'administrator'] }
+  },
+  {
+    path: 'transactions/renew',
+    component: Renew,
+    // canActivate: [AuthGuard],
+    data: { roles: ['cashier', 'manager', 'administrator'] }
+  },
+
   { path: '**', redirectTo: '/login' }
 ];

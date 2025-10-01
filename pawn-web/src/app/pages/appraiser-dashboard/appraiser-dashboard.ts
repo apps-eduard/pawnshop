@@ -1,7 +1,7 @@
 import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterModule } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { PawnerService } from '../../core/services/pawner.service';
 import { ItemService } from '../../core/services/item.service';
@@ -9,6 +9,7 @@ import { AddressService } from '../../core/services/address.service';
 import { AppraisalService } from '../../core/services/appraisal.service';
 import { ToastService } from '../../core/services/toast.service';
 import { CategoriesService, Category } from '../../core/services/categories.service';
+
 
 interface Pawner {
   id?: number;
@@ -396,7 +397,8 @@ export class AppraiserDashboard implements OnInit {
     private addressService: AddressService,
     private appraisalService: AppraisalService,
     private toastService: ToastService,
-    private categoriesService: CategoriesService
+    private categoriesService: CategoriesService,
+    private router: Router
   ) {}
 
   // Check authentication status
@@ -624,14 +626,8 @@ export class AppraiserDashboard implements OnInit {
       this.onCityChange();
     }
 
-    // Open the New Appraisal modal for the selected pawner
-    this.showNewAppraisalModal = true;
-
-    // Reset items list
-    this.appraisalItems = [];
-
-    // Show item form
-    this.showItemForm = true;
+    // Navigate to appraisal page for the selected pawner
+    this.router.navigate(['/transactions/appraisal']);
 
     // Reset current item for the selected pawner
     this.currentItem = {
@@ -675,14 +671,8 @@ export class AppraiserDashboard implements OnInit {
       addressDetails: ''
     };
 
-    // Show new appraisal modal with pawner form for a new pawner
-    this.showCreatePawnerForm = true;
-    this.showNewAppraisalModal = true;
-
-    // Reset items list for fresh start
-    this.appraisalItems = [];
-
-    // Also show item appraisal form
+    // Navigate to appraisal page for new pawner
+    this.router.navigate(['/transactions/appraisal']);
     this.currentItem = {
       pawnerId: 0, // Will be set after pawner is created
       category: '',
@@ -1602,7 +1592,8 @@ export class AppraiserDashboard implements OnInit {
   // Properties for the modals
   showAddCityModal = false;
   showAddBarangayModal = false;
-  showNewAppraisalModal = false;
+  showNewAppraisalModal = false; // Keep for backward compatibility
+
   newCityName = '';
   newBarangayName = '';
   isAddingCity = false;
@@ -1742,6 +1733,8 @@ export class AppraiserDashboard implements OnInit {
     // Refresh dashboard data to show updated counts and recent appraisals
     this.loadRecentAppraisals();
   }
+
+
 
   // Get interest rate for category
   getInterestRateForCategory(categoryName: string): number {

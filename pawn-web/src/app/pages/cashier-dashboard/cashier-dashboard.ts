@@ -12,6 +12,7 @@ import { ToastService } from '../../core/services/toast.service';
 import { CategoriesService, Category } from '../../core/services/categories.service';
 import { Appraisal, CreateAppraisalRequest } from '../../core/models/interfaces';
 
+
 interface DashboardCard {
   title: string;
   count: number;
@@ -74,6 +75,9 @@ export class CashierDashboard implements OnInit {
   // New Loan Modal Properties
   showNewLoanModal = false;
   selectedAppraisal: any = null;
+  
+  // Appraisal Component Properties
+
   selectedPawnerInfo: any = null;
   loanData = {
     transactionDate: new Date(),
@@ -290,6 +294,7 @@ export class CashierDashboard implements OnInit {
     setInterval(() => this.updateTime(), 1000);
 
     // Load categories to get interest rates from database
+    console.log('🚀 Cashier Dashboard initializing - loading categories...');
     this.loadCategories();
     
     // Load cities and barangays for pawner form
@@ -599,18 +604,35 @@ export class CashierDashboard implements OnInit {
     console.log('Selected transaction type:', transactionType);
 
     if (transactionType.id === 'create_appraisal') {
-      this.enterAppraisalMode();
+      // Navigate to appraisal page
+      this.router.navigate(['/transactions/appraisal']);
     } else if (transactionType.id === 'new_loan') {
-      // Show Find Pawner modal for New Loan
-      this.startNewLoan();
+      // Navigate to new loan page
+      this.router.navigate(['/transactions/new-loan']);
+    } else if (transactionType.id === 'additional') {
+      // Navigate to additional loan page
+      this.router.navigate(['/transactions/additional-loan']);
+    } else if (transactionType.id === 'partial') {
+      // Navigate to partial payment page
+      this.router.navigate(['/transactions/partial-payment']);
+    } else if (transactionType.id === 'redeem') {
+      // Navigate to redeem page
+      this.router.navigate(['/transactions/redeem']);
+    } else if (transactionType.id === 'renew') {
+      // Navigate to renew page
+      this.router.navigate(['/transactions/renew']);
     } else {
-      // Navigate to transaction page with transaction type
-      this.navigateToTransactionPage(transactionType.id);
+      // Fallback for any unhandled transaction types
+      this.toastService.showInfo('Navigation', `Navigating to ${transactionType.title} page`);
     }
   }
 
   navigateToTransaction(appraisal: any) {
-    console.log('Opening New Loan modal with appraisal:', appraisal);
+    console.log('Opening New Loan modal with pending appraisal:', appraisal);
+
+    // Make sure we're NOT in appraisal mode - this is for New Loan from pending appraisal
+    this.isAppraisalMode = false;
+    this.showFindPawnerModal = false;
 
     // If we need to fetch additional data for the pawner, we might do that here
     // For now, let's check if we need to retrieve more details
@@ -632,11 +654,13 @@ export class CashierDashboard implements OnInit {
     
     // Ensure the pawner form is visible in the modal
     this.showCreatePawnerForm = true;
-    this.isEditMode = false;
+    this.isEditMode = true; // We're displaying existing appraisal data
     this.showItemForm = true;
     
-    // Show the modal
+    // Show the New Loan modal (NOT the Create Appraisal modal)
     this.showNewLoanModal = true;
+    
+    console.log('✅ New Loan Modal opened with appraisal data');
 
     // Focus on principal input field after the modal is displayed
     setTimeout(() => {
@@ -651,22 +675,27 @@ export class CashierDashboard implements OnInit {
   navigateToTransactionPage(transactionType: string) {
     console.log('Navigating to transaction page with type:', transactionType);
 
-    // Show toast for now since transaction page doesn't exist yet
-    const transactionLabels: { [key: string]: string } = {
-      'new_loan': 'New Loan',
-      'additional': 'Additional Loan',
-      'partial': 'Partial Payment',
-      'redeem': 'Loan Redemption',
-      'renew': 'Loan Renewal'
+    const routeMap: { [key: string]: string } = {
+      'new_loan': '/transactions/new-loan',
+      'additional': '/transactions/additional-loan',
+      'partial': '/transactions/partial-payment',
+      'redeem': '/transactions/redeem',
+      'renew': '/transactions/renew',
+      'create_appraisal': '/transactions/appraisal'
     };
 
-    const label = transactionLabels[transactionType] || 'Transaction';
-    this.toastService.showInfo('Navigation', `${label} page - Coming Soon`);
+    const route = routeMap[transactionType];
+    if (route) {
+      this.router.navigate([route]);
+    } else {
+      this.toastService.showError('Navigation Error', `Unknown transaction type: ${transactionType}`);
+    }
+  }
 
-    // TODO: Implement actual navigation when transaction pages are ready
-    // this.router.navigate(['/transaction'], {
-    //   queryParams: { type: transactionType }
-    // });
+  // Start Create Appraisal flow - navigate to appraisal page
+  startCreateAppraisal() {
+    console.log('Starting Create Appraisal flow - navigating to appraisal page');
+    this.router.navigate(['/transactions/appraisal']);
   }
 
   enterAppraisalMode() {
@@ -684,6 +713,8 @@ export class CashierDashboard implements OnInit {
     this.loadAddresses();
     this.loadRecentAppraisals();
   }
+
+
 
   private resetAppraisalData() {
     this.selectedPawner = null;
@@ -716,19 +747,31 @@ export class CashierDashboard implements OnInit {
 
   // Appraisal-related methods (simplified for cashier dashboard)
   loadCategories() {
+    console.log('🔄 Loading categories...');
     this.categoriesService.getCategories().subscribe({
       next: (response: any) => {
+        console.log('📊 Categories response:', response);
         if (response.success && response.data) {
           this.categories = response.data;
+          console.log('✅ Categories loaded successfully:', this.categories.length, 'categories');
 
           // Update interest rates from database values
           this.updateInterestRatesFromDatabase(response.data);
           console.log('📊 Categories loaded with interest rates:', this.categoryInterestRates);
+        } else {
+          console.warn('⚠️ Categories response not successful:', response);
+          this.toastService.showWarning('Warning', 'Categories data format unexpected');
         }
       },
       error: (error: any) => {
-        console.error('Error loading categories:', error);
-        this.toastService.showError('Error', 'Failed to load categories');
+        console.error('❌ Error loading categories:', error);
+        console.error('Error details:', {
+          status: error.status,
+          statusText: error.statusText,
+          message: error.message,
+          url: error.url
+        });
+        this.toastService.showError('Error', 'Failed to load categories - check backend connection');
       }
     });
   }
@@ -940,7 +983,7 @@ export class CashierDashboard implements OnInit {
     return this.appraisalItems.reduce((total, item) => total + (item.appraised_value || 0), 0);
   }
 
-  // Create appraisal (simplified for initial implementation)
+  // Create appraisal with comprehensive loan logic (transferred from New Loan)
   createAppraisal() {
     if (this.appraisalItems.length === 0) {
       this.toastService.showError('Error', 'Please add at least one item to the appraisal');
@@ -952,11 +995,46 @@ export class CashierDashboard implements OnInit {
       return;
     }
 
+    // Add audit entry
+    this.addAuditEntry('Appraisal creation initiated', {
+      pawnerId: this.selectedPawner.id,
+      pawnerName: `${this.selectedPawner.firstName || this.selectedPawner.first_name} ${this.selectedPawner.lastName || this.selectedPawner.last_name}`,
+      itemsCount: this.appraisalItems.length,
+      totalValue: this.getTotalAppraisedValue()
+    });
+
+    console.log('Creating appraisal with comprehensive loan logic:', {
+      pawner: this.selectedPawner,
+      items: this.appraisalItems,
+      totalValue: this.getTotalAppraisedValue()
+    });
+
     this.submitAppraisal(this.selectedPawner.id);
   }
 
   private submitAppraisal(pawnerId: number) {
     this.isCreatingAppraisal = true;
+
+    // Initialize loan data for the appraisal (transferred from New Loan logic)
+    this.initializeLoanDataForAppraisal();
+    
+    // Prepare items breakdown with their respective interest rates
+    this.prepareItemsBreakdownFromAppraisalItems();
+    
+    // Calculate total appraisal value and loan values
+    const totalAppraisalValue = this.getTotalAppraisedValue();
+    this.loanData.appraisalValue = totalAppraisalValue;
+    this.loanData.principalLoan = totalAppraisalValue * 0.7; // Default 70% loan-to-value ratio
+    this.loanData.calculatedPrincipal = this.loanData.principalLoan;
+    
+    // Calculate interest and other charges
+    this.calculateLoanValues();
+
+    console.log('Submitting appraisal with loan calculations:', {
+      pawner: this.selectedPawner,
+      loanData: this.loanData,
+      itemsBreakdown: this.loanData.itemsBreakdown
+    });
 
     // Create appraisal for each item (matching appraiser dashboard approach)
     let itemsSaved = 0;
@@ -979,10 +1057,24 @@ export class CashierDashboard implements OnInit {
 
             if (itemsSaved === totalItems) {
               this.isCreatingAppraisal = false;
-              this.toastService.showSuccess('Success', 'Appraisal created successfully!');
+              
+              // Add final audit entry
+              this.addAuditEntry('Appraisal created successfully', {
+                appraisalId: response.data?.id || 'N/A',
+                pawnerName: `${this.selectedPawner.firstName || this.selectedPawner.first_name} ${this.selectedPawner.lastName || this.selectedPawner.last_name}`,
+                finalLoanData: { ...this.loanData }
+              });
+
+              // Show success with loan details
+              this.toastService.showSuccess(
+                'Appraisal Created Successfully!',
+                `Total Value: ₱${this.formatNumberWithCommas(totalAppraisalValue)} | Estimated Loan: ₱${this.formatNumberWithCommas(this.loanData.calculatedPrincipal)}`
+              );
+              
               this.resetAppraisalData();
               this.loadRecentAppraisals();
               this.loadPendingAppraisals();
+              this.exitAppraisalMode();
             }
           } else {
             this.isCreatingAppraisal = false;
@@ -1304,6 +1396,7 @@ export class CashierDashboard implements OnInit {
     const fullName = this.selectedPawnerInfo.fullName || '';
     const nameParts = fullName.split(' ');
     
+    // Update both pawnerForm and newPawner objects
     this.pawnerForm = {
       first_name: nameParts[0] || '',
       last_name: nameParts.slice(1).join(' ') || '',
@@ -1318,6 +1411,17 @@ export class CashierDashboard implements OnInit {
       civil_status: appraisal.civilStatus || appraisal.civil_status || (appraisal.pawner?.civilStatus) || 'Single',
       gender: appraisal.gender || (appraisal.pawner?.gender) || 'Male',
       occupation: appraisal.occupation || (appraisal.pawner?.occupation) || ''
+    };
+
+    // Also populate the newPawner object used by the New Loan modal form
+    this.newPawner = {
+      firstName: nameParts[0] || '',
+      lastName: nameParts.slice(1).join(' ') || '',
+      contactNumber: getContactNumber(),
+      email: appraisal.email || (appraisal.pawner?.email) || '',
+      cityId: undefined,
+      barangayId: undefined,
+      addressDetails: ''
     };
 
     console.log('📋 DEBUG: Final selectedPawnerInfo:', this.selectedPawnerInfo);
@@ -1394,6 +1498,60 @@ export class CashierDashboard implements OnInit {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
     });
+  }
+
+  // Initialize loan data for appraisal (transferred from New Loan logic)
+  initializeLoanDataForAppraisal() {
+    const today = new Date();
+    const dueDate = new Date(today.getTime() + (30 * 24 * 60 * 60 * 1000)); // 30 days default
+    
+    this.loanData = {
+      transactionDate: today,
+      grantedDate: today,
+      maturedDate: new Date(today.getTime() + (4 * 30 * 24 * 60 * 60 * 1000)), // 4 months
+      expiredDate: new Date(today.getTime() + (6 * 30 * 24 * 60 * 60 * 1000)), // 6 months
+      appraisalValue: 0,
+      principalLoan: 0,
+      principalAmount: '',
+      interestRate: 3.5,
+      advanceInterest: 0,
+      serviceCharge: 0,
+      netProceed: 0,
+      calculatedPrincipal: 0,
+      calculatedInterest: 0,
+      calculatedServiceCharge: 0,
+      calculatedNetProceed: 0,
+      loanTermValue: 30,
+      loanTermUnit: 'days',
+      dueDate: dueDate,
+      notes: '',
+      collateralItems: [],
+      itemsBreakdown: []
+    };
+    
+    this.displayPrincipalLoan = '0.00';
+    this.principalLoanError = '';
+  }
+
+  // Prepare items breakdown from appraisal items
+  prepareItemsBreakdownFromAppraisalItems() {
+    this.loanData.itemsBreakdown = [];
+
+    this.appraisalItems.forEach((item, index) => {
+      const itemCategory = (item.category || 'default').toLowerCase();
+      const interestRate = this.categoryInterestRates[itemCategory] || this.categoryInterestRates['default'];
+
+      this.loanData.itemsBreakdown.push({
+        name: item.name || `Item #${index + 1}`,
+        category: itemCategory,
+        appraisalValue: item.appraised_value || 0,
+        principalValue: 0, // Will be calculated later
+        interestRate: interestRate,
+        interestAmount: 0  // Will be calculated later
+      });
+    });
+
+    console.log('Items breakdown prepared from appraisal items:', this.loanData.itemsBreakdown);
   }
 
   createLoan() {
@@ -1504,9 +1662,9 @@ export class CashierDashboard implements OnInit {
 
   selectPawnerForLoan(pawner: any) {
     this.selectedPawner = pawner;
-    console.log('Selected pawner for loan:', pawner);
+    console.log('Selected pawner:', pawner, 'Appraisal Mode:', this.isAppraisalMode);
     
-    // Show the pawner form in the loan modal
+    // Show the pawner form in the appropriate modal
     this.showCreatePawnerForm = true;
     
     // Populate the form with selected pawner data
@@ -1519,11 +1677,20 @@ export class CashierDashboard implements OnInit {
       barangayId: pawner.barangayId || pawner.barangay_id || null,
       addressDetails: pawner.addressDetails || pawner.address_details || pawner.address || ''
     };
+
+    // Also populate pawnerForm for the Create Appraisal interface
+    this.pawnerForm.first_name = this.newPawner.firstName;
+    this.pawnerForm.last_name = this.newPawner.lastName;
+    this.pawnerForm.phone = this.newPawner.contactNumber;
+    this.pawnerForm.email = this.newPawner.email;
+    this.pawnerForm.city = pawner.city || '';
+    this.pawnerForm.barangay = pawner.barangay || '';
+    this.pawnerForm.address = this.newPawner.addressDetails;
     
     // Clear search results after selection
     this.searchResults = [];
     
-    // Set the selected pawner info for the loan
+    // Set the selected pawner info
     this.selectedPawnerInfo = {
       fullName: `${this.newPawner.firstName} ${this.newPawner.lastName}`,
       contactNumber: this.newPawner.contactNumber,
@@ -1531,21 +1698,28 @@ export class CashierDashboard implements OnInit {
       address: this.newPawner.addressDetails
     };
 
-    // Initialize loan data with default values
-    this.initializeLoanDataForNewLoan();
-    
-    // Show the loan modal
-    this.showNewLoanModal = true;
+    // Hide Find Pawner modal
     this.showFindPawnerModal = false;
-    
-    // Auto-focus on the principal input
-    setTimeout(() => {
-      if (this.principalInput) {
-        this.principalInput.nativeElement.focus();
-      }
-    }, 100);
-    
-    this.toastService.showSuccess('Success', 'Pawner selected successfully!');
+
+    if (this.isAppraisalMode) {
+      // For Create Appraisal flow - categories should already be loaded from ngOnInit
+      console.log('Continuing with Create Appraisal interface');
+      console.log('Categories already loaded:', this.categories.length);
+      this.loadRecentAppraisals();
+      this.toastService.showSuccess('Success', 'Pawner selected for appraisal!');
+    } else {
+      // For New Loan flow (if ever re-enabled)
+      this.initializeLoanDataForNewLoan();
+      this.showNewLoanModal = true;
+      
+      setTimeout(() => {
+        if (this.principalInput) {
+          this.principalInput.nativeElement.focus();
+        }
+      }, 100);
+      
+      this.toastService.showSuccess('Success', 'Pawner selected for loan!');
+    }
   }
 
   changePawner() {
@@ -1831,6 +2005,7 @@ export class CashierDashboard implements OnInit {
   startNewLoanWithPawner() {
     // Always show the pawner form in the loan modal
     this.showCreatePawnerForm = true;
+    this.isEditMode = false; // We're creating a new loan, not editing existing appraisal
     
     // If there's a selected pawner, use their info
     if (this.selectedPawner) {
@@ -1904,8 +2079,8 @@ export class CashierDashboard implements OnInit {
     this.loanData = {
       transactionDate: today,
       grantedDate: today,
-      maturedDate: new Date(today.getTime() + (4 * 30 * 24 * 60 * 60 * 1000)), // 4 months
-      expiredDate: new Date(today.getTime() + (6 * 30 * 24 * 60 * 60 * 1000)), // 6 months
+      maturedDate: new Date(today.getTime() + (1 * 30 * 24 * 60 * 60 * 1000)), // 1 month
+      expiredDate: new Date(today.getTime() + (4 * 30 * 24 * 60 * 60 * 1000)), // 4 months
       appraisalValue: 0,
       principalLoan: 0,
       principalAmount: '',
