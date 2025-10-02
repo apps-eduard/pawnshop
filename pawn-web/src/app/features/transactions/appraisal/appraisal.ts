@@ -88,6 +88,7 @@ export class Appraisal implements OnInit, OnDestroy {
   // Categories and Items
   categories: Category[] = [];
   categoryDescriptions: string[] = [];
+  isLoadingDescriptions: boolean = false;
   appraisalItems: AppraisalItem[] = [];
   itemForm: any = {
     category: '',
@@ -139,21 +140,29 @@ export class Appraisal implements OnInit, OnDestroy {
   }
 
   private loadCategoryDescriptions() {
-    // For now, we'll use a static list. This can be replaced with API call later
-    this.categoryDescriptions = [
-      'Gold Ring',
-      'Gold Necklace',
-      'Gold Bracelet',
-      'Gold Earrings',
-      'Silver Ring',
-      'Silver Necklace',
-      'Smartphone',
-      'Laptop',
-      'Tablet',
-      'Watch',
-      'Diamond Ring',
-      'Pearl Necklace'
-    ];
+    // Initialize as empty - will be loaded when category is selected
+    this.categoryDescriptions = [];
+  }
+
+  // Load category descriptions based on selected category
+  private loadCategoryDescriptionsForCategory(categoryId: number) {
+    this.isLoadingDescriptions = true;
+    this.categoriesService.getCategoryDescriptions(categoryId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response: ApiResponse<any[]>) => {
+          this.categoryDescriptions = response.data?.map(desc => desc.description) || [];
+          console.log(`Category descriptions loaded for category ${categoryId}:`, this.categoryDescriptions.length);
+          this.isLoadingDescriptions = false;
+        },
+        error: (error) => {
+          console.error('Failed to load category descriptions:', error);
+          this.toastService.showError('Error', 'Failed to load category descriptions');
+          // Fallback to empty array
+          this.categoryDescriptions = [];
+          this.isLoadingDescriptions = false;
+        }
+      });
   }
 
   private loadAddresses() {
@@ -267,6 +276,22 @@ export class Appraisal implements OnInit, OnDestroy {
 
   formatContactNumber() {
     // Basic phone number formatting logic can be added here
+  }
+
+  // Category change handler
+  onCategoryChange() {
+    // Reset category description when category changes  
+    this.itemForm.categoryDescription = '';
+    this.categoryDescriptions = [];
+
+    if (this.itemForm.category) {
+      // Find the selected category to get its ID
+      const selectedCategory = this.categories.find(cat => cat.name === this.itemForm.category);
+      if (selectedCategory) {
+        console.log('Loading descriptions for category:', selectedCategory.name, 'ID:', selectedCategory.id);
+        this.loadCategoryDescriptionsForCategory(selectedCategory.id);
+      }
+    }
   }
 
   // Item management

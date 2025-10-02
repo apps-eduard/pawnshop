@@ -24,6 +24,7 @@ export class NavbarComponent implements OnInit, OnDestroy {
   isDarkMode = false;
   userMenuOpen = false;
   isOnLoginPage = false;
+  isOnTransactionPage = false;
   currentDateTime = new Date();
   currentPageTitle = '';
   private destroy$ = new Subject<void>();
@@ -58,6 +59,7 @@ export class NavbarComponent implements OnInit, OnDestroy {
       )
       .subscribe((event: any) => {
         this.isOnLoginPage = event.url === '/login' || event.url.startsWith('/login');
+        this.isOnTransactionPage = event.url.includes('/transactions/');
 
         // Set page title based on URL
         if (event.url.includes('/appraiser-dashboard')) {
@@ -81,6 +83,7 @@ export class NavbarComponent implements OnInit, OnDestroy {
 
     // Set initial state
     this.isOnLoginPage = this.router.url === '/login' || this.router.url.startsWith('/login');
+    this.isOnTransactionPage = this.router.url.includes('/transactions/');
 
     // Update current time every minute
     setInterval(() => {
