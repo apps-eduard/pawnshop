@@ -18,72 +18,126 @@
           </div>
           
           <!-- Search Section -->
-          <div *ngIf="!selectedPawner" class="mb-4 flex-shrink-0">
+          <div *ngIf="!selectedPawner" class="mb-2 flex-shrink-0">
             <div class="relative">
               <input #searchInput type="text" [(ngModel)]="searchQuery" (input)="onSearchInput()"
-                placeholder="Type at least 3 characters to search existing pawner..."
-                class="w-full px-4 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
-              <div class="absolute right-3 top-1/2 transform -translate-y-1/2">
-                <svg *ngIf="!isSearching" class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                placeholder="Search existing pawner..."
+                class="w-full px-3 py-1.5 pr-8 text-xs border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+              <div class="absolute right-2 top-1/2 transform -translate-y-1/2">
+                <svg *ngIf="!isSearching" class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
                 </svg>
-                <div *ngIf="isSearching" class="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                <div *ngIf="isSearching" class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
               </div>
             </div>
 
             <!-- Search Results -->
-            <div *ngIf="pawners.length > 0" class="mt-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 max-h-32 overflow-y-auto">
+            <div *ngIf="pawners.length > 0" class="mt-1 border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-800 max-h-24 overflow-y-auto">
               <div *ngFor="let pawner of pawners.slice(0, 3)"
                 (click)="selectPawner(pawner)"
-                class="p-2 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer border-b border-gray-100 dark:border-gray-700 last:border-b-0">
-                <div class="font-medium text-sm text-gray-900 dark:text-white">{{ pawner.firstName }} {{ pawner.lastName }}</div>
+                class="p-1.5 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer border-b border-gray-100 dark:border-gray-700 last:border-b-0">
+                <div class="font-medium text-xs text-gray-900 dark:text-white">{{ pawner.firstName }} {{ pawner.lastName }}</div>
                 <div class="text-xs text-gray-600 dark:text-gray-400">{{ pawner.contactNumber }}</div>
-                <div *ngIf="pawner.email" class="text-xs text-gray-500 dark:text-gray-500">{{ pawner.email }}</div>
               </div>
-              <div *ngIf="pawners.length > 3" class="p-2 text-center text-xs text-gray-500 dark:text-gray-400 border-t border-gray-100 dark:border-gray-700">
-                + {{ pawners.length - 3 }} more results (type more to narrow down)
+              <div *ngIf="pawners.length > 3" class="p-1 text-center text-xs text-gray-500 dark:text-gray-400 border-t border-gray-100 dark:border-gray-700">
+                +{{ pawners.length - 3 }} more
+              </div>
+            </div>
+          </div>
+
+          <!-- Manual Pawner Information Input -->
+          <div *ngIf="!selectedPawner" class="mb-3 p-2 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-300 dark:border-gray-600">
+            <h4 class="text-xs font-medium text-gray-900 dark:text-white mb-2">Add New Pawner</h4>
+            
+            <div class="space-y-2">
+              <!-- Name Row -->
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <input id="firstName" type="text" [(ngModel)]="pawnerForm.firstName" placeholder="First Name"
+                    class="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-800 dark:text-white">
+                </div>
+                <div>
+                  <input id="lastName" type="text" [(ngModel)]="pawnerForm.lastName" placeholder="Last Name"
+                    class="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-800 dark:text-white">
+                </div>
+              </div>
+
+              <!-- Contact & Email Row -->
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <input id="contactNumber" type="text" [(ngModel)]="pawnerForm.contactNumber" placeholder="Contact Number"
+                    class="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-800 dark:text-white">
+                </div>
+                <div>
+                  <input id="email" type="email" [(ngModel)]="pawnerForm.email" placeholder="Email (Optional)"
+                    class="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-800 dark:text-white">
+                </div>
+              </div>
+
+              <!-- Address Row -->
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <div class="flex gap-1">
+                    <select id="city" [(ngModel)]="pawnerForm.cityId" (change)="onCityChange()" title="Select City"
+                      class="flex-1 px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-800 dark:text-white">
+                      <option value="">Select City</option>
+                      <option *ngFor="let city of cities" [value]="city.id">{{ city.name }}</option>
+                    </select>
+                    <button type="button" (click)="showAddCityModal()" title="Add New City"
+                      class="px-2 py-1 text-xs bg-green-600 hover:bg-green-700 text-white rounded transition-colors">
+                      +
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <div class="flex gap-1">
+                    <select id="barangay" [(ngModel)]="pawnerForm.barangayId" [disabled]="!pawnerForm.cityId" title="Select Barangay"
+                      class="flex-1 px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-800 dark:text-white disabled:opacity-50">
+                      <option value="">Select Barangay</option>
+                      <option *ngFor="let barangay of barangays" [value]="barangay.id">{{ barangay.name }}</option>
+                    </select>
+                    <button type="button" (click)="showAddBarangayModal()" [disabled]="!pawnerForm.cityId" title="Add New Barangay"
+                      class="px-2 py-1 text-xs bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded transition-colors">
+                      +
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Address Details -->
+              <div>
+                <input id="addressDetails" [(ngModel)]="pawnerForm.addressDetails" placeholder="Address Details (Optional)"
+                  class="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-800 dark:text-white">
               </div>
             </div>
           </div>
 
           <!-- Selected Pawner Info -->
-          <div *ngIf="selectedPawner" class="mb-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800 flex-shrink-0">
-            <div class="flex justify-between">
-              <div class="w-full">
-                <!-- Personal Information -->
-                <div class="font-semibold text-sm text-blue-900 dark:text-blue-100 border-b border-blue-200 dark:border-blue-700 pb-1 mb-1">Pawner Information</div>
-                <div class="font-medium text-sm text-blue-900 dark:text-blue-100">{{ selectedPawner.firstName }} {{ selectedPawner.lastName }}</div>
-                <div class="text-xs text-blue-600 dark:text-blue-400">Contact: {{ selectedPawner.contactNumber }}</div>
-                <div *ngIf="selectedPawner.email" class="text-xs text-blue-500 dark:text-blue-300">Email: {{ selectedPawner.email }}</div>
-                
-                <!-- Address Information -->
-                <div class="font-semibold text-sm text-blue-900 dark:text-blue-100 border-b border-blue-200 dark:border-blue-700 pb-1 mt-2 mb-1">Address</div>
-                <div *ngIf="selectedPawner.cityName || selectedPawner.barangayName" class="text-xs text-blue-600 dark:text-blue-400">
-                  {{ selectedPawner.cityName || 'No city' }}{{ selectedPawner.cityName && selectedPawner.barangayName ? ', ' : '' }}{{ selectedPawner.barangayName || 'No barangay' }}
-                </div>
-                <div *ngIf="selectedPawner.addressDetails" class="text-xs text-blue-500 dark:text-blue-300 mt-1">{{ selectedPawner.addressDetails }}</div>
-                <div *ngIf="!selectedPawner.addressDetails && !selectedPawner.cityName && !selectedPawner.barangayName" class="text-xs text-blue-500 dark:text-blue-300 italic">No address information available</div>
-              </div>
+          <div *ngIf="selectedPawner" class="mb-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800 flex-shrink-0">
+            <div class="text-xs font-medium text-blue-900 dark:text-blue-100 mb-1">{{ selectedPawner.firstName }} {{ selectedPawner.lastName }}</div>
+            <div class="text-xs text-blue-600 dark:text-blue-400">{{ selectedPawner.contactNumber }}</div>
+            <div *ngIf="selectedPawner.cityName || selectedPawner.barangayName" class="text-xs text-blue-500 dark:text-blue-300">
+              {{ selectedPawner.cityName }}{{ selectedPawner.cityName && selectedPawner.barangayName ? ', ' : '' }}{{ selectedPawner.barangayName }}
             </div>
           </div>
 
           <!-- Added Items Section -->
-          <div class="flex-1 overflow-y-auto min-h-0 mt-3">
-            <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
-              <h4 class="text-sm font-medium text-gray-900 dark:text-white mb-2">Selected Items ({{ selectedItems.length || 0 }})</h4>
+          <div class="flex-1 overflow-y-auto min-h-0">
+            <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-2">
+              <h4 class="text-xs font-medium text-gray-900 dark:text-white mb-2">Added Items ({{ selectedItems.length || 0 }})</h4>
 
-              <div *ngIf="!selectedItems || selectedItems.length === 0" class="text-center py-2 text-gray-500 dark:text-gray-400 text-sm">
+              <div *ngIf="!selectedItems || selectedItems.length === 0" class="text-center py-4 text-gray-500 dark:text-gray-400 text-xs">
                 No items added yet
               </div>
 
-              <div *ngIf="selectedItems && selectedItems.length > 0" class="space-y-1">
+              <div *ngIf="selectedItems && selectedItems.length > 0" class="space-y-1 max-h-40 overflow-y-auto">
                 <div *ngFor="let item of selectedItems; let i = index"
                   class="flex justify-between items-center p-1.5 bg-white dark:bg-gray-600 rounded border text-xs">
-                  <div class="flex-1">
-                    <div class="font-medium text-gray-900 dark:text-white">{{ item.categoryDescription }}</div>
-                    <div class="text-xs text-gray-500 dark:text-gray-400">{{ item.category }} - ₱{{ item.appraisalValue | number:"1.2-2" }}</div>
+                  <div class="flex-1 min-w-0">
+                    <div class="font-medium text-gray-900 dark:text-white truncate">{{ item.categoryDescription }}</div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400">₱{{ item.appraisalValue | number:'1.2-2' }}</div>
                   </div>
-                  <button (click)="removeItem(i)" class="text-red-500 hover:text-red-700 p-1" title="Remove Item">
+                  <button (click)="removeItem(i)" class="text-red-500 hover:text-red-700 p-1 flex-shrink-0" title="Remove Item">
                     <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                     </svg>
@@ -93,7 +147,7 @@
 
               <div *ngIf="selectedItems && selectedItems.length > 0" class="mt-2 p-1.5 bg-blue-50 dark:bg-blue-900/20 rounded border-l-2 border-blue-400">
                 <div class="text-xs font-medium text-blue-900 dark:text-blue-300">
-                  Total Appraisal Value: ₱{{ getTotalAppraisalValue() | number:"1.2-2" }}
+                  Total Appraisal Value: ₱{{ getTotalAppraisalValue() | number:'1.2-2' }}
                 </div>
               </div>
             </div>
@@ -104,50 +158,44 @@
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 h-full flex flex-col min-h-0">
           <h4 class="text-md font-medium text-gray-900 dark:text-white mb-3">Item Information</h4>
           
+          <!-- Date Fields Section -->
+          <div class="mb-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-300 dark:border-gray-600">
+            <div class="grid grid-cols-2 gap-3">
+              <!-- Date Transaction -->
+              <div>
+                <label for="dateTransaction" class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Date Transaction</label>
+                <input id="dateTransaction" type="date" [(ngModel)]="loanForm.transactionDate" name="dateTransaction"
+                  class="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-800 dark:text-white">
+              </div>
+
+              <!-- Date Granted -->
+              <div>
+                <label for="dateGranted" class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Date Granted</label>
+                <input id="dateGranted" type="date" [(ngModel)]="loanForm.loanDate" name="dateGranted"
+                  class="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-800 dark:text-white">
+              </div>
+
+              <!-- Date Mature -->
+              <div>
+                <label for="dateMature" class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Date Mature</label>
+                <input id="dateMature" type="date" [(ngModel)]="loanForm.maturityDate" name="dateMature"
+                  class="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-800 dark:text-white">
+              </div>
+
+              <!-- Date Expire -->
+              <div>
+                <label for="dateExpire" class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Date Expire</label>
+                <input id="dateExpire" type="date" [(ngModel)]="loanForm.expiryDate" name="dateExpire"
+                  class="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-800 dark:text-white">
+              </div>
+            </div>
+          </div>
+          
           <div class="flex-1 overflow-y-auto min-h-0">
             <form (ngSubmit)="addItem()" class="space-y-3">
               <!-- Search for Appraisal -->
-              <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Search Appraisals
-                </label>
-                <div class="relative">
-                  <input type="text" [(ngModel)]="appraisalSearchQuery" name="appraisalSearch"
-                    placeholder="Search by ID or description..."
-                    class="w-full px-3 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-gray-700 dark:text-white">
-                  <button type="button" (click)="searchAppraisals()" class="absolute right-2 top-1/2 transform -translate-y-1/2" title="Search Appraisals">
-                    <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                    </svg>
-                  </button>
-                </div>
-              </div>
-
-              <!-- Appraisal Results -->
-              <div *ngIf="appraisalResults.length > 0" class="border border-gray-200 dark:border-gray-600 rounded-lg max-h-32 overflow-y-auto">
-                <div *ngFor="let appraisal of appraisalResults"
-                  (click)="selectAppraisal(appraisal)"
-                  class="p-2 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer border-b border-gray-100 dark:border-gray-700 last:border-b-0">
-                  <div class="flex justify-between">
-                    <span class="font-medium text-sm text-gray-900 dark:text-white">{{ appraisal.categoryDescription }}</span>
-                    <span class="text-xs text-blue-600 dark:text-blue-400">₱{{ appraisal.estimatedValue | number:"1.2-2" }}</span>
-                  </div>
-                  <div class="text-xs text-gray-600 dark:text-gray-400">{{ appraisal.description }}</div>
-                </div>
-              </div>
-
-              <!-- Selected Appraisal Details -->
-              <div *ngIf="selectedAppraisal" class="p-2 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-700">
-                <div class="font-medium text-sm text-green-900 dark:text-green-300">{{ selectedAppraisal.categoryDescription }}</div>
-                <div class="text-xs text-green-700 dark:text-green-400">{{ selectedAppraisal.category }}</div>
-                <div class="text-xs text-green-700 dark:text-green-400">{{ selectedAppraisal.description }}</div>
-                <div class="text-sm font-semibold text-green-900 dark:text-green-300 mt-1">
-                  Appraisal Value: ₱{{ selectedAppraisal.estimatedValue | number:"1.2-2" }}
-                </div>
-              </div>
-
               <!-- Manual Item Entry Fields -->
-              <div *ngIf="!selectedAppraisal" class="space-y-3">
+              <div class="space-y-3">
                 <div>
                   <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Category <span class="text-red-500">*</span>
@@ -219,13 +267,26 @@
               <div class="space-y-3">
                 <div>
                   <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Principal Amount
+                    Total Appraisal
                   </label>
                   <div class="relative">
                     <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">₱</span>
                     <input type="text" [(ngModel)]="loanForm.principalAmount" name="principalAmount" 
                       class="w-full px-3 py-2 pl-8 text-right border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-gray-700 dark:text-white font-semibold" 
-                      [value]="getTotalAppraisalValue() | number:'1.2-2'" readonly title="Principal Amount">
+                      [value]="getTotalAppraisalValue() | number:'1.2-2'" readonly title="Total Appraisal Value">
+                  </div>
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Principal Loan
+                  </label>
+                  <div class="relative">
+                    <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">₱</span>
+                    <input type="text" [(ngModel)]="loanAmountDisplay" name="loanAmount"
+                      (input)="onLoanAmountInput($event)"
+                      class="w-full px-3 py-2 pl-8 text-right border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-gray-700 dark:text-white font-semibold"
+                      placeholder="0.00" title="Principal Loan Amount">
                   </div>
                 </div>
 
@@ -235,25 +296,7 @@
                   </label>
                   <input type="number" [(ngModel)]="loanForm.interestRate" name="interestRate"
                     class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-                    [value]="3.5" step="0.1" min="0" max="20" placeholder="Interest rate percentage" title="Interest Rate Percentage">
-                </div>
-
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Loan Date
-                  </label>
-                  <input type="date" [(ngModel)]="loanForm.loanDate" name="loanDate"
-                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-                    title="Loan Start Date">
-                </div>
-
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Maturity Date
-                  </label>
-                  <input type="date" [(ngModel)]="loanForm.maturityDate" name="maturityDate"
-                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-                    title="Loan Maturity Date">
+                    step="0.1" min="0" max="20" placeholder="0%" title="Interest Rate Percentage" readonly>
                 </div>
               </div>
 
@@ -263,24 +306,24 @@
                 
                 <div class="space-y-2">
                   <div class="flex justify-between text-sm">
-                    <span class="text-gray-600 dark:text-gray-400">Principal Amount:</span>
-                    <span class="font-medium text-gray-900 dark:text-white">₱{{ getTotalAppraisalValue() | number:"1.2-2" }}</span>
+                    <span class="text-gray-600 dark:text-gray-400">Principal Loan:</span>
+                    <span class="font-medium text-gray-900 dark:text-white">₱{{ loanForm.loanAmount | number:'1.2-2' }}</span>
                   </div>
                   
                   <div class="flex justify-between text-sm">
                     <span class="text-gray-600 dark:text-gray-400">Interest Amount:</span>
-                    <span class="font-medium text-gray-900 dark:text-white">₱{{ getInterestAmount() | number:"1.2-2" }}</span>
+                    <span class="font-medium text-gray-900 dark:text-white">₱{{ getInterestAmount() | number:'1.2-2' }}</span>
                   </div>
                   
                   <div class="flex justify-between text-sm">
                     <span class="text-gray-600 dark:text-gray-400">Service Charge:</span>
-                    <span class="font-medium text-gray-900 dark:text-white">₱{{ getServiceCharge() | number:"1.2-2" }}</span>
+                    <span class="font-medium text-gray-900 dark:text-white">₱{{ getServiceCharge() | number:'1.2-2' }}</span>
                   </div>
                   
                   <div class="border-t border-gray-200 dark:border-gray-600 pt-2 mt-2">
                     <div class="flex justify-between text-sm font-semibold">
                       <span class="text-gray-800 dark:text-gray-200">Net Proceeds:</span>
-                      <span class="text-green-600 dark:text-green-400">₱{{ getNetProceeds() | number:"1.2-2" }}</span>
+                      <span class="text-green-600 dark:text-green-400">₱{{ getNetProceeds() | number:'1.2-2' }}</span>
                     </div>
                   </div>
                 </div>
@@ -314,6 +357,58 @@
           </div>
         </div>
       </div>
+    </div>
+  </div>
+
+<!-- Add City Modal -->
+<div *ngIf="showCityModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+  <div class="bg-white dark:bg-gray-800 rounded-lg p-6 w-96 max-w-full mx-4">
+    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Add New City</h3>
+    
+    <div class="mb-4">
+      <label for="newCityName" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">City Name</label>
+      <input id="newCityName" type="text" [(ngModel)]="newCityName" placeholder="Enter city name"
+        class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+    </div>
+    
+    <div class="flex justify-end gap-3">
+      <button type="button" (click)="closeCityModal()"
+        class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 rounded-md transition-colors">
+        Cancel
+      </button>
+      <button type="button" (click)="addNewCity()" [disabled]="!newCityName || !newCityName.trim()"
+        class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed rounded-md transition-colors">
+        Add City
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Barangay Modal -->
+<div *ngIf="showBarangayModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+  <div class="bg-white dark:bg-gray-800 rounded-lg p-6 w-96 max-w-full mx-4">
+    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Add New Barangay</h3>
+    
+    <div class="mb-2">
+      <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Selected City</label>
+      <p class="text-sm text-gray-600 dark:text-gray-400">{{ getSelectedCityName() }}</p>
+    </div>
+    
+    <div class="mb-4">
+      <label for="newBarangayName" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Barangay Name</label>
+      <input id="newBarangayName" type="text" [(ngModel)]="newBarangayName" placeholder="Enter barangay name"
+        class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+    </div>
+    
+    <div class="flex justify-end gap-3">
+      <button type="button" (click)="closeBarangayModal()"
+        class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 rounded-md transition-colors">
+        Cancel
+      </button>
+      <button type="button" (click)="addNewBarangay()" [disabled]="!newBarangayName || !newBarangayName.trim()"
+        class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed rounded-md transition-colors">
+        Add Barangay
+      </button>
     </div>
   </div>
 </div>

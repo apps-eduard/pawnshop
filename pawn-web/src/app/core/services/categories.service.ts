@@ -31,7 +31,7 @@ export interface CreateCategoryDescriptionRequest {
   providedIn: 'root'
 })
 export class CategoriesService {
-  private baseUrl = 'http://localhost:3000/api/categories';
+  private baseUrl = '/api/categories';
 
   constructor(private http: HttpClient) {}
 

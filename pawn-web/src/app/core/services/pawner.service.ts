@@ -35,7 +35,7 @@ export interface UpdatePawnerRequest {
   providedIn: 'root'
 })
 export class PawnerService {
-  private readonly API_URL = 'http://localhost:3000/api';
+  private readonly API_URL = '/api';
 
   constructor(private http: HttpClient) {}
 

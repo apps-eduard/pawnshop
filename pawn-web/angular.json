@@ -75,7 +75,8 @@
               "buildTarget": "pawn-web:build:production"
             },
             "development": {
-              "buildTarget": "pawn-web:build:development"
+              "buildTarget": "pawn-web:build:development",
+              "proxyConfig": "proxy.conf.json"
             }
           },
           "defaultConfiguration": "development"

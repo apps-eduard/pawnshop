@@ -13,7 +13,7 @@ export interface ApiResponse<T> {
   providedIn: 'root'
 })
 export class AppraisalService {
-  private readonly API_URL = 'http://localhost:3000/api';
+  private readonly API_URL = '/api';
 
   constructor(private http: HttpClient) {
     console.log('AppraisalService initialized with API URL:', this.API_URL);
