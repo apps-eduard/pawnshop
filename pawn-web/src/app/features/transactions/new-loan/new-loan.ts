@@ -1,13 +1,18 @@
-import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Location } from '@angular/common';
+import { Subject, takeUntil } from 'rxjs';
 import { ToastService } from '../../../core/services/toast.service';
 import { PawnerService } from '../../../core/services/pawner.service';
 import { AppraisalService } from '../../../core/services/appraisal.service';
 import { CategoriesService, Category } from '../../../core/services/categories.service';
 import { AddressService } from '../../../core/services/address.service';
+import { ModalService } from '../../../shared/services/modal.service';
+import { AddCityModalComponent } from '../../../shared/modals/add-city-modal/add-city-modal.component';
+import { AddBarangayModalComponent } from '../../../shared/modals/add-barangay-modal/add-barangay-modal.component';
+import { AddCategoryDescriptionModalComponent } from '../../../shared/modals/add-category-description-modal/add-category-description-modal.component';
 import { HttpClient } from '@angular/common/http';
 
 interface Pawner {
@@ -59,12 +64,21 @@ interface LoanForm {
 @Component({
   selector: 'app-new-loan',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [
+    CommonModule, 
+    FormsModule,
+    AddCityModalComponent,
+    AddBarangayModalComponent,
+    AddCategoryDescriptionModalComponent
+  ],
   templateUrl: './new-loan.html',
   styleUrl: './new-loan.css'
 })
-export class NewLoan implements OnInit {
+export class NewLoan implements OnInit, OnDestroy {
   @ViewChild('searchInput') searchInput!: ElementRef<HTMLInputElement>;
+
+  // Lifecycle management
+  private destroy$ = new Subject<void>();
 
   // Search & Pawner Management
   searchQuery = '';
@@ -87,16 +101,7 @@ export class NewLoan implements OnInit {
   cities: { id: number; name: string }[] = [];
   barangays: { id: number; name: string }[] = [];
 
-  // Modal states
-  showCityModal = false;
-  showBarangayModal = false;
-  showCategoryModal = false;
-  showCategoryDescriptionModal = false;
-  newCityName = '';
-  newBarangayName = '';
-  newCategoryName = '';
-  newCategoryDescription = '';
-  selectedCategoryFromModal = '';
+  // Old modal states removed - now using ModalService
 
   // Item/Appraisal Management
   appraisalSearchQuery = '';
@@ -140,6 +145,7 @@ export class NewLoan implements OnInit {
     private appraisalService: AppraisalService,
     private categoriesService: CategoriesService,
     private addressService: AddressService,
+    private modalService: ModalService,
     private http: HttpClient
   ) {}
 
@@ -156,18 +162,92 @@ export class NewLoan implements OnInit {
 
     // Initialize currency display
     this.updateLoanAmountDisplay();
+
+    // Set autofocus on search input after view initialization
+    setTimeout(() => {
+      if (this.searchInput) {
+        this.searchInput.nativeElement.focus();
+      }
+    }, 100);
+
+    // Subscribe to modal results
+    this.setupModalSubscriptions();
+  }
+
+  ngOnDestroy() {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  private setupModalSubscriptions() {
+    // City modal result subscription
+    this.modalService.cityModalResult$.pipe(takeUntil(this.destroy$)).subscribe(result => {
+      if (result?.success && result.data) {
+        // Refresh city list to get the new city
+        this.loadCities();
+        
+        // Auto-select the newly added city (will need to wait for list to load)
+        setTimeout(() => {
+          const newCity = this.cities.find(city => city.name === result.data!.name);
+          if (newCity) {
+            this.pawnerForm.cityId = newCity.id.toString();
+            // Clear barangays since city changed
+            this.barangays = [];
+            this.pawnerForm.barangayId = '';
+            // Load barangays for the new city
+            this.onCityChange();
+          }
+        }, 100);
+      }
+    });
+
+    // Barangay modal result subscription
+    this.modalService.barangayModalResult$.pipe(takeUntil(this.destroy$)).subscribe(result => {
+      if (result?.success && result.data) {
+        // Refresh barangay list for the selected city
+        this.onCityChange();
+        
+        // Auto-select the newly added barangay (will need to wait for list to load)
+        setTimeout(() => {
+          const newBarangay = this.barangays.find(barangay => barangay.name === result.data!.name);
+          if (newBarangay) {
+            this.pawnerForm.barangayId = newBarangay.id.toString();
+          }
+        }, 100);
+      }
+    });
+
+    // Category description modal result subscription
+    this.modalService.categoryDescriptionModalResult$.pipe(takeUntil(this.destroy$)).subscribe(result => {
+      if (result?.success) {
+        this.itemForm.categoryDescription = result.data?.description || '';
+        this.onCategoryChange(); // Refresh category descriptions
+      }
+    });
   }
 
   loadCategories() {
+    console.log('🔄 Loading categories for New Loan...');
     this.categoriesService.getCategories().subscribe({
       next: (response) => {
+        console.log('📊 Categories response:', response);
         if (response.success && response.data) {
           this.categories = response.data;
+          console.log('✅ Categories loaded successfully:', this.categories.length, 'categories');
+        } else {
+          console.warn('⚠️ Categories response not successful:', response);
+          this.toastService.showWarning('Warning', 'Categories data format unexpected');
         }
       },
       error: (error: any) => {
-        console.error('Error loading categories:', error);
-        this.toastService.showError('Error', 'Failed to load categories');
+        console.error('❌ Error loading categories:', error);
+        console.error('Error details:', {
+          status: error.status,
+          statusText: error.statusText,
+          message: error.message,
+          url: error.url
+        });
+        this.toastService.showError('Error', 'Failed to load categories - check backend connection');
       }
     });
   }
@@ -222,42 +302,65 @@ export class NewLoan implements OnInit {
 
   // City and Barangay management
   loadCities() {
+    console.log('🔄 Loading cities for New Loan...');
     this.addressService.getCities().subscribe({
       next: (response) => {
-        if (response.success) {
+        console.log('🏙️ Cities response:', response);
+        if (response.success && response.data) {
           this.cities = response.data.map(city => ({ id: city.id, name: city.name }));
-          console.log('✅ Cities loaded:', this.cities);
+          console.log('✅ Cities loaded successfully:', this.cities.length, 'cities');
         } else {
-          this.toastService.showError('Error', 'Failed to load cities');
+          console.warn('⚠️ Cities response not successful:', response);
+          this.toastService.showError('Error', 'Failed to load cities - unexpected response format');
         }
       },
       error: (error) => {
-        console.error('Error loading cities:', error);
-        this.toastService.showError('Error', 'Failed to load cities');
+        console.error('❌ Error loading cities:', error);
+        console.error('Error details:', {
+          status: error.status,
+          statusText: error.statusText,
+          message: error.message,
+          url: error.url
+        });
+        this.toastService.showError('Error', 'Failed to load cities - check backend connection');
       }
     });
   }
 
   onCityChange() {
+    console.log('🏙️ City changed to:', this.pawnerForm.cityId);
     this.pawnerForm.barangayId = ''; // Reset barangay selection
     this.barangays = [];
     
     if (!this.pawnerForm.cityId) {
+      console.log('⚠️ No city selected, skipping barangay load');
       return;
     }
 
-    this.addressService.getBarangaysByCity(parseInt(this.pawnerForm.cityId)).subscribe({
+    const cityId = parseInt(this.pawnerForm.cityId);
+    console.log('🔄 Loading barangays for city ID:', cityId);
+    
+    this.addressService.getBarangaysByCity(cityId).subscribe({
       next: (response) => {
-        if (response.success) {
+        console.log('🏘️ Barangays response:', response);
+        if (response.success && response.data) {
           this.barangays = response.data.map(barangay => ({ id: barangay.id, name: barangay.name }));
-          console.log('✅ Barangays loaded for city', this.pawnerForm.cityId, ':', this.barangays);
+          console.log('✅ Barangays loaded for city', this.pawnerForm.cityId, ':', this.barangays.length, 'barangays');
         } else {
-          this.toastService.showError('Error', 'Failed to load barangays');
+          console.warn('⚠️ Barangays response not successful:', response);
+          this.toastService.showError('Error', 'Failed to load barangays - unexpected response format');
         }
       },
       error: (error) => {
-        console.error('Error loading barangays:', error);
-        this.toastService.showError('Error', 'Failed to load barangays');
+        console.error('❌ Error loading barangays:', error);
+        console.error('Error details:', {
+          status: error.status,
+          statusText: error.statusText,
+          message: error.message,
+          url: error.url
+        });
+        
+        this.toastService.showError('Error', 'Failed to load barangays - check backend connection');
       }
     });
   }
@@ -529,15 +632,12 @@ export class NewLoan implements OnInit {
     this.barangays = [];
   }
 
-  // Modal management methods
+  // Modal management methods using ModalService
   showAddCityModal() {
-    this.showCityModal = true;
-    this.newCityName = '';
-  }
-
-  closeCityModal() {
-    this.showCityModal = false;
-    this.newCityName = '';
+    this.modalService.openCityModal({
+      title: 'Add New City',
+      placeholder: 'Enter city name...'
+    });
   }
 
   showAddBarangayModal() {
@@ -545,163 +645,38 @@ export class NewLoan implements OnInit {
       this.toastService.showWarning('Validation', 'Please select a city first');
       return;
     }
-    this.showBarangayModal = true;
-    this.newBarangayName = '';
-  }
 
-  closeBarangayModal() {
-    this.showBarangayModal = false;
-    this.newBarangayName = '';
-  }
-
-  getSelectedCityName(): string {
     const selectedCity = this.cities.find(city => city.id.toString() === this.pawnerForm.cityId);
-    return selectedCity ? selectedCity.name : 'No city selected';
-  }
-
-  addNewCity() {
-    if (!this.newCityName?.trim()) {
-      this.toastService.showWarning('Validation', 'Please enter a city name');
+    if (!selectedCity) {
+      this.toastService.showWarning('Error', 'Selected city not found');
       return;
     }
 
-    const cityData = {
-      name: this.newCityName.trim(),
-      isActive: true
-    };
-
-    this.addressService.createCity(cityData).subscribe({
-      next: (response) => {
-        if (response.success) {
-          // Add the new city to the list
-          this.cities.push({ id: response.data.id, name: response.data.name });
-          // Select the newly added city
-          this.pawnerForm.cityId = response.data.id.toString();
-          // Clear barangays since city changed
-          this.barangays = [];
-          this.pawnerForm.barangayId = '';
-          // Load barangays for the new city
-          this.onCityChange();
-          
-          this.toastService.showSuccess('Success', 'City added successfully');
-          this.closeCityModal();
-        } else {
-          this.toastService.showError('Error', response.message || 'Failed to add city');
-        }
-      },
-      error: (error) => {
-        console.error('Error adding city:', error);
-        this.toastService.showError('Error', 'Failed to add city');
-      }
+    this.modalService.openBarangayModal({
+      title: 'Add New Barangay',
+      placeholder: 'Enter barangay name...',
+      selectedCityId: this.pawnerForm.cityId,
+      selectedCityName: selectedCity.name
     });
   }
 
-  addNewBarangay() {
-    if (!this.newBarangayName?.trim()) {
-      this.toastService.showWarning('Validation', 'Please enter a barangay name');
-      return;
-    }
-
-    if (!this.pawnerForm.cityId) {
-      this.toastService.showWarning('Validation', 'Please select a city first');
-      return;
-    }
-
-    const barangayData = {
-      name: this.newBarangayName.trim(),
-      cityId: parseInt(this.pawnerForm.cityId),
-      isActive: true
-    };
-
-    this.addressService.createBarangay(barangayData).subscribe({
-      next: (response) => {
-        if (response.success) {
-          // Add the new barangay to the list
-          this.barangays.push({ id: response.data.id, name: response.data.name });
-          // Select the newly added barangay
-          this.pawnerForm.barangayId = response.data.id.toString();
-          
-          this.toastService.showSuccess('Success', 'Barangay added successfully');
-          this.closeBarangayModal();
-        } else {
-          this.toastService.showError('Error', response.message || 'Failed to add barangay');
-        }
-      },
-      error: (error) => {
-        console.error('Error adding barangay:', error);
-        this.toastService.showError('Error', 'Failed to add barangay');
-      }
-    });
-  }
-
-  // Category Modal Methods
-  closeCategoryModal() {
-    this.showCategoryModal = false;
-    this.selectedCategoryFromModal = '';
-  }
-
-  selectCategoryFromModal() {
-    if (!this.selectedCategoryFromModal) {
-      this.toastService.showWarning('Validation', 'Please select a category');
-      return;
-    }
-
-    // Set the selected category to the form
-    this.itemForm.category = this.selectedCategoryFromModal;
-    
-    this.toastService.showSuccess('Success', 'Category selected successfully');
-    this.closeCategoryModal();
-    
-    // Load category descriptions for the selected category
-    this.onCategoryChange();
-  }
-
-  // Category Description Modal Methods
-  closeCategoryDescriptionModal() {
-    this.showCategoryDescriptionModal = false;
-    this.newCategoryDescription = '';
-  }
-
-  addNewCategoryDescription() {
-    if (!this.newCategoryDescription || !this.newCategoryDescription.trim()) {
-      this.toastService.showWarning('Validation', 'Please enter a description');
-      return;
-    }
-
+  showCategoryDescriptionModal() {
     if (!this.itemForm.category) {
       this.toastService.showWarning('Validation', 'Please select a category first');
       return;
     }
 
-    // Find the selected category to get its ID
     const selectedCategory = this.categories.find(cat => cat.name === this.itemForm.category);
     if (!selectedCategory) {
       this.toastService.showWarning('Error', 'Selected category not found');
       return;
     }
 
-    const descriptionData = {
-      description: this.newCategoryDescription.trim()
-    };
-
-    this.categoriesService.createCategoryDescription(selectedCategory.id, descriptionData).subscribe({
-      next: (response: any) => {
-        if (response.success && response.data) {
-          // Add the new description to the list
-          this.categoryDescriptions.push(response.data.description);
-          // Select the newly added description
-          this.itemForm.categoryDescription = response.data.description;
-          
-          this.toastService.showSuccess('Success', 'Category description added successfully');
-          this.closeCategoryDescriptionModal();
-        } else {
-          this.toastService.showError('Error', response.message || 'Failed to add description');
-        }
-      },
-      error: (error: any) => {
-        console.error('Error adding category description:', error);
-        this.toastService.showError('Error', 'Failed to add category description');
-      }
+    this.modalService.openCategoryDescriptionModal({
+      title: 'Add Category Description',
+      placeholder: 'Enter description...',
+      selectedCategoryId: selectedCategory.id.toString(),
+      selectedCategoryName: selectedCategory.name
     });
   }
 

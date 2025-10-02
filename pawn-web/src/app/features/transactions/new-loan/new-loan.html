@@ -29,7 +29,7 @@
           <div *ngIf="!selectedPawner" class="mb-2 flex-shrink-0">
             <div class="relative">
               <input #searchInput type="text" [(ngModel)]="searchQuery" (input)="onSearchInput()"
-                placeholder="Search existing pawner..."
+                placeholder="Search existing pawner..." autofocus
                 class="w-full px-3 py-1.5 pr-8 text-xs border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
               <div class="absolute right-2 top-1/2 transform -translate-y-1/2">
                 <svg *ngIf="!isSearching" class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -196,30 +196,30 @@
             <div class="grid grid-cols-2 gap-3">
               <!-- Date Transaction -->
               <div>
-                <label for="dateTransaction" class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Date Transaction</label>
+                <label for="dateTransaction" class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-0.5">Date Transaction</label>
                 <input id="dateTransaction" type="date" [(ngModel)]="loanForm.transactionDate" name="dateTransaction"
-                  class="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-400 focus:border-blue-500 dark:bg-gray-700 dark:text-white bg-white transition-all">
+                  class="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-400 focus:border-blue-500 dark:bg-gray-700 dark:text-white bg-white transition-all">
               </div>
 
               <!-- Date Granted -->
               <div>
-                <label for="dateGranted" class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Date Granted</label>
+                <label for="dateGranted" class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-0.5">Date Granted</label>
                 <input id="dateGranted" type="date" [(ngModel)]="loanForm.loanDate" name="dateGranted"
-                  class="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-400 focus:border-blue-500 dark:bg-gray-700 dark:text-white bg-white transition-all">
+                  class="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-400 focus:border-blue-500 dark:bg-gray-700 dark:text-white bg-white transition-all">
               </div>
 
               <!-- Date Mature -->
               <div>
-                <label for="dateMature" class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Date Mature</label>
+                <label for="dateMature" class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-0.5">Date Mature</label>
                 <input id="dateMature" type="date" [(ngModel)]="loanForm.maturityDate" name="dateMature"
-                  class="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-400 focus:border-blue-500 dark:bg-gray-700 dark:text-white bg-white transition-all">
+                  class="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:text-white bg-white transition-all">
               </div>
 
               <!-- Date Expire -->
               <div>
-                <label for="dateExpire" class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Date Expire</label>
+                <label for="dateExpire" class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-0.5">Date Expire</label>
                 <input id="dateExpire" type="date" [(ngModel)]="loanForm.expiryDate" name="dateExpire"
-                  class="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-400 focus:border-blue-500 dark:bg-gray-700 dark:text-white bg-white transition-all">
+                  class="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-400 focus:border-blue-500 dark:bg-gray-700 dark:text-white bg-white transition-all">
               </div>
             </div>
           </div>
@@ -240,18 +240,12 @@
                     <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-0.5">
                       Category <span class="text-red-500">*</span>
                     </label>
-                    <div class="flex gap-1">
-                      <select [(ngModel)]="itemForm.category" name="category" required (change)="onCategoryChange()"
-                        class="flex-1 px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-blue-400 focus:border-blue-500 dark:bg-gray-700 dark:text-white bg-white transition-all"
-                        title="Select Item Category">
-                        <option value="">Select Category</option>
-                        <option *ngFor="let category of categories" [value]="category.name">{{ category.name }}</option>
-                      </select>
-                      <button type="button" (click)="showCategoryModal = true" title="Select Category"
-                        class="px-2 py-1 text-xs bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded transition-all shadow-sm">
-                        📋
-                      </button>
-                    </div>
+                    <select [(ngModel)]="itemForm.category" name="category" required (change)="onCategoryChange()"
+                      class="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-blue-400 focus:border-blue-500 dark:bg-gray-700 dark:text-white bg-white transition-all"
+                      title="Select Item Category">
+                      <option value="">Select Category</option>
+                      <option *ngFor="let category of categories" [value]="category.name">{{ category.name }}</option>
+                    </select>
                   </div>
 
                   <div>
@@ -269,7 +263,7 @@
                         <option value="" *ngIf="itemForm.category && !isLoadingDescriptions && categoryDescriptions.length > 0">Select Description</option>
                         <option *ngFor="let desc of categoryDescriptions" [value]="desc">{{ desc }}</option>
                       </select>
-                      <button type="button" (click)="showCategoryDescriptionModal = true" [disabled]="!itemForm.category" title="Add New Description"
+                      <button type="button" (click)="showCategoryDescriptionModal()" [disabled]="!itemForm.category" title="Add New Description"
                         class="px-2 py-1 text-xs bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed text-white rounded transition-all shadow-sm">
                         +
                       </button>
@@ -418,174 +412,7 @@
     </div>
   </div>
 
-<!-- Add City Modal -->
-<div *ngIf="showCityModal" class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
-  <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 p-4 w-80 max-w-full mx-4">
-    <!-- Header -->
-    <div class="flex items-center justify-between mb-3">
-      <div class="flex items-center">
-        <svg class="w-4 h-4 mr-2 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
-        </svg>
-        <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Add New City</h3>
-      </div>
-      <button type="button" (click)="closeCityModal()" title="Close Modal" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-        </svg>
-      </button>
-    </div>
-    
-    <!-- Form -->
-    <div class="mb-3">
-      <label for="newCityName" class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">City Name</label>
-      <input id="newCityName" type="text" [(ngModel)]="newCityName" placeholder="Enter city name"
-        class="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-emerald-400 focus:border-emerald-500 dark:bg-gray-700 dark:text-white transition-all">
-    </div>
-    
-    <!-- Buttons -->
-    <div class="flex justify-end gap-2">
-      <button type="button" (click)="closeCityModal()"
-        class="px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-600 hover:bg-gray-200 dark:hover:bg-gray-500 rounded transition-all">
-        Cancel
-      </button>
-      <button type="button" (click)="addNewCity()" [disabled]="!newCityName || !newCityName.trim()"
-        class="px-3 py-1.5 text-xs font-medium text-white bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed rounded transition-all shadow-sm">
-        Add City
-      </button>
-    </div>
-  </div>
-</div>
-
-<!-- Add Barangay Modal -->
-<div *ngIf="showBarangayModal" class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
-  <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 p-4 w-80 max-w-full mx-4">
-    <!-- Header -->
-    <div class="flex items-center justify-between mb-3">
-      <div class="flex items-center">
-        <svg class="w-4 h-4 mr-2 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
-        </svg>
-        <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Add New Barangay</h3>
-      </div>
-      <button type="button" (click)="closeBarangayModal()" title="Close Modal" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-        </svg>
-      </button>
-    </div>
-    
-    <!-- Selected City Info -->
-    <div class="mb-2 p-2 bg-gray-50 dark:bg-gray-700 rounded border">
-      <label class="block text-xs font-medium text-gray-600 dark:text-gray-300">Selected City</label>
-      <p class="text-xs font-semibold text-gray-800 dark:text-gray-200">{{ getSelectedCityName() }}</p>
-    </div>
-    
-    <!-- Form -->
-    <div class="mb-3">
-      <label for="newBarangayName" class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Barangay Name</label>
-      <input id="newBarangayName" type="text" [(ngModel)]="newBarangayName" placeholder="Enter barangay name"
-        class="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-emerald-400 focus:border-emerald-500 dark:bg-gray-700 dark:text-white transition-all">
-    </div>
-    
-    <!-- Buttons -->
-    <div class="flex justify-end gap-2">
-      <button type="button" (click)="closeBarangayModal()"
-        class="px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-600 hover:bg-gray-200 dark:hover:bg-gray-500 rounded transition-all">
-        Cancel
-      </button>
-      <button type="button" (click)="addNewBarangay()" [disabled]="!newBarangayName || !newBarangayName.trim()"
-        class="px-3 py-1.5 text-xs font-medium text-white bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed rounded transition-all shadow-sm">
-        Add Barangay
-      </button>
-    </div>
-  </div>
-</div>
-
-<!-- Select Category Modal -->
-<div *ngIf="showCategoryModal" class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
-  <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 p-4 w-80 max-w-full mx-4">
-    <!-- Header -->
-    <div class="flex items-center justify-between mb-3">
-      <div class="flex items-center">
-        <svg class="w-4 h-4 mr-2 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
-        </svg>
-        <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Select Category</h3>
-      </div>
-      <button type="button" (click)="showCategoryModal = false" title="Close Modal" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-        </svg>
-      </button>
-    </div>
-    
-    <!-- Form -->
-    <div class="mb-3">
-      <label for="modalCategorySelect" class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Select Category</label>
-      <select id="modalCategorySelect" [(ngModel)]="selectedCategoryFromModal" 
-        class="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-emerald-400 focus:border-emerald-500 dark:bg-gray-700 dark:text-white transition-all">
-        <option value="">Choose a category</option>
-        <option *ngFor="let category of categories" [value]="category.name">{{ category.name }}</option>
-      </select>
-    </div>
-    
-    <!-- Buttons -->
-    <div class="flex justify-end gap-2">
-      <button type="button" (click)="showCategoryModal = false"
-        class="px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-600 hover:bg-gray-200 dark:hover:bg-gray-500 rounded transition-all">
-        Cancel
-      </button>
-      <button type="button" (click)="selectCategoryFromModal()" [disabled]="!selectedCategoryFromModal"
-        class="px-3 py-1.5 text-xs font-medium text-white bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed rounded transition-all shadow-sm">
-        Select Category
-      </button>
-    </div>
-  </div>
-</div>
-
-<!-- Add Category Description Modal -->
-<div *ngIf="showCategoryDescriptionModal" class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
-  <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 p-4 w-80 max-w-full mx-4">
-    <!-- Header -->
-    <div class="flex items-center justify-between mb-3">
-      <div class="flex items-center">
-        <svg class="w-4 h-4 mr-2 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-        </svg>
-        <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Add Category Description</h3>
-      </div>
-      <button type="button" (click)="showCategoryDescriptionModal = false" title="Close Modal" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-        </svg>
-      </button>
-    </div>
-    
-    <!-- Selected Category Info -->
-    <div class="mb-2 p-2 bg-gray-50 dark:bg-gray-700 rounded border">
-      <label class="block text-xs font-medium text-gray-600 dark:text-gray-300">Selected Category</label>
-      <p class="text-xs font-semibold text-gray-800 dark:text-gray-200">{{ itemForm.category || 'No category selected' }}</p>
-    </div>
-    
-    <!-- Form -->
-    <div class="mb-3">
-      <label for="newCategoryDescription" class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
-      <input id="newCategoryDescription" type="text" [(ngModel)]="newCategoryDescription" placeholder="Enter description"
-        class="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-emerald-400 focus:border-emerald-500 dark:bg-gray-700 dark:text-white transition-all">
-    </div>
-    
-    <!-- Buttons -->
-    <div class="flex justify-end gap-2">
-      <button type="button" (click)="showCategoryDescriptionModal = false"
-        class="px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-600 hover:bg-gray-200 dark:hover:bg-gray-500 rounded transition-all">
-        Cancel
-      </button>
-      <button type="button" (click)="addNewCategoryDescription()" [disabled]="!newCategoryDescription || !newCategoryDescription.trim()"
-        class="px-3 py-1.5 text-xs font-medium text-white bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed rounded transition-all shadow-sm">
-        Add Description
-      </button>
-    </div>
-  </div>
-</div>
+<!-- Shared Modal Components -->
+<app-add-city-modal></app-add-city-modal>
+<app-add-barangay-modal></app-add-barangay-modal>
+<app-add-category-description-modal></app-add-category-description-modal>

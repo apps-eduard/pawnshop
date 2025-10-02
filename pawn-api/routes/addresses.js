@@ -85,12 +85,12 @@ router.get('/cities/:id', async (req, res) => {
   }
 });
 
-// Create new city (Admin/Manager only)
+// Create new city (Admin/Manager/Cashier)
 router.post('/cities', async (req, res) => {
-  if (!['administrator', 'manager'].includes(req.user.role)) {
+  if (!['administrator', 'manager', 'cashier'].includes(req.user.role)) {
     return res.status(403).json({
       success: false,
-      message: 'Admin or manager access required'
+      message: 'Admin, manager, or cashier access required'
     });
   }
 
@@ -106,11 +106,24 @@ router.post('/cities', async (req, res) => {
     
     console.log(`➕ [${new Date().toISOString()}] Creating city: ${name} - User: ${req.user.username}`);
     
+    // Check for duplicate city name
+    const duplicateCheck = await pool.query(
+      'SELECT id FROM cities WHERE LOWER(name) = LOWER($1)',
+      [name.trim()]
+    );
+    
+    if (duplicateCheck.rows.length > 0) {
+      return res.status(409).json({
+        success: false,
+        message: 'A city with this name already exists'
+      });
+    }
+    
     const result = await pool.query(`
       INSERT INTO cities (name, province, is_active)
       VALUES ($1, $2, $3)
       RETURNING id, name, province, is_active, created_at, updated_at
-    `, [name, province, isActive]);
+    `, [name.trim(), province, isActive]);
     
     const row = result.rows[0];
     
@@ -137,12 +150,12 @@ router.post('/cities', async (req, res) => {
   }
 });
 
-// Update city (Admin/Manager only)
+// Update city (Admin/Manager/Cashier)
 router.put('/cities/:id', async (req, res) => {
-  if (!['administrator', 'manager'].includes(req.user.role)) {
+  if (!['administrator', 'manager', 'cashier'].includes(req.user.role)) {
     return res.status(403).json({
       success: false,
-      message: 'Admin or manager access required'
+      message: 'Admin, manager, or cashier access required'
     });
   }
 
@@ -335,12 +348,12 @@ router.get('/cities/:cityId/barangays', async (req, res) => {
   }
 });
 
-// Create new barangay (Admin/Manager only)
+// Create new barangay (Admin/Manager/Cashier)
 router.post('/barangays', async (req, res) => {
-  if (!['administrator', 'manager'].includes(req.user.role)) {
+  if (!['administrator', 'manager', 'cashier'].includes(req.user.role)) {
     return res.status(403).json({
       success: false,
-      message: 'Admin or manager access required'
+      message: 'Admin, manager, or cashier access required'
     });
   }
 
@@ -356,11 +369,24 @@ router.post('/barangays', async (req, res) => {
     
     console.log(`➕ [${new Date().toISOString()}] Creating barangay: ${name} for city ${cityId} - User: ${req.user.username}`);
     
+    // Check for duplicate barangay name within the same city
+    const duplicateCheck = await pool.query(
+      'SELECT id FROM barangays WHERE LOWER(name) = LOWER($1) AND city_id = $2',
+      [name.trim(), cityId]
+    );
+    
+    if (duplicateCheck.rows.length > 0) {
+      return res.status(409).json({
+        success: false,
+        message: 'A barangay with this name already exists in this city'
+      });
+    }
+    
     const result = await pool.query(`
       INSERT INTO barangays (name, city_id, is_active)
       VALUES ($1, $2, $3)
       RETURNING id, name, city_id, is_active, created_at, updated_at
-    `, [name, cityId, isActive]);
+    `, [name.trim(), cityId, isActive]);
     
     const row = result.rows[0];
     
@@ -387,12 +413,12 @@ router.post('/barangays', async (req, res) => {
   }
 });
 
-// Update barangay (Admin/Manager only)
+// Update barangay (Admin/Manager/Cashier)
 router.put('/barangays/:id', async (req, res) => {
-  if (!['administrator', 'manager'].includes(req.user.role)) {
+  if (!['administrator', 'manager', 'cashier'].includes(req.user.role)) {
     return res.status(403).json({
       success: false,
-      message: 'Admin or manager access required'
+      message: 'Admin, manager, or cashier access required'
     });
   }
 

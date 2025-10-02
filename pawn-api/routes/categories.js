@@ -66,6 +66,14 @@ router.get('/:categoryId/descriptions', authenticateToken, async (req, res) => {
 
 // Create new category description
 router.post('/:categoryId/descriptions', authenticateToken, async (req, res) => {
+  // Check role authorization (same as cities/barangays)
+  if (!['administrator', 'manager', 'cashier'].includes(req.user.role)) {
+    return res.status(403).json({
+      success: false,
+      message: 'Admin, manager, or cashier access required'
+    });
+  }
+
   try {
     const { categoryId } = req.params;
     const { description } = req.body;
@@ -88,6 +96,19 @@ router.post('/:categoryId/descriptions', authenticateToken, async (req, res) => 
       });
     }
 
+    // Check for duplicate description within the same category (case-insensitive)
+    const duplicateCheck = await pool.query(
+      'SELECT id FROM category_descriptions WHERE LOWER(description) = LOWER($1) AND category_id = $2',
+      [description.trim(), categoryId]
+    );
+    
+    if (duplicateCheck.rows.length > 0) {
+      return res.status(409).json({
+        success: false,
+        message: 'This description already exists for this category'
+      });
+    }
+
     // Insert new category description
     const result = await pool.query(`
       INSERT INTO category_descriptions (category_id, description)
@@ -106,6 +127,7 @@ router.post('/:categoryId/descriptions', authenticateToken, async (req, res) => 
   } catch (error) {
     console.error('❌ [Categories API] Error creating category description:', error);
     
+    // Handle database constraint errors as fallback
     if (error.constraint === 'category_descriptions_category_id_description_key') {
       return res.status(409).json({
         success: false,

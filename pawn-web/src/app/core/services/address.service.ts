@@ -25,7 +25,7 @@ export interface CreateBarangayRequest {
   providedIn: 'root'
 })
 export class AddressService {
-  private readonly API_URL = '/api';
+  private readonly API_URL = 'http://localhost:3000/api';
 
   constructor(private http: HttpClient) {}
 
