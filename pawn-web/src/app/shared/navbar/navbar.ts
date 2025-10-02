@@ -2,6 +2,7 @@ import { Component, OnInit, OnDestroy, Input, Output, EventEmitter } from '@angu
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router, NavigationEnd } from '@angular/router';
 import { Location } from '@angular/common';
+import { HttpClient } from '@angular/common/http';
 import { Subject, takeUntil, filter } from 'rxjs';
 import { AuthService } from '../../core/auth/auth';
 import { ThemeService } from '../../core/theme/theme';
@@ -27,13 +28,15 @@ export class NavbarComponent implements OnInit, OnDestroy {
   isOnTransactionPage = false;
   currentDateTime = new Date();
   currentPageTitle = '';
+  currentBranchName = '';
   private destroy$ = new Subject<void>();
 
   constructor(
     private authService: AuthService,
     private themeService: ThemeService,
     private router: Router,
-    private location: Location
+    private location: Location,
+    private http: HttpClient
   ) {}
 
   ngOnInit(): void {
@@ -42,6 +45,9 @@ export class NavbarComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe(user => {
         this.currentUser = user;
+        if (user) {
+          this.loadCurrentBranch();
+        }
       });
 
     // Subscribe to theme changes
@@ -60,30 +66,15 @@ export class NavbarComponent implements OnInit, OnDestroy {
       .subscribe((event: any) => {
         this.isOnLoginPage = event.url === '/login' || event.url.startsWith('/login');
         this.isOnTransactionPage = event.url.includes('/transactions/');
-
-        // Set page title based on URL
-        if (event.url.includes('/appraiser-dashboard')) {
-          this.currentPageTitle = 'Appraiser Dashboard';
-        } else if (event.url.includes('/manager-dashboard')) {
-          this.currentPageTitle = 'Manager Dashboard';
-        } else if (event.url.includes('/auctioneer-dashboard')) {
-          this.currentPageTitle = 'Auctioneer Dashboard';
-        } else if (event.url.includes('/cashier-dashboard')) {
-          this.currentPageTitle = 'Cashier Dashboard';
-        } else if (event.url.includes('/admin-dashboard')) {
-          this.currentPageTitle = 'Admin Dashboard';
-        } else if (event.url.includes('/transactions/appraisal')) {
-          this.currentPageTitle = 'Create Appraisal';
-        } else if (event.url.includes('/transactions/')) {
-          this.currentPageTitle = 'Transaction';
-        } else {
-          this.currentPageTitle = '';
-        }
+        this.setPageTitle(event.url);
       });
 
     // Set initial state
     this.isOnLoginPage = this.router.url === '/login' || this.router.url.startsWith('/login');
     this.isOnTransactionPage = this.router.url.includes('/transactions/');
+
+    // Set initial page title based on current URL
+    this.setPageTitle(this.router.url);
 
     // Update current time every minute
     setInterval(() => {
@@ -134,5 +125,43 @@ export class NavbarComponent implements OnInit, OnDestroy {
   // Go back navigation
   goBack(): void {
     this.location.back();
+  }
+
+  // Set page title based on URL
+  private setPageTitle(url: string): void {
+    if (url.includes('/appraiser-dashboard')) {
+      this.currentPageTitle = 'Appraiser Dashboard';
+    } else if (url.includes('/manager-dashboard')) {
+      this.currentPageTitle = 'Manager Dashboard';
+    } else if (url.includes('/auctioneer-dashboard')) {
+      this.currentPageTitle = 'Auctioneer Dashboard';
+    } else if (url.includes('/cashier-dashboard')) {
+      this.currentPageTitle = 'Cashier Dashboard';
+    } else if (url.includes('/admin-dashboard')) {
+      this.currentPageTitle = 'Admin Dashboard';
+    } else if (url.includes('/admin-settings')) {
+      this.currentPageTitle = 'Admin Settings';
+    } else if (url.includes('/transactions/appraisal')) {
+      this.currentPageTitle = 'Create Appraisal';
+    } else if (url.includes('/transactions/')) {
+      this.currentPageTitle = 'Transaction';
+    } else {
+      this.currentPageTitle = '';
+    }
+  }
+
+  // Load current branch information
+  private loadCurrentBranch(): void {
+    this.http.get<{success: boolean, data: any}>('http://localhost:3000/api/branch-config/current').subscribe({
+      next: (response) => {
+        if (response.success && response.data) {
+          this.currentBranchName = response.data.name;
+        }
+      },
+      error: (error) => {
+        console.error('Error loading current branch:', error);
+        this.currentBranchName = '';
+      }
+    });
   }
 }

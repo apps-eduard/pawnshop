@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -13,6 +13,7 @@ import { ModalService } from '../../../shared/services/modal.service';
 import { AddCityModalComponent } from '../../../shared/modals/add-city-modal/add-city-modal.component';
 import { AddBarangayModalComponent } from '../../../shared/modals/add-barangay-modal/add-barangay-modal.component';
 import { AddCategoryDescriptionModalComponent } from '../../../shared/modals/add-category-description-modal/add-category-description-modal.component';
+import { CurrencyInputDirective } from '../../../shared/directives/currency-input.directive';
 import { HttpClient } from '@angular/common/http';
 
 interface Pawner {
@@ -69,13 +70,17 @@ interface LoanForm {
     FormsModule,
     AddCityModalComponent,
     AddBarangayModalComponent,
-    AddCategoryDescriptionModalComponent
+    AddCategoryDescriptionModalComponent,
+    CurrencyInputDirective
   ],
   templateUrl: './new-loan.html',
   styleUrl: './new-loan.css'
 })
 export class NewLoan implements OnInit, OnDestroy {
   @ViewChild('searchInput') searchInput!: ElementRef<HTMLInputElement>;
+  @ViewChild('categoryDescriptionSelect') categoryDescriptionSelect!: ElementRef<HTMLSelectElement>;
+  @ViewChild('principalLoanInput', { read: CurrencyInputDirective }) principalLoanDirective!: CurrencyInputDirective;
+  @ViewChild('appraisalValueInput', { read: CurrencyInputDirective }) appraisalValueDirective!: CurrencyInputDirective;
 
   // Lifecycle management
   private destroy$ = new Subject<void>();
@@ -128,14 +133,10 @@ export class NewLoan implements OnInit, OnDestroy {
     loanDate: new Date().toISOString().split('T')[0],
     maturityDate: this.getDefaultMaturityDate(),
     expiryDate: this.getDefaultExpiryDate(),
-    serviceCharge: 100 // Default service charge
+    serviceCharge: 0 // Will be calculated automatically
   };
 
-  // For currency input formatting
-  loanAmountDisplay: string = '';
-  private updateLoanAmountDisplay() {
-    this.loanAmountDisplay = this.loanForm.loanAmount ? this.formatCurrency(this.loanForm.loanAmount) : '';
-  }
+
 
   constructor(
     private router: Router,
@@ -160,8 +161,7 @@ export class NewLoan implements OnInit, OnDestroy {
     this.loanForm.loanDate = new Date().toISOString().split('T')[0];
     this.loanForm.maturityDate = this.getDefaultMaturityDate();
 
-    // Initialize currency display
-    this.updateLoanAmountDisplay();
+
 
     // Set autofocus on search input after view initialization
     setTimeout(() => {
@@ -426,7 +426,13 @@ export class NewLoan implements OnInit, OnDestroy {
     }
     
     // Set interest rate from selected category
-    this.loanForm.interestRate = parseFloat(selectedCategory.interest_rate);
+    const interestRateValue = parseFloat(selectedCategory.interest_rate);
+    this.loanForm.interestRate = interestRateValue;
+    
+    console.log('🔍 Category selected:', selectedCategory.name);
+    console.log('💾 Database interest_rate value:', selectedCategory.interest_rate);
+    console.log('🔢 Parsed interest rate:', interestRateValue);
+    console.log('📊 Final loanForm.interestRate:', this.loanForm.interestRate);
     
     // Load descriptions for the selected category
     this.isLoadingDescriptions = true;
@@ -472,16 +478,23 @@ export class NewLoan implements OnInit, OnDestroy {
       
       this.selectedItems.push(newItem);
       
-      // Reset form
-      this.itemForm = {
-        category: '',
-        categoryDescription: '',
-        description: '',
-        appraisalValue: 0
-      };
+      // Reset only description and appraisal value, keep category and categoryDescription
+      this.itemForm.categoryDescription = '';
+      this.itemForm.description = '';
+      this.itemForm.appraisalValue = 0;
       
       // Update loan amount
       this.updateLoanAmount();
+      
+      // Reset appraisal value input field to show 0.00
+      setTimeout(() => {
+        if (this.appraisalValueDirective) {
+          this.appraisalValueDirective.setValue(0);
+        }
+        if (this.categoryDescriptionSelect) {
+          this.categoryDescriptionSelect.nativeElement.focus();
+        }
+      }, 100);
       
       this.toastService.showSuccess('Success', 'Item added to loan');
     }
@@ -509,6 +522,14 @@ export class NewLoan implements OnInit, OnDestroy {
               this.itemForm.appraisalValue > 0);
   }
 
+  isCategoryDisabled(): boolean {
+    return this.selectedItems && this.selectedItems.length > 0;
+  }
+
+  isCategoryDescriptionDisabled(): boolean {
+    return !this.itemForm.category || this.isLoadingDescriptions;
+  }
+
   // Loan calculations and management
   updateLoanAmount() {
     this.loanForm.principalAmount = this.getTotalAppraisalValue();
@@ -521,12 +542,23 @@ export class NewLoan implements OnInit, OnDestroy {
     }, 0);
   }
 
+  getMaxPrincipalLoan(): number {
+    return this.getTotalAppraisalValue();
+  }
+
   getInterestAmount(): number {
     return (this.loanForm.loanAmount * this.loanForm.interestRate) / 100;
   }
 
   getServiceCharge(): number {
-    return this.loanForm.serviceCharge || 100;
+    const principalLoan = this.loanForm.loanAmount;
+    
+    if (principalLoan <= 0) return 0;
+    if (principalLoan <= 100) return 1;
+    if (principalLoan <= 200) return 2;
+    if (principalLoan <= 300) return 3;
+    if (principalLoan <= 400) return 4;
+    return 5; // 401 and up
   }
 
   getNetProceeds(): number {
@@ -555,11 +587,16 @@ export class NewLoan implements OnInit, OnDestroy {
     }).format(value);
   }
 
-  onLoanAmountInput(event: any) {
-    const input = event.target.value.replace(/[^0-9.]/g, '');
-    const numValue = parseFloat(input) || 0;
-    this.loanForm.loanAmount = numValue;
-    this.loanAmountDisplay = this.formatCurrency(numValue);
+
+
+  // Principal loan amount change handler
+  onPrincipalLoanChange(value: number) {
+    this.loanForm.loanAmount = value;
+  }
+
+  // Appraisal value change handler
+  onAppraisalValueChange(value: number) {
+    this.itemForm.appraisalValue = value;
   }
 
   canCreateLoan(): boolean {
@@ -580,15 +617,40 @@ export class NewLoan implements OnInit, OnDestroy {
       loanDate: new Date().toISOString().split('T')[0],
       maturityDate: this.getDefaultMaturityDate(),
       expiryDate: this.getDefaultExpiryDate(),
-      serviceCharge: 100
+      serviceCharge: 0 // Will be calculated automatically
     };
     
     // Reset items
     this.selectedItems = [];
     this.selectedAppraisal = null;
     
-    // Reset currency display
-    this.updateLoanAmountDisplay();
+    // Reset item form
+    this.itemForm = {
+      category: '',
+      categoryDescription: '',
+      description: '',
+      appraisalValue: 0
+    };
+    
+    // Reset pawner selection and form
+    this.selectedPawner = null;
+    this.searchQuery = '';
+    this.resetPawnerForm();
+    
+    // Reset currency input fields to show 0.00
+    setTimeout(() => {
+      if (this.principalLoanDirective) {
+        this.principalLoanDirective.setValue(0);
+      }
+      if (this.appraisalValueDirective) {
+        this.appraisalValueDirective.setValue(0);
+      }
+      
+      // Focus on search input for pawner after reset
+      if (this.searchInput) {
+        this.searchInput.nativeElement.focus();
+      }
+    }, 100);
     
     this.toastService.showInfo('Reset', 'Form has been reset');
   }

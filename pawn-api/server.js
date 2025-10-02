@@ -19,6 +19,8 @@ const pawnerRoutes = require('./routes/pawners');
 const appraisalRoutes = require('./routes/appraisals');
 const categoryRoutes = require('./routes/categories');
 const addressRoutes = require('./routes/addresses');
+const branchConfigRoutes = require('./routes/branch-config');
+const syncLogsRoutes = require('./routes/sync-logs');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -141,6 +143,8 @@ app.use('/api/admin-advanced', adminAdvancedRoutes);
 app.use('/api/appraisals', appraisalRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/addresses', addressRoutes);
+app.use('/api/branch-config', branchConfigRoutes);
+app.use('/api/sync-logs', syncLogsRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

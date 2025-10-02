@@ -242,11 +242,19 @@ router.post('/', async (req, res) => {
       // We no longer return an error - allowing duplicate contact numbers
     }
     
+    // Get current branch ID
+    const branchResult = await pool.query(`
+      SELECT config_value as branch_id 
+      FROM system_config 
+      WHERE config_key = 'current_branch_id'
+    `);
+    const currentBranchId = branchResult.rows.length > 0 ? parseInt(branchResult.rows[0].branch_id) : 1;
+
     const result = await pool.query(`
-      INSERT INTO pawners (first_name, last_name, contact_number, email, city_id, barangay_id, address_details, is_active)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-      RETURNING id, first_name, last_name, contact_number, email, city_id, barangay_id, address_details, is_active, created_at, updated_at
-    `, [firstName, lastName, contactNumber, email, safeCityId, safeBarangayId, safeAddressDetails, isActive]);
+      INSERT INTO pawners (first_name, last_name, contact_number, email, city_id, barangay_id, address_details, branch_id, is_active)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      RETURNING id, first_name, last_name, contact_number, email, city_id, barangay_id, address_details, branch_id, is_active, created_at, updated_at
+    `, [firstName, lastName, contactNumber, email, safeCityId, safeBarangayId, safeAddressDetails, currentBranchId, isActive]);
     
     const row = result.rows[0];
     
@@ -264,6 +272,7 @@ router.post('/', async (req, res) => {
         cityId: row.city_id,
         barangayId: row.barangay_id,
         addressDetails: row.address_details,
+        branchId: row.branch_id,
         isActive: row.is_active,
         createdAt: row.created_at,
         updatedAt: row.updated_at

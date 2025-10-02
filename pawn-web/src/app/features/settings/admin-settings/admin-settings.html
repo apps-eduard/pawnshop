@@ -1,49 +1,12 @@
 <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
-  <!-- Header -->
-  <div class="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="flex justify-between items-center py-6">
-        <div class="flex items-center space-x-4">
-          <div class="flex-shrink-0">
-            <img class="h-10 w-10" src="./assets/icons/pawnshop-logo.svg" alt="Gold Win Logo">
-          </div>
-          <div>
-            <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Admin Settings</h1>
-            <p class="text-sm text-gray-500 dark:text-gray-400">
-              Configure system settings and business rules
-            </p>
-          </div>
-        </div>
-
-        <!-- Save All Button -->
-        <div class="flex items-center space-x-3">
-          <button
-            (click)="loadAllSettings()"
-            class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
-            <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-            </svg>
-            Refresh
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
 
   <!-- Loading State -->
-  <div *ngIf="isLoading" class="flex items-center justify-center py-12">
-    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+  <div *ngIf="isLoading" class="flex items-center justify-center py-8">
+    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
   </div>
 
   <!-- Settings Content -->
-  <div *ngIf="!isLoading" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-
-    <!-- Debug Panel -->
-    <div class="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded mb-4">
-      <strong>Debug Info:</strong> Current tab: {{ activeTab }}
-      <br>
-      Available tabs: <span *ngFor="let tab of tabs; let last = last">{{ tab.key }}<span *ngIf="!last">, </span></span>
-    </div>
+  <div *ngIf="!isLoading" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
 
     <!-- Tab Navigation -->
     <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 mb-8">
@@ -61,9 +24,166 @@
         </nav>
       </div>
 
+      <!-- System Configuration Tab -->
+      <div *ngIf="isActiveTab('system-config')" class="p-4">
+        <div class="max-w-4xl mx-auto">
+          
+          <!-- Current Branch Information -->
+          <div *ngIf="branchConfig?.currentBranch" class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6 mb-6">
+            <div class="flex items-start">
+              <div class="flex-shrink-0">
+                <svg class="h-6 w-6 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                </svg>
+              </div>
+              <div class="ml-4 flex-1">
+                <h3 class="text-lg font-medium text-blue-900 dark:text-blue-100">
+                  Current Branch: {{ branchConfig?.currentBranch?.name }}
+                </h3>
+                <p class="text-sm text-blue-700 dark:text-blue-300 mt-1">
+                  {{ branchConfig?.currentBranch?.address }}
+                </p>
+                <div class="mt-3 flex items-center space-x-4 text-sm text-blue-600 dark:text-blue-400">
+                  <span>📍 Branch ID: {{ branchConfig?.currentBranch?.id }}</span>
+                  <span *ngIf="branchConfig?.currentBranch?.contact_number">📞 {{ branchConfig?.currentBranch?.contact_number }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            
+            <!-- Branch Configuration Form -->
+            <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
+              <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">
+                Configure This Installation
+              </h3>
+
+              <form [formGroup]="branchConfigForm" (ngSubmit)="saveBranchConfig()" class="space-y-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Select Branch for This Installation
+                  </label>
+                  <select
+                    formControlName="currentBranchId"
+                    class="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900 dark:text-white">
+                    <option value="">Choose a branch...</option>
+                    <option *ngFor="let branch of branchConfig?.availableBranches" [value]="branch.id">
+                      {{ branch.name }} - {{ branch.address }}
+                    </option>
+                  </select>
+                  <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    This determines which branch all transactions from this system will be associated with.
+                  </p>
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Installation Type
+                  </label>
+                  <select
+                    formControlName="installationType"
+                    class="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900 dark:text-white">
+                    <option value="main">Main Server (Headquarters)</option>
+                    <option value="branch">Branch Installation</option>
+                    <option value="sync">Sync Node</option>
+                  </select>
+                  <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    Defines the role of this installation in your multi-branch setup.
+                  </p>
+                </div>
+
+                <div class="flex items-center">
+                  <input
+                    type="checkbox"
+                    formControlName="syncEnabled"
+                    id="sync_enabled"
+                    class="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded">
+                  <label for="sync_enabled" class="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                    Enable Synchronization
+                  </label>
+                </div>
+                <p class="text-xs text-gray-500 dark:text-gray-400 ml-6">
+                  Allow this installation to sync data with other branches.
+                </p>
+
+                <div class="pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <button
+                    type="submit"
+                    [disabled]="!branchConfigForm.valid"
+                    class="w-full bg-primary-600 hover:bg-primary-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                    Save Branch Configuration
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            <!-- Synchronization Status -->
+            <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
+              <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">
+                Synchronization Status
+              </h3>
+
+              <div *ngIf="branchConfig?.config" class="space-y-4">
+                <div class="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700">
+                  <span class="text-sm text-gray-600 dark:text-gray-400">Sync Enabled:</span>
+                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                        [class]="branchConfig?.config?.sync_enabled === 'true'
+                          ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                          : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'">
+                    {{ branchConfig?.config?.sync_enabled === 'true' ? 'Enabled' : 'Disabled' }}
+                  </span>
+                </div>
+
+                <div class="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700">
+                  <span class="text-sm text-gray-600 dark:text-gray-400">Installation Type:</span>
+                  <span class="text-sm font-medium text-gray-900 dark:text-white capitalize">
+                    {{ branchConfig?.config?.installation_type }}
+                  </span>
+                </div>
+
+                <div class="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700">
+                  <span class="text-sm text-gray-600 dark:text-gray-400">Last Sync:</span>
+                  <span class="text-sm text-gray-900 dark:text-white">
+                    {{ branchConfig?.config?.last_sync_timestamp === '1970-01-01 00:00:00' 
+                       ? 'Never synced' 
+                       : formatDate(branchConfig?.config?.last_sync_timestamp || '') }}
+                  </span>
+                </div>
+
+                <div class="pt-4">
+                  <button
+                    (click)="triggerSync()"
+                    [disabled]="branchConfig?.config?.sync_enabled !== 'true'"
+                    class="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                    <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                    </svg>
+                    Update Sync Status
+                  </button>
+                </div>
+              </div>
+
+              <!-- Setup Instructions -->
+              <div class="mt-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <h4 class="text-sm font-medium text-gray-900 dark:text-white mb-2">
+                  Multi-Branch Setup Instructions
+                </h4>
+                <ul class="text-xs text-gray-600 dark:text-gray-400 space-y-1">
+                  <li>• Set one installation as "Main Server" at headquarters</li>
+                  <li>• Configure each branch installation with its respective branch</li>
+                  <li>• Enable sync on all installations for data synchronization</li>
+                  <li>• Each transaction will be tagged with the configured branch ID</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Categories Tab -->
-      <div *ngIf="isActiveTab('categories')" class="p-6">
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div *ngIf="isActiveTab('categories')" class="p-4">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
           <!-- Category Form -->
           <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-6">
@@ -206,18 +326,9 @@
             <div class="divide-y divide-gray-200 dark:divide-gray-700">
               <div *ngFor="let category of categories" class="px-6 py-4 hover:bg-gray-50 dark:hover:bg-gray-700">
                 <div class="flex items-center justify-between">
-                  <div class="flex items-center space-x-3 flex-1">
-                    <!-- Bulk Selection Checkbox -->
-                    <input
-                      *ngIf="showBulkActions"
-                      type="checkbox"
-                      [checked]="selectedCategories.has(category.id!)"
-                      (change)="toggleCategorySelection(category.id!)"
-                      class="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded">
-
-                    <div class="flex-1">
-                      <div class="flex items-center space-x-3">
-                        <h4 class="text-sm font-medium text-gray-900 dark:text-white">{{ category.name }}</h4>
+                  <div class="flex-1">
+                    <div class="flex items-center space-x-3">
+                      <h4 class="text-sm font-medium text-gray-900 dark:text-white">{{ category.name }}</h4>
                       <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
                             [class]="category.is_active
                               ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
@@ -252,11 +363,8 @@
       </div>
 
       <!-- Branches Tab -->
-      <div *ngIf="isActiveTab('branches')" class="p-6">
-        <div class="bg-blue-100 p-4 rounded mb-4">
-          <h2 class="text-lg font-bold text-blue-800">✅ BRANCHES TAB IS ACTIVE</h2>
-        </div>
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div *ngIf="isActiveTab('branches')" class="p-4">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
           <!-- Branch Form -->
           <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-6">
@@ -386,10 +494,8 @@
                         {{ branch.is_active ? 'Active' : 'Inactive' }}
                       </span>
                     </div>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                      {{ branch.address }}
-                    </p>
-                    <div class="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">{{ branch.address }}</p>
+                    <div class="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400 mt-1">
                       <span>📞 {{ branch.phone }}</span>
                       <span *ngIf="branch.email">✉️ {{ branch.email }}</span>
                       <span *ngIf="branch.manager_name">👤 {{ branch.manager_name }}</span>
@@ -419,11 +525,8 @@
       </div>
 
       <!-- Voucher Types Tab -->
-      <div *ngIf="isActiveTab('vouchers')" class="p-6">
-        <div class="bg-green-100 p-4 rounded mb-4">
-          <h2 class="text-lg font-bold text-green-800">✅ VOUCHERS TAB IS ACTIVE</h2>
-        </div>
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div *ngIf="isActiveTab('vouchers')" class="p-4">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
           <!-- Voucher Form -->
           <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-6">
@@ -546,10 +649,7 @@
       </div>
 
       <!-- Loan Rules Tab -->
-      <div *ngIf="isActiveTab('loan-rules')" class="p-6">
-        <div class="bg-purple-100 p-4 rounded mb-4">
-          <h2 class="text-lg font-bold text-purple-800">✅ LOAN RULES TAB IS ACTIVE</h2>
-        </div>
+      <div *ngIf="isActiveTab('loan-rules')" class="p-4">
         <div class="max-w-2xl">
           <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 mb-6">
             <div class="flex">
@@ -667,10 +767,8 @@
       <!-- =============================================
            AUDIT TRAIL TAB
            ============================================= -->
-      <div *ngIf="isActiveTab('audit')" class="p-6">
-        <div class="bg-orange-100 p-4 rounded mb-4">
-          <h2 class="text-lg font-bold text-orange-800">✅ AUDIT TRAIL TAB IS ACTIVE</h2>
-        </div>
+            <!-- Audit Tab -->
+      <div *ngIf="isActiveTab('audit')" class="p-4">
         <div class="flex justify-between items-center mb-6">
           <div>
             <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Audit Trail</h3>
@@ -758,10 +856,8 @@
       <!-- =============================================
            STATISTICS TAB
            ============================================= -->
-      <div *ngIf="isActiveTab('stats')" class="p-6">
-        <div class="bg-red-100 p-4 rounded mb-4">
-          <h2 class="text-lg font-bold text-red-800">✅ STATISTICS TAB IS ACTIVE</h2>
-        </div>
+            <!-- Stats Tab -->
+      <div *ngIf="isActiveTab('stats')" class="p-4">
         <div class="flex justify-between items-center mb-6">
           <div>
             <h3 class="text-lg font-semibold text-gray-900 dark:text-white">System Statistics</h3>
@@ -780,7 +876,7 @@
         </div>
 
         <!-- Statistics Cards -->
-        <div *ngIf="systemStats" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div *ngIf="systemStats" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <!-- Categories Stats -->
           <div class="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700">
             <div class="flex items-center">

@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
@@ -55,7 +55,32 @@ interface SystemStats {
   recent_changes: number;
 }
 
-type TabKey = 'categories' | 'branches' | 'vouchers' | 'loan-rules' | 'audit' | 'stats';
+interface BranchConfig {
+  config: {
+    current_branch_id: string;
+    installation_type: string;
+    sync_enabled: string;
+    last_sync_timestamp: string;
+  } | null;
+  currentBranch: {
+    id: number;
+    name: string;
+    address: string;
+    contact_number?: string;
+    installation_type?: string;
+    sync_enabled?: string;
+  } | null;
+  availableBranches: {
+    id: number;
+    name: string;
+    address: string;
+    is_active: boolean;
+  }[];
+}
+
+
+
+type TabKey = 'categories' | 'branches' | 'vouchers' | 'loan-rules' | 'audit' | 'stats' | 'system-config';
 
 @Component({
   selector: 'app-admin-settings',
@@ -65,11 +90,12 @@ type TabKey = 'categories' | 'branches' | 'vouchers' | 'loan-rules' | 'audit' | 
   styleUrl: './admin-settings.css'
 })
 export class AdminSettingsComponent implements OnInit {
-  activeTab: string = 'categories';
+  activeTab: string = 'system-config';
   isLoading = false;
 
-  // Tab definitions
+    // Tab definitions
   tabs: {key: string, label: string, icon: string}[] = [
+    {key: 'system-config', label: 'System Configuration', icon: 'settings'},
     {key: 'categories', label: 'Categories & Interest', icon: 'tag'},
     {key: 'branches', label: 'Branches', icon: 'office'},
     {key: 'vouchers', label: 'Voucher Types', icon: 'receipt'},
@@ -87,6 +113,7 @@ export class AdminSettingsComponent implements OnInit {
     minimum_service_charge: 5,
     minimum_loan_for_service: 500
   };
+  branchConfig: BranchConfig | null = null;
 
   // Make Math available in template
   Math = Math;
@@ -96,6 +123,7 @@ export class AdminSettingsComponent implements OnInit {
   branchForm!: FormGroup;
   voucherForm!: FormGroup;
   loanRulesForm!: FormGroup;
+  branchConfigForm!: FormGroup;
 
   // Edit states
   editingCategory: Category | null = null;
@@ -114,12 +142,16 @@ export class AdminSettingsComponent implements OnInit {
 
   constructor(
     private fb: FormBuilder,
-    private http: HttpClient
+    private http: HttpClient,
+    private cdr: ChangeDetectorRef
   ) {
     this.initializeForms();
   }
 
+
+
   ngOnInit(): void {
+    console.log('🎯 Admin Settings Init - Active Tab:', this.activeTab);
     this.loadAllSettings();
   }
 
@@ -153,17 +185,26 @@ export class AdminSettingsComponent implements OnInit {
       minimum_service_charge: [5, [Validators.required, Validators.min(1)]],
       minimum_loan_for_service: [500, [Validators.required, Validators.min(100)]]
     });
+
+    this.branchConfigForm = this.fb.group({
+      currentBranchId: ['', [Validators.required]],
+      installationType: ['branch', [Validators.required]],
+      syncEnabled: [true]
+    });
   }
 
   loadAllSettings(): void {
     this.isLoading = true;
     Promise.all([
+      this.loadBranchConfig(),
       this.loadCategories(),
       this.loadBranches(),
       this.loadVoucherTypes(),
       this.loadLoanRules()
     ]).finally(() => {
       this.isLoading = false;
+      // Force change detection to ensure UI updates
+      this.cdr.detectChanges();
     });
   }
 
@@ -173,7 +214,7 @@ export class AdminSettingsComponent implements OnInit {
       const response = await this.http.get<any>('http://localhost:3000/api/admin/categories').toPromise();
       this.categories = response.data || [];
     } catch (error) {
-      console.error('Error loading categories:', error);
+      console.error('❌ Error loading categories:', error);
       // Initialize with default categories
       this.categories = [
         { name: 'Jewelry', description: 'Gold, silver, watches, precious stones', interest_rate: 3.0, is_active: true },
@@ -264,7 +305,7 @@ export class AdminSettingsComponent implements OnInit {
       const response = await this.http.get<any>('http://localhost:3000/api/branches').toPromise();
       this.branches = response.data || [];
     } catch (error) {
-      console.error('Error loading branches:', error);
+      console.error('❌ Error loading branches:', error);
       // Initialize with default branches
       this.branches = [
         {
@@ -361,7 +402,7 @@ export class AdminSettingsComponent implements OnInit {
       const response = await this.http.get<any>('http://localhost:3000/api/admin/voucher-types').toPromise();
       this.voucherTypes = response.data || [];
     } catch (error) {
-      console.error('Error loading voucher types:', error);
+      console.error('❌ Error loading voucher types:', error);
       // Initialize with default voucher types
       this.voucherTypes = [
         { code: 'CASH', type: 'CASH', description: 'Cash Payment', is_active: true },
@@ -478,6 +519,8 @@ export class AdminSettingsComponent implements OnInit {
 
   setActiveTab(tab: string): void {
     this.activeTab = tab;
+    // Force change detection to ensure UI updates
+    this.cdr.detectChanges();
   }
 
   isActiveTab(tab: string): boolean {
@@ -635,6 +678,76 @@ export class AdminSettingsComponent implements OnInit {
       case 'DELETE': return '🗑️ Deleted';
       default: return action;
     }
+  }
+
+  // Branch Configuration Methods
+  loadBranchConfig(): Promise<void> {
+    console.log('🔄 Loading branch configuration...');
+    return new Promise((resolve, reject) => {
+      this.http.get<{success: boolean, data: BranchConfig}>('http://localhost:3000/api/branch-config').subscribe({
+        next: (response) => {
+          console.log('✅ Branch config loaded:', response);
+          if (response.success) {
+            this.branchConfig = response.data;
+            console.log('📋 Branch config data:', this.branchConfig);
+            // Update form with current values
+            if (this.branchConfig.config) {
+              this.branchConfigForm.patchValue({
+                currentBranchId: parseInt(this.branchConfig.config.current_branch_id),
+                installationType: this.branchConfig.config.installation_type,
+                syncEnabled: this.branchConfig.config.sync_enabled === 'true'
+              });
+              console.log('📝 Form updated with values');
+            }
+          }
+          resolve();
+        },
+        error: (error) => {
+          console.error('❌ Error loading branch configuration:', error);
+          reject(error);
+        }
+      });
+    });
+  }
+
+  saveBranchConfig(): void {
+    if (!this.branchConfigForm.valid) return;
+
+    const formData = this.branchConfigForm.value;
+    
+    this.http.put<{success: boolean, message: string}>('http://localhost:3000/api/branch-config', {
+      currentBranchId: formData.currentBranchId,
+      installationType: formData.installationType,
+      syncEnabled: formData.syncEnabled
+    }).subscribe({
+      next: (response) => {
+        if (response.success) {
+          console.log('✅ Branch configuration updated successfully');
+          this.loadBranchConfig(); // Reload to get updated data
+        }
+      },
+      error: (error) => {
+        console.error('❌ Error updating branch configuration:', error);
+      }
+    });
+  }
+
+  triggerSync(): void {
+    this.http.post<{success: boolean, message: string}>('http://localhost:3000/api/branch-config/sync-status', {
+      syncTimestamp: new Date().toISOString(),
+      syncType: 'manual',
+      recordsCount: 0
+    }).subscribe({
+      next: (response) => {
+        if (response.success) {
+          console.log('✅ Sync status updated');
+          this.loadBranchConfig(); // Reload to get updated sync timestamp
+        }
+      },
+      error: (error) => {
+        console.error('❌ Error updating sync status:', error);
+      }
+    });
   }
 }
 

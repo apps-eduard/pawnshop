@@ -96,7 +96,7 @@
                       <option value="">Select City</option>
                       <option *ngFor="let city of cities" [value]="city.id">{{ city.name }}</option>
                     </select>
-                    <button type="button" (click)="showAddCityModal()" title="Add New City"
+                    <button type="button" (click)="showAddCityModal()" title="Add New City" tabindex="-1"
                       class="px-2 py-1.5 text-xs bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-md transition-all shadow-sm">
                       +
                     </button>
@@ -109,7 +109,7 @@
                       <option value="">Select Barangay</option>
                       <option *ngFor="let barangay of barangays" [value]="barangay.id">{{ barangay.name }}</option>
                     </select>
-                    <button type="button" (click)="showAddBarangayModal()" [disabled]="!pawnerForm.cityId" title="Add New Barangay"
+                    <button type="button" (click)="showAddBarangayModal()" [disabled]="!pawnerForm.cityId" title="Add New Barangay" tabindex="-1"
                       class="px-2 py-1.5 text-xs bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed text-white rounded-md transition-all shadow-sm">
                       +
                     </button>
@@ -197,28 +197,28 @@
               <!-- Date Transaction -->
               <div>
                 <label for="dateTransaction" class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-0.5">Date Transaction</label>
-                <input id="dateTransaction" type="date" [(ngModel)]="loanForm.transactionDate" name="dateTransaction"
+                <input id="dateTransaction" type="date" [(ngModel)]="loanForm.transactionDate" name="dateTransaction" tabindex="-1"
                   class="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-400 focus:border-blue-500 dark:bg-gray-700 dark:text-white bg-white transition-all">
               </div>
 
               <!-- Date Granted -->
               <div>
                 <label for="dateGranted" class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-0.5">Date Granted</label>
-                <input id="dateGranted" type="date" [(ngModel)]="loanForm.loanDate" name="dateGranted"
+                <input id="dateGranted" type="date" [(ngModel)]="loanForm.loanDate" name="dateGranted" tabindex="-1"
                   class="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-400 focus:border-blue-500 dark:bg-gray-700 dark:text-white bg-white transition-all">
               </div>
 
               <!-- Date Mature -->
               <div>
                 <label for="dateMature" class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-0.5">Date Mature</label>
-                <input id="dateMature" type="date" [(ngModel)]="loanForm.maturityDate" name="dateMature"
+                <input id="dateMature" type="date" [(ngModel)]="loanForm.maturityDate" name="dateMature" tabindex="-1"
                   class="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:text-white bg-white transition-all">
               </div>
 
               <!-- Date Expire -->
               <div>
                 <label for="dateExpire" class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-0.5">Date Expire</label>
-                <input id="dateExpire" type="date" [(ngModel)]="loanForm.expiryDate" name="dateExpire"
+                <input id="dateExpire" type="date" [(ngModel)]="loanForm.expiryDate" name="dateExpire" tabindex="-1"
                   class="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-400 focus:border-blue-500 dark:bg-gray-700 dark:text-white bg-white transition-all">
               </div>
             </div>
@@ -240,8 +240,8 @@
                     <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-0.5">
                       Category <span class="text-red-500">*</span>
                     </label>
-                    <select [(ngModel)]="itemForm.category" name="category" required (change)="onCategoryChange()"
-                      class="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-blue-400 focus:border-blue-500 dark:bg-gray-700 dark:text-white bg-white transition-all"
+                    <select [(ngModel)]="itemForm.category" name="category" required (change)="onCategoryChange()" [disabled]="isCategoryDisabled()"
+                      class="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-blue-400 focus:border-blue-500 dark:bg-gray-700 dark:text-white bg-white disabled:bg-gray-100 disabled:dark:bg-gray-600 disabled:cursor-not-allowed transition-all"
                       title="Select Item Category">
                       <option value="">Select Category</option>
                       <option *ngFor="let category of categories" [value]="category.name">{{ category.name }}</option>
@@ -253,8 +253,8 @@
                       Category Description <span class="text-red-500">*</span>
                     </label>
                     <div class="flex gap-1">
-                      <select [(ngModel)]="itemForm.categoryDescription" name="categoryDescription" required
-                        [disabled]="!itemForm.category || isLoadingDescriptions"
+                      <select #categoryDescriptionSelect [(ngModel)]="itemForm.categoryDescription" name="categoryDescription" required
+                        [disabled]="isCategoryDescriptionDisabled()"
                         class="flex-1 px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-blue-400 focus:border-blue-500 dark:bg-gray-700 dark:text-white bg-white disabled:bg-gray-100 disabled:dark:bg-gray-600 transition-all"
                         title="Select Category Description">
                         <option value="" *ngIf="!itemForm.category">Select category first</option>
@@ -263,7 +263,7 @@
                         <option value="" *ngIf="itemForm.category && !isLoadingDescriptions && categoryDescriptions.length > 0">Select Description</option>
                         <option *ngFor="let desc of categoryDescriptions" [value]="desc">{{ desc }}</option>
                       </select>
-                      <button type="button" (click)="showCategoryDescriptionModal()" [disabled]="!itemForm.category" title="Add New Description"
+                      <button type="button" (click)="showCategoryDescriptionModal()" [disabled]="!itemForm.category" title="Add New Description" tabindex="-1"
                         class="px-2 py-1 text-xs bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed text-white rounded transition-all shadow-sm">
                         +
                       </button>
@@ -285,7 +285,12 @@
                     </label>
                     <div class="relative">
                       <span class="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-600 dark:text-gray-400 font-medium text-xs">₱</span>
-                      <input type="number" [(ngModel)]="itemForm.appraisalValue" name="appraisalValue" required
+                      <input type="text" 
+                        #appraisalValueInput
+                        appCurrencyInput
+                        [minValue]="0.01"
+                        (valueChange)="onAppraisalValueChange($event)"
+                        name="appraisalValue" required
                         class="w-full pl-6 pr-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-blue-400 focus:border-blue-500 dark:bg-gray-700 dark:text-white bg-white font-semibold transition-all"
                         placeholder="0.00">
                     </div>
@@ -334,9 +339,14 @@
             <div class="bg-green-50 dark:bg-green-900/20 p-1.5 rounded">
               <div class="flex justify-between items-center gap-2">
                 <label class="text-xs font-medium text-green-700 dark:text-green-300">Principal Loan</label>
-                <input type="text" [(ngModel)]="loanAmountDisplay" (input)="onLoanAmountInput($event)"
+                <input type="text" 
+                  #principalLoanInput
+                  appCurrencyInput
+                  [maxValue]="getTotalAppraisalValue()"
+                  (valueChange)="onPrincipalLoanChange($event)"
                   class="w-[65%] px-2 py-1 text-xs border border-green-300 dark:border-green-600 rounded focus:outline-none focus:ring-1 focus:ring-green-500 dark:bg-green-900/30 dark:text-white text-right"
-                  placeholder="0,000.00">
+                  placeholder="0.00" 
+                  [title]="'Maximum: ₱' + (getTotalAppraisalValue() | number:'1.2-2')">
               </div>
             </div>
 

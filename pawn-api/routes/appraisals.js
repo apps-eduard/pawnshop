@@ -302,14 +302,22 @@ router.post('/', async (req, res) => {
       });
     }
 
+    // Get current branch ID
+    const branchResult = await pool.query(`
+      SELECT config_value as branch_id 
+      FROM system_config 
+      WHERE config_key = 'current_branch_id'
+    `);
+    const currentBranchId = branchResult.rows.length > 0 ? parseInt(branchResult.rows[0].branch_id) : 1;
+
     // Insert new appraisal with 'pending' status
     const insertQuery = `
       INSERT INTO appraisals (
         pawner_id, appraiser_id, item_category, item_category_description, 
         item_type, description, serial_number, weight, karat, 
-        estimated_value, condition_notes, status, created_at, updated_at
+        estimated_value, condition_notes, branch_id, status, created_at, updated_at
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'pending', 
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'pending', 
         CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
       ) RETURNING *
     `;
@@ -325,7 +333,8 @@ router.post('/', async (req, res) => {
       weight || null,
       karat || null,
       parseFloat(estimatedValue),
-      notes || null
+      notes || null,
+      currentBranchId
     ];
 
     const result = await pool.query(insertQuery, values);
