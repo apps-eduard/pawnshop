@@ -91,12 +91,12 @@ export class SidebarComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe(user => {
         this.currentUser = user;
-        console.log('Sidebar received user update:', user);
+        // console.log('Sidebar received user update:', user);
       });
 
     // For testing - simulate admin user if none exists
     if (!this.currentUser) {
-      console.log('No user found - creating test admin user');
+      // console.log('No user found - creating test admin user');
       this.currentUser = {
         id: 1,
         username: 'admin',
@@ -117,19 +117,19 @@ export class SidebarComponent implements OnInit, OnDestroy {
   // Filter navigation items based on user role
   getFilteredNavigation(): NavigationItem[] {
     // Debug logging
-    console.log('Current user in sidebar:', this.currentUser);
+    // console.log('Current user in sidebar:', this.currentUser);
 
     // For testing purposes, if no user is logged in, show admin items
     if (!this.currentUser) {
-      console.log('No current user - showing admin navigation for testing');
+      // console.log('No current user - showing admin navigation for testing');
       return this.navigationItems.filter(item => item.roles.includes('administrator'));
     }
 
-    console.log('Filtering navigation for role:', this.currentUser.role);
+    // console.log('Filtering navigation for role:', this.currentUser.role);
     const filteredItems = this.navigationItems.filter(item =>
       item.roles.includes(this.currentUser!.role)
     );
-    console.log('Filtered navigation items:', filteredItems);
+    // console.log('Filtered navigation items:', filteredItems);
 
     return filteredItems;
   }

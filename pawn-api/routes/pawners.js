@@ -216,33 +216,37 @@ router.post('/', async (req, res) => {
     } = req.body;
     
     // Validate required fields
-    if (!firstName || !lastName || !contactNumber || !cityId || !barangayId || !addressDetails) {
+    if (!firstName || !lastName || !contactNumber) {
       return res.status(400).json({
         success: false,
-        message: 'Missing required fields'
+        message: 'Missing required fields: First name, last name, and contact number are required'
       });
     }
     
+    // Use default values for optional fields if not provided
+    const safeAddressDetails = addressDetails || '';
+    const safeCityId = cityId || null;
+    const safeBarangayId = barangayId || null;
+    
     console.log(`➕ [${new Date().toISOString()}] Creating pawner: ${firstName} ${lastName} - User: ${req.user.username}`);
     
-    // Check if contact number already exists
+    // Log if contact number already exists (but allow it)
     const existingPawner = await pool.query(
-      'SELECT id FROM pawners WHERE contact_number = $1',
+      'SELECT id, first_name, last_name FROM pawners WHERE contact_number = $1',
       [contactNumber]
     );
     
     if (existingPawner.rows.length > 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Contact number already exists'
-      });
+      const existing = existingPawner.rows[0];
+      console.log(`⚠️ Note: Contact number ${contactNumber} already exists for pawner: ${existing.first_name} ${existing.last_name} (ID: ${existing.id}), but creating anyway as requested`);
+      // We no longer return an error - allowing duplicate contact numbers
     }
     
     const result = await pool.query(`
       INSERT INTO pawners (first_name, last_name, contact_number, email, city_id, barangay_id, address_details, is_active)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       RETURNING id, first_name, last_name, contact_number, email, city_id, barangay_id, address_details, is_active, created_at, updated_at
-    `, [firstName, lastName, contactNumber, email, cityId, barangayId, addressDetails, isActive]);
+    `, [firstName, lastName, contactNumber, email, safeCityId, safeBarangayId, safeAddressDetails, isActive]);
     
     const row = result.rows[0];
     
@@ -300,18 +304,17 @@ router.put('/:id', async (req, res) => {
       });
     }
     
-    // Check for contact number conflicts (excluding current pawner)
+    // Log if contact number already exists (but allow it)
     if (contactNumber) {
       const conflicts = await pool.query(
-        'SELECT id FROM pawners WHERE contact_number = $1 AND id != $2',
+        'SELECT id, first_name, last_name FROM pawners WHERE contact_number = $1 AND id != $2',
         [contactNumber, id]
       );
       
       if (conflicts.rows.length > 0) {
-        return res.status(400).json({
-          success: false,
-          message: 'Contact number already exists'
-        });
+        const existing = conflicts.rows[0];
+        console.log(`⚠️ Note: Contact number ${contactNumber} already exists for pawner: ${existing.first_name} ${existing.last_name} (ID: ${existing.id}), but updating anyway as requested`);
+        // We no longer return an error - allowing duplicate contact numbers
       }
     }
     

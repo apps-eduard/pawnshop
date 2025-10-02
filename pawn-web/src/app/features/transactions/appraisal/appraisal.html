@@ -1,15 +1,15 @@
 <!-- CREATE APPRAISAL PAGE - FULL SCREEN -->
-<div class="h-[calc(100vh-4rem)] bg-gray-50 dark:bg-gray-900 flex flex-col" style="overflow: hidden !important;">
+<div class="h-[calc(100vh-4rem)] bg-gray-50 dark:bg-gray-900 flex flex-col overflow-hidden">
   <!-- Main Content - Full Height -->
   <div class="flex-1 p-4 min-h-0">
     <div class="h-full">
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 h-full">
-        
+
         <!-- LEFT COLUMN: Pawner Information -->
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 h-full flex flex-col min-h-0">
           <div class="flex items-center justify-between mb-3 flex-shrink-0">
             <h3 class="text-md font-semibold text-gray-900 dark:text-white">Pawner Information</h3>
-            <button *ngIf="selectedPawner" (click)="changePawner()" 
+            <button *ngIf="selectedPawner" (click)="changePawner()"
               class="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline">
               Change
             </button>
@@ -18,7 +18,7 @@
           <!-- Search Section (only show if no pawner selected) -->
           <div *ngIf="!selectedPawner" class="mb-4 flex-shrink-0">
             <div class="relative">
-              <input type="text" [(ngModel)]="searchQuery" (input)="onSearchInput()" 
+              <input #searchInput type="text" [(ngModel)]="searchQuery" (input)="onSearchInput()"
                 placeholder="Type at least 3 characters to search existing pawner..."
                 class="w-full px-4 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
               <div class="absolute right-3 top-1/2 transform -translate-y-1/2">
@@ -31,7 +31,7 @@
 
             <!-- Search Results -->
             <div *ngIf="pawners.length > 0" class="mt-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 max-h-32 overflow-y-auto">
-              <div *ngFor="let pawner of pawners.slice(0, 3)" 
+              <div *ngFor="let pawner of pawners.slice(0, 3)"
                 (click)="selectPawner(pawner)"
                 class="p-2 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer border-b border-gray-100 dark:border-gray-700 last:border-b-0">
                 <div class="font-medium text-sm text-gray-900 dark:text-white">{{ pawner.firstName }} {{ pawner.lastName }}</div>
@@ -53,7 +53,7 @@
               </div>
             </div>
           </div>
-          
+
           <!-- Pawner Form -->
           <div class="flex-1 space-y-4 overflow-y-auto min-h-0">
 
@@ -84,7 +84,7 @@
               <div class="grid grid-cols-2 gap-3">
                 <div>
                   <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-0.5">
-                    Contact Number <span class="text-red-500">*</span>       
+                    Contact Number <span class="text-red-500">*</span>
                   </label>
                   <input type="tel" [(ngModel)]="pawnerForm.phone" name="contactNumber" required
                     [readonly]="selectedPawner" pattern="[0-9+\-\s\(\)]+" (input)="formatContactNumber()"
@@ -103,25 +103,25 @@
               </div>
 
               <!-- Address Information -->
-              <div *ngIf="!selectedPawner" class="grid grid-cols-2 gap-3">   
+              <div *ngIf="!selectedPawner" class="grid grid-cols-2 gap-3">
                 <div>
                   <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-0.5">
                     City <span class="text-red-500">*</span>
                   </label>
-                  <select [(ngModel)]="pawnerForm.city" name="cityId" (change)="onCityChange()" required
+                  <select [(ngModel)]="pawnerForm.cityId" name="cityId" (change)="onCityChange()" required
                     title="Select a city"
                     class="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-gray-700 dark:text-white">
                     <option value="">Select City</option>
-                    <option *ngFor="let city of cities" [value]="city.name">{{ city.name }}</option>
+                    <option *ngFor="let city of cities" [value]="city.id">{{ city.name }}</option>
                   </select>
                 </div>
                 <div>
                   <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-0.5">Barangay</label>
-                  <select [(ngModel)]="pawnerForm.barangay" name="barangayId" [disabled]="!pawnerForm.city"
+                  <select [(ngModel)]="pawnerForm.barangayId" name="barangayId" [disabled]="!pawnerForm.cityId"
                     title="Select a barangay"
                     class="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-gray-700 dark:text-white disabled:bg-gray-100 disabled:dark:bg-gray-600">
                     <option value="">Select Barangay</option>
-                    <option *ngFor="let barangay of filteredBarangays" [value]="barangay.name">{{ barangay.name }}</option>
+                    <option *ngFor="let barangay of filteredBarangays" [value]="barangay.id">{{ barangay.name }}</option>
                   </select>
                 </div>
               </div>
@@ -130,11 +130,11 @@
                 <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-0.5">Address Details</label>
                 <textarea [(ngModel)]="pawnerForm.address" name="addressDetails" rows="2"
                   class="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-                  placeholder="Street, house number, etc."></textarea>       
+                  placeholder="Street, house number, etc."></textarea>
               </div>
             </form>
           </div>
-          
+
           <!-- Added Items Section -->
           <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 mt-4 flex-shrink-0">
             <h4 class="text-sm font-medium text-gray-900 dark:text-white mb-2">Added Items ({{ appraisalItems.length }})</h4>
@@ -177,7 +177,8 @@
                 <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Category <span class="text-red-500">*</span>
                 </label>
-                <select [(ngModel)]="itemForm.category" name="category" required (change)="onCategoryChange()"
+                <select #categorySelect [(ngModel)]="itemForm.category" name="category" required (change)="onCategoryChange()"
+                  aria-label="Item Category" title="Select Item Category"
                   class="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-gray-700 dark:text-white">
                   <option value="">Select Category</option>
                   <option *ngFor="let category of categories" [value]="category.name">{{ category.name }}</option>
@@ -191,6 +192,7 @@
                 </label>
                 <select [(ngModel)]="itemForm.categoryDescription" name="categoryDescription" required
                   [disabled]="!itemForm.category || isLoadingDescriptions"
+                  aria-label="Item Category Description" title="Select Item Category Description"
                   class="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-gray-700 dark:text-white disabled:bg-gray-100 disabled:dark:bg-gray-600">
                   <option value="" *ngIf="!itemForm.category">Select category first</option>
                   <option value="" *ngIf="itemForm.category && isLoadingDescriptions">Loading descriptions...</option>
@@ -231,14 +233,36 @@
 
           <!-- Action Buttons -->
           <div class="mt-3 pt-2 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
-            <!-- Create Appraisal Button -->
-            <button (click)="createAppraisal()" [disabled]="appraisalItems.length === 0"
-              class="w-full px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors flex items-center justify-center text-sm">
-              <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path>
-              </svg>
-              Create Appraisal ({{ appraisalItems.length }})
-            </button>
+            <!-- Action Buttons Row -->
+            <div class="flex gap-2 w-full">
+              <!-- Save Button -->
+              <button (click)="createAppraisal()" [disabled]="appraisalItems.length === 0 || isSaving"
+                class="flex-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors flex items-center justify-center text-sm">
+                <div *ngIf="isSaving" class="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-2"></div>
+                <svg *ngIf="!isSaving" class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+                {{ isSaving ? 'Saving...' : 'Save' }}
+              </button>
+
+              <!-- Reset Button -->
+              <button (click)="resetAll()" type="button" [disabled]="isSaving"
+                class="flex-1 px-3 py-1.5 bg-yellow-500 hover:bg-yellow-600 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors flex items-center justify-center text-sm">
+                <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                </svg>
+                Reset
+              </button>
+
+              <!-- Cancel Button -->
+              <button (click)="goBack()" type="button" [disabled]="isSaving"
+                class="flex-1 px-3 py-1.5 bg-gray-500 hover:bg-gray-600 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors flex items-center justify-center text-sm">
+                <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       </div>

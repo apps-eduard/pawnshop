@@ -1,134 +1,59 @@
 import { Routes } from '@angular/router';
-import { LoginComponent } from './auth/login/login';
-import { AdminDashboard } from './pages/admin-dashboard/admin-dashboard';
-import { AdminSettingsComponent } from './pages/admin-settings/admin-settings';
-import { UserManagementComponent } from './pages/user-management/user-management';
-import { AddressManagementComponent } from './pages/address-management/address-management';
-import { PawnerManagementComponent } from './pages/pawner-management/pawner-management';
-import { ItemManagementComponent } from './pages/item-management/item-management';
-import { CashierDashboard } from './pages/cashier-dashboard/cashier-dashboard';
-import { AppraiserDashboard } from './pages/appraiser-dashboard/appraiser-dashboard';
-import { ManagerDashboard } from './pages/manager-dashboard/manager-dashboard';
-import { AuctioneerDashboard } from './pages/auctioneer-dashboard/auctioneer-dashboard';
-import { PawnerDashboard } from './pages/pawner-dashboard/pawner-dashboard';
 
-// Transaction Components
-import { Appraisal } from './features/transactions/appraisal/appraisal';
-import { NewLoan } from './features/transactions/new-loan/new-loan';
-import { AdditionalLoan } from './features/transactions/additional-loan/additional-loan';
-import { PartialPayment } from './features/transactions/partial-payment/partial-payment';
-import { Redeem } from './features/transactions/redeem/redeem';
-import { Renew } from './features/transactions/renew/renew';
+// Import all feature routes
+import { transactionRoutes } from './features/transactions/routes/transaction.routes';
+import { dashboardRoutes } from './features/dashboards/routes/dashboard.routes';
+import { managementRoutes } from './features/management/routes/management.routes';
+import { settingsRoutes } from './features/settings/routes/settings.routes';
+import { pageRoutes } from './features/pages/routes/page.routes';
 
 export const routes: Routes = [
   { path: '', redirectTo: '/login', pathMatch: 'full' },
-  { path: 'login', component: LoginComponent },
+
+  // Page routes (login, error pages)
   {
-    path: 'admin-dashboard',
-    component: AdminDashboard,
-    // canActivate: [AuthGuard], // TODO: Implement auth guard
-    data: { roles: ['administrator'] }
-  },
-  {
-    path: 'admin-settings',
-    component: AdminSettingsComponent,
-    // canActivate: [AuthGuard], // TODO: Implement auth guard
-    data: { roles: ['administrator'] }
-  },
-  {
-    path: 'user-management',
-    component: UserManagementComponent,
-    // canActivate: [AuthGuard], // TODO: Implement auth guard
-    data: { roles: ['administrator'] }
-  },
-  {
-    path: 'address-management',
-    component: AddressManagementComponent,
-    // canActivate: [AuthGuard], // TODO: Implement auth guard
-    data: { roles: ['administrator'] }
-  },
-  {
-    path: 'pawner-management',
-    component: PawnerManagementComponent,
-    // canActivate: [AuthGuard], // TODO: Implement auth guard
-    data: { roles: ['administrator', 'manager', 'cashier'] }
-  },
-  {
-    path: 'item-management',
-    component: ItemManagementComponent,
-    // canActivate: [AuthGuard], // TODO: Implement auth guard
-    data: { roles: ['administrator', 'manager'] }
-  },
-  {
-    path: 'manager-dashboard',
-    component: ManagerDashboard,
-    // canActivate: [AuthGuard],
-    data: { roles: ['manager'] }
+    path: '',
+    children: pageRoutes
   },
 
+  // Management routes
   {
-    path: 'cashier-dashboard',
-    component: CashierDashboard,
-    // canActivate: [AuthGuard],
-    data: { roles: ['cashier'] }
+    path: 'management',
+    children: managementRoutes
   },
 
+  // Settings routes
   {
-    path: 'appraiser-dashboard',
-    component: AppraiserDashboard,
-    // canActivate: [AuthGuard],
-    data: { roles: ['appraiser'] }
+    path: 'settings',
+    children: settingsRoutes
   },
+
+  // Legacy redirects for management
+  { path: 'address-management', redirectTo: 'management/address', pathMatch: 'full' },
+  { path: 'item-management', redirectTo: 'management/item', pathMatch: 'full' },
+  { path: 'pawner-management', redirectTo: 'management/pawner', pathMatch: 'full' },
+  { path: 'user-management', redirectTo: 'management/user', pathMatch: 'full' },
+  { path: 'admin-settings', redirectTo: 'settings/admin', pathMatch: 'full' },
+
+  // Dashboard routes
   {
-    path: 'auctioneer-dashboard',
-    component: AuctioneerDashboard,
-    // canActivate: [AuthGuard],
-    data: { roles: ['auctioneer'] }
+    path: 'dashboard',
+    children: dashboardRoutes
   },
-  {
-    path: 'pawner-dashboard',
-    component: PawnerDashboard,
-    // canActivate: [AuthGuard],
-    data: { roles: ['pawner'] }
-  },
+
+  // Legacy redirects (to maintain backward compatibility)
+  { path: 'admin-dashboard', redirectTo: 'dashboard/admin', pathMatch: 'full' },
+  { path: 'manager-dashboard', redirectTo: 'dashboard/manager', pathMatch: 'full' },
+  { path: 'cashier-dashboard', redirectTo: 'dashboard/cashier', pathMatch: 'full' },
+  { path: 'appraiser-dashboard', redirectTo: 'dashboard/appraiser', pathMatch: 'full' },
+  { path: 'auctioneer-dashboard', redirectTo: 'dashboard/auctioneer', pathMatch: 'full' },
+  { path: 'pawner-dashboard', redirectTo: 'dashboard/pawner', pathMatch: 'full' },
 
   // Transaction Routes
   {
-    path: 'transactions/appraisal',
-    component: Appraisal,
-    // canActivate: [AuthGuard],
-    data: { roles: ['appraiser', 'cashier', 'manager', 'administrator'] }
-  },
-  {
-    path: 'transactions/new-loan',
-    component: NewLoan,
-    // canActivate: [AuthGuard],
-    data: { roles: ['cashier', 'manager', 'administrator'] }
-  },
-  {
-    path: 'transactions/additional-loan',
-    component: AdditionalLoan,
-    // canActivate: [AuthGuard],
-    data: { roles: ['cashier', 'manager', 'administrator'] }
-  },
-  {
-    path: 'transactions/partial-payment',
-    component: PartialPayment,
-    // canActivate: [AuthGuard],
-    data: { roles: ['cashier', 'manager', 'administrator'] }
-  },
-  {
-    path: 'transactions/redeem',
-    component: Redeem,
-    // canActivate: [AuthGuard],
-    data: { roles: ['cashier', 'manager', 'administrator'] }
-  },
-  {
-    path: 'transactions/renew',
-    component: Renew,
-    // canActivate: [AuthGuard],
-    data: { roles: ['cashier', 'manager', 'administrator'] }
+    path: 'transactions',
+    children: transactionRoutes
   },
 
-  { path: '**', redirectTo: '/login' }
+  { path: '**', redirectTo: '/404' }
 ];

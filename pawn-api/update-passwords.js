@@ -3,27 +3,31 @@ const { pool } = require('./config/database');
 
 async function updatePasswords() {
   try {
-    console.log('🔐 Updating passwords for appraiser and auctioneer...');
+    console.log('🔐 Updating passwords for all test users...');
     
-    // Hash the passwords
-    const appraiserPassword = await bcrypt.hash('appraiser123', 10);
-    const auctioneerPassword = await bcrypt.hash('auctioneer123', 10);
+    // Define all test users and their passwords
+    const users = [
+      { username: 'admin', password: 'admin123' },
+      { username: 'manager1', password: 'manager123' },
+      { username: 'cashier1', password: 'cashier123' },
+      { username: 'auctioneer1', password: 'auctioneer123' },
+      { username: 'appraiser1', password: 'appraiser123' },
+      { username: 'pawner1', password: 'pawner123' }
+    ];
     
-    // Update appraiser password
-    await pool.query(
-      'UPDATE users SET password_hash = $1 WHERE username = $2',
-      [appraiserPassword, 'appraiser1']
-    );
-    console.log('✅ Updated appraiser1 password');
+    // Update each user's password
+    for (const user of users) {
+      const passwordHash = await bcrypt.hash(user.password, 10);
+      
+      // Update the user's password in the database
+      await pool.query(
+        'UPDATE users SET password_hash = $1 WHERE username = $2',
+        [passwordHash, user.username]
+      );
+      console.log(`✅ Updated ${user.username} password to "${user.password}"`);
+    }
     
-    // Update auctioneer password
-    await pool.query(
-      'UPDATE users SET password_hash = $1 WHERE username = $2',
-      [auctioneerPassword, 'auctioneer1']
-    );
-    console.log('✅ Updated auctioneer1 password');
-    
-    console.log('🎉 Password update completed!');
+    console.log('🎉 All passwords have been updated successfully!');
     
   } catch (error) {
     console.error('❌ Error updating passwords:', error);

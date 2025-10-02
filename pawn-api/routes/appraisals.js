@@ -6,6 +6,70 @@ const router = express.Router();
 // Apply authentication middleware to all routes
 router.use(authenticateToken);
 
+// Get today's appraisals for dashboard
+router.get('/today', async (req, res) => {
+  try {
+    console.log(`🗓️ [${new Date().toISOString()}] TODAY'S APPRAISALS - Fetching appraisals from today - User: ${req.user.username}`);
+    
+    // Get current date range (start of day to end of day)
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    
+    console.log(`🔍 [TODAY'S APPRAISALS] Date range: ${today.toISOString()} to ${tomorrow.toISOString()}`);
+    
+    // Query appraisals created today with pawner information
+    const result = await pool.query(`
+      SELECT a.id, a.pawner_id, a.appraiser_id, a.item_category, a.item_category_description,
+             a.item_type, a.description, a.serial_number, a.weight, a.karat,
+             a.estimated_value, a.condition_notes, a.status, a.created_at,
+             p.first_name, p.last_name, p.contact_number,
+             u.first_name as appraiser_first_name, u.last_name as appraiser_last_name
+      FROM appraisals a
+      JOIN pawners p ON a.pawner_id = p.id
+      LEFT JOIN users u ON a.appraiser_id = u.id
+      WHERE a.created_at >= $1 AND a.created_at < $2
+      ORDER BY a.created_at DESC
+    `, [today, tomorrow]);
+    
+    console.log(`📊 [TODAY'S APPRAISALS] Found ${result.rows.length} appraisals for today`);
+    
+    const mappedData = result.rows.map(row => ({
+      id: row.id,
+      pawnerId: row.pawner_id,
+      appraiserId: row.appraiser_id,
+      category: row.item_category,
+      categoryDescription: row.item_category_description,
+      description: row.description,
+      serialNumber: row.serial_number,
+      weight: row.weight,
+      karat: row.karat,
+      estimatedValue: parseFloat(row.estimated_value),
+      notes: row.condition_notes,
+      status: row.status,
+      createdAt: row.created_at,
+      pawnerName: `${row.first_name} ${row.last_name}`,
+      pawnerContact: row.contact_number,
+      appraiserName: row.appraiser_first_name && row.appraiser_last_name ? 
+                    `${row.appraiser_first_name} ${row.appraiser_last_name}` : 
+                    'Unknown'
+    }));
+
+    res.json({
+      success: true,
+      message: 'Today\'s appraisals retrieved successfully',
+      data: mappedData
+    });
+  } catch (error) {
+    console.error('❌ Error fetching today\'s appraisals:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching today\'s appraisals',
+      error: error.message
+    });
+  }
+});
+
 // Get pending appraisals ready for transaction (cashier dashboard)
 router.get('/pending-ready', async (req, res) => {
   try {
