@@ -90,8 +90,13 @@ export class NewLoan implements OnInit {
   // Modal states
   showCityModal = false;
   showBarangayModal = false;
+  showCategoryModal = false;
+  showCategoryDescriptionModal = false;
   newCityName = '';
   newBarangayName = '';
+  newCategoryName = '';
+  newCategoryDescription = '';
+  selectedCategoryFromModal = '';
 
   // Item/Appraisal Management
   appraisalSearchQuery = '';
@@ -625,6 +630,77 @@ export class NewLoan implements OnInit {
       error: (error) => {
         console.error('Error adding barangay:', error);
         this.toastService.showError('Error', 'Failed to add barangay');
+      }
+    });
+  }
+
+  // Category Modal Methods
+  closeCategoryModal() {
+    this.showCategoryModal = false;
+    this.selectedCategoryFromModal = '';
+  }
+
+  selectCategoryFromModal() {
+    if (!this.selectedCategoryFromModal) {
+      this.toastService.showWarning('Validation', 'Please select a category');
+      return;
+    }
+
+    // Set the selected category to the form
+    this.itemForm.category = this.selectedCategoryFromModal;
+    
+    this.toastService.showSuccess('Success', 'Category selected successfully');
+    this.closeCategoryModal();
+    
+    // Load category descriptions for the selected category
+    this.onCategoryChange();
+  }
+
+  // Category Description Modal Methods
+  closeCategoryDescriptionModal() {
+    this.showCategoryDescriptionModal = false;
+    this.newCategoryDescription = '';
+  }
+
+  addNewCategoryDescription() {
+    if (!this.newCategoryDescription || !this.newCategoryDescription.trim()) {
+      this.toastService.showWarning('Validation', 'Please enter a description');
+      return;
+    }
+
+    if (!this.itemForm.category) {
+      this.toastService.showWarning('Validation', 'Please select a category first');
+      return;
+    }
+
+    // Find the selected category to get its ID
+    const selectedCategory = this.categories.find(cat => cat.name === this.itemForm.category);
+    if (!selectedCategory) {
+      this.toastService.showWarning('Error', 'Selected category not found');
+      return;
+    }
+
+    const descriptionData = {
+      description: this.newCategoryDescription.trim()
+    };
+
+    this.categoriesService.createCategoryDescription(selectedCategory.id, descriptionData).subscribe({
+      next: (response: any) => {
+        if (response.success && response.data) {
+          // Add the new description to the list
+          this.categoryDescriptions.push(response.data.description);
+          // Select the newly added description
+          this.itemForm.categoryDescription = response.data.description;
+          
+          this.toastService.showSuccess('Success', 'Category description added successfully');
+          this.closeCategoryDescriptionModal();
+        } else {
+          this.toastService.showError('Error', response.message || 'Failed to add description');
+        }
+      },
+      error: (error: any) => {
+        console.error('Error adding category description:', error);
+        this.toastService.showError('Error', 'Failed to add category description');
       }
     });
   }
