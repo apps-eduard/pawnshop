@@ -1,3 +1,45 @@
 
 
 Stop-Process -Id (Get-NetTCPConnection -LocalPort 3000).OwningProcess -Force -ErrorAction SilentlyContinue
+
+
+1366 x 766
+
+
+Carmen Hernandez
+ID: 5
++1-555-2005
+carmen.hernandez@email.com
+Manila, Ermita
+1005 Visitor Rd, Suburb
+
+
+Appraisal dashboard
+Appraisal - this for encoding of the pawner details and pawn items
+	     		
+New Loan
+Additional
+Partial
+Redeem
+Renew
+
+cd "C:\Users\speed\Desktop\pawnshopv1\pawnshop\pawn-web"; ng serve
+
+cd "C:\Users\speed\Desktop\pawnshopv1\pawnshop\pawn-web"; npm start
+
+
+
+
+cd "C:\Users\speed\Desktop\pawnshopv1\pawnshop\pawn-web";npm run ng -- serve --host localhost --port 4200 
+
+cd "C:\Users\speed\Desktop\pawnshopv1\pawnshop\pawn-api"; node server.js
+
+taskkill /F /IM node.exe
+
+cd "C:\Users\speed\Desktop\pawnshopv1\pawnshop\pawn-api"; npm run dev
+
+taskkill /F /IM node.exe
+taskkill /F /IM nodemon.exe
+
+
+Get-Process node -ErrorAction SilentlyContinue | Select-Object Id, ProcessName, WorkingSet

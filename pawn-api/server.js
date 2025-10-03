@@ -32,36 +32,80 @@ app.use(helmet({
   contentSecurityPolicy: false
 }));
 
-// Rate limiting
+// Enhanced rate limiting for better performance
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
-  message: 'Too many requests from this IP, please try again later.'
+  windowMs: 1 * 60 * 1000, // 1 minute window
+  max: 30, // Reduced from 100 to 30 requests per minute
+  message: 'Too many requests from this IP, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
 });
-app.use('/api/', limiter);
 
-// CORS configuration - Enhanced for development with broader access
+// More restrictive rate limiting for dashboard endpoints
+const dashboardLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 20, // Limit dashboard requests
+  message: 'Dashboard requests limited, please slow down.'
+});
+
+app.use('/api/', limiter);
+app.use('/api/dashboard', dashboardLimiter);
+
+// Enhanced CORS configuration - Fixed for proper preflight handling
 app.use(cors({
-  origin: function(origin, callback) {
-    // Allow requests with no origin (mobile apps, curl requests)
-    if(!origin) return callback(null, true);
-    // Allow all origins during development
-    const allowedOrigins = [
-      'http://localhost:4200',
-      'http://localhost:8080',
-      'http://127.0.0.1:4200',
-      'http://127.0.0.1:8080'
-    ];
-    if(allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      callback(null, true); // Allow all origins during development
-    }
-  },
+  origin: ['http://localhost:4200', 'http://127.0.0.1:4200'],
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept']
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+  exposedHeaders: ['Content-Range', 'X-Content-Range'],
+  preflightContinue: false,
+  optionsSuccessStatus: 204
 }));
+
+// Enhanced CORS middleware should handle preflight requests automatically
+
+// Add response header middleware to ensure CORS headers are always present
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', 'http://localhost:4200');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  next();
+});
+
+// Request timeout middleware to prevent hanging connections
+app.use((req, res, next) => {
+  req.setTimeout(30000, () => {
+    console.log(`⏰ Request timeout for ${req.method} ${req.path}`);
+    if (!res.headersSent) {
+      res.header('Access-Control-Allow-Origin', 'http://localhost:4200');
+      res.header('Access-Control-Allow-Credentials', 'true');
+      res.status(408).json({ error: 'Request timeout' });
+    }
+  });
+  next();
+});
+
+// Add request queueing to prevent overwhelming the server
+let activeRequests = 0;
+const maxConcurrentRequests = 5;
+
+app.use('/api', (req, res, next) => {
+  if (activeRequests >= maxConcurrentRequests) {
+    console.log(`🚦 Request queued: ${req.method} ${req.path} (Active: ${activeRequests})`);
+    return setTimeout(() => {
+      next();
+    }, 50); // Small delay to prevent overwhelming
+  }
+  
+  activeRequests++;
+  
+  const originalEnd = res.end;
+  res.end = function(...args) {
+    activeRequests--;
+    originalEnd.apply(res, args);
+  };
+  
+  next();
+});
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
@@ -146,9 +190,18 @@ app.use('/api/addresses', addressRoutes);
 app.use('/api/branch-config', branchConfigRoutes);
 app.use('/api/sync-logs', syncLogsRoutes);
 
-// Error handling middleware
+// Enhanced error handling middleware with CORS support
 app.use((err, req, res, next) => {
-  console.error(`❌ [${new Date().toISOString()}] Error:`, err);
+  console.error(`❌ [${new Date().toISOString()}] Error:`, {
+    method: req.method,
+    url: req.url,
+    error: err.message,
+    stack: err.stack?.split('\n').slice(0, 3)
+  });
+  
+  // Ensure CORS headers are set even on errors
+  res.header('Access-Control-Allow-Origin', 'http://localhost:4200');
+  res.header('Access-Control-Allow-Credentials', 'true');
   
   // Handle specific known errors
   if (err.name === 'UnauthorizedError') {
@@ -159,11 +212,35 @@ app.use((err, req, res, next) => {
   }
   
   // Default error response
-  res.status(err.status || 500).json({
-    success: false,
-    message: err.message || 'An unexpected error occurred on the server.',
-    error: process.env.NODE_ENV === 'development' ? err : {}
+  if (!res.headersSent) {
+    res.status(err.status || 500).json({
+      success: false,
+      message: err.message || 'An unexpected error occurred on the server.',
+      error: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong'
+    });
+  }
+});
+
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('🚨 [UNHANDLED REJECTION]', {
+    timestamp: new Date().toISOString(),
+    reason: reason,
+    promise: promise
   });
+});
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (error) => {
+  console.error('🚨 [UNCAUGHT EXCEPTION]', {
+    timestamp: new Date().toISOString(),
+    error: error.message,
+    stack: error.stack
+  });
+  // Don't exit the process in development
+  if (process.env.NODE_ENV !== 'development') {
+    process.exit(1);
+  }
 });
 
 // Start the server

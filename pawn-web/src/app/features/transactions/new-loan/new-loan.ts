@@ -102,6 +102,25 @@ export class NewLoan implements OnInit, OnDestroy {
     addressDetails: ''
   };
 
+  // Track which fields have been touched to show validation
+  touchedFields = {
+    pawner: {
+      firstName: false,
+      lastName: false,
+      contactNumber: false,
+      email: false,
+      cityId: false,
+      barangayId: false,
+      addressDetails: false
+    },
+    item: {
+      category: false,
+      categoryDescription: false,
+      description: false,
+      appraisalValue: false
+    }
+  };
+
   // City and Barangay data
   cities: { id: number; name: string }[] = [];
   barangays: { id: number; name: string }[] = [];
@@ -175,8 +194,23 @@ export class NewLoan implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
+    // Clean up all subscriptions to prevent memory leaks
     this.destroy$.next();
     this.destroy$.complete();
+    
+    // Clear any pending timeouts
+    if (this.searchInput) {
+      this.searchInput.nativeElement.blur();
+    }
+    
+    // Clear arrays to free memory
+    this.pawners = [];
+    this.appraisalResults = [];
+    this.selectedItems = [];
+    this.categories = [];
+    this.categoryDescriptions = [];
+    this.cities = [];
+    this.barangays = [];
   }
 
   private setupModalSubscriptions() {
@@ -516,10 +550,47 @@ export class NewLoan implements OnInit, OnDestroy {
       return true;
     }
     
+    // Updated validation: category, categoryDescription, appraisalValue > 0 required (description removed)
     return !!(this.itemForm.category && 
               this.itemForm.categoryDescription &&
-              this.itemForm.description && 
               this.itemForm.appraisalValue > 0);
+  }
+
+  // Check if item form fields are required based on whether we have added items
+  areItemFieldsRequired(): boolean {
+    // If we already have items added, item details are not required for validation
+    return this.selectedItems.length === 0;
+  }
+
+  // Check if item form field is invalid for validation display
+  isItemFieldInvalid(fieldName: string): boolean {
+    const fieldKey = fieldName as keyof typeof this.touchedFields.item;
+    
+    // Only show validation if fields are required (no items added yet) AND field has been touched
+    if (!this.areItemFieldsRequired() || !this.touchedFields.item[fieldKey]) {
+      return false;
+    }
+
+    switch (fieldName) {
+      case 'category':
+        return !this.itemForm.category;
+      case 'categoryDescription':
+        return !this.itemForm.categoryDescription;
+      case 'description':
+        return false; // Description is no longer required
+      case 'appraisalValue':
+        return this.itemForm.appraisalValue <= 0;
+      default:
+        return false;
+    }
+  }
+
+  // Mark item field as touched
+  markItemFieldTouched(fieldName: string): void {
+    const fieldKey = fieldName as keyof typeof this.touchedFields.item;
+    if (this.touchedFields.item.hasOwnProperty(fieldKey)) {
+      this.touchedFields.item[fieldKey] = true;
+    }
   }
 
   isCategoryDisabled(): boolean {
@@ -600,15 +671,26 @@ export class NewLoan implements OnInit, OnDestroy {
   }
 
   canCreateLoan(): boolean {
-    return !!(this.selectedPawner && 
-              this.selectedItems.length > 0 &&
-              this.loanForm.loanAmount > 0 &&
-              this.loanForm.loanDate &&
-              this.loanForm.maturityDate);
+    // Check if pawner is valid (either selected or new pawner form is complete)
+    const pawnerValid = this.isPawnerValid();
+    
+    // Check if we have added items
+    const hasItems = this.selectedItems.length > 0;
+    
+    // Check if principal loan is greater than 0
+    const principalLoanValid = this.loanForm.loanAmount > 0;
+    
+    // Check if net proceeds is greater than 0
+    const netProceedsValid = this.getNetProceeds() > 0;
+    
+    // Check if required dates are set
+    const datesValid = !!(this.loanForm.loanDate && this.loanForm.maturityDate);
+    
+    return pawnerValid && hasItems && principalLoanValid && netProceedsValid && datesValid;
   }
 
   resetForm() {
-    // Reset loan form
+    // Reset loan form to pristine state
     this.loanForm = {
       principalAmount: 0,
       loanAmount: 0,
@@ -617,14 +699,16 @@ export class NewLoan implements OnInit, OnDestroy {
       loanDate: new Date().toISOString().split('T')[0],
       maturityDate: this.getDefaultMaturityDate(),
       expiryDate: this.getDefaultExpiryDate(),
-      serviceCharge: 0 // Will be calculated automatically
+      serviceCharge: 0
     };
     
-    // Reset items
+    // Reset all item-related data
     this.selectedItems = [];
     this.selectedAppraisal = null;
+    this.appraisalResults = [];
+    this.appraisalSearchQuery = '';
     
-    // Reset item form
+    // Reset item form to pristine state
     this.itemForm = {
       category: '',
       categoryDescription: '',
@@ -632,12 +716,42 @@ export class NewLoan implements OnInit, OnDestroy {
       appraisalValue: 0
     };
     
-    // Reset pawner selection and form
+    // Reset category descriptions
+    this.categoryDescriptions = [];
+    this.isLoadingDescriptions = false;
+    
+    // Reset pawner selection and search
     this.selectedPawner = null;
     this.searchQuery = '';
+    this.pawners = [];
+    this.isSearching = false;
+    
+    // Reset pawner form to pristine state
     this.resetPawnerForm();
     
-    // Reset currency input fields to show 0.00
+    // Reset barangays when city is cleared
+    this.barangays = [];
+    
+    // Reset all touched states to pristine
+    this.touchedFields = {
+      pawner: {
+        firstName: false,
+        lastName: false,
+        contactNumber: false,
+        email: false,
+        cityId: false,
+        barangayId: false,
+        addressDetails: false
+      },
+      item: {
+        category: false,
+        categoryDescription: false,
+        description: false,
+        appraisalValue: false
+      }
+    };
+    
+    // Reset currency input fields to show 0.00 and clear validation states
     setTimeout(() => {
       if (this.principalLoanDirective) {
         this.principalLoanDirective.setValue(0);
@@ -652,7 +766,7 @@ export class NewLoan implements OnInit, OnDestroy {
       }
     }, 100);
     
-    this.toastService.showInfo('Reset', 'Form has been reset');
+    this.toastService.showInfo('Reset', 'All form data has been reset to pristine state');
   }
 
   goBack() {
@@ -681,6 +795,50 @@ export class NewLoan implements OnInit, OnDestroy {
               this.pawnerForm.barangayId);
   }
 
+  // New pawner validation method
+  isPawnerValid(): boolean {
+    if (this.selectedPawner) {
+      return true; // Selected pawner is always valid
+    }
+    
+    // For new pawner, check required fields: fname, lname, contact, city, barangay
+    return !!(this.pawnerForm.firstName.trim() && 
+              this.pawnerForm.lastName.trim() && 
+              this.pawnerForm.contactNumber.trim() &&
+              this.pawnerForm.cityId &&
+              this.pawnerForm.barangayId);
+  }
+
+  // Check if pawner form field is invalid for validation display
+  isPawnerFieldInvalid(fieldName: string): boolean {
+    const field = this.pawnerForm[fieldName as keyof typeof this.pawnerForm];
+    const fieldKey = fieldName as keyof typeof this.touchedFields.pawner;
+    
+    // Only show validation if field has been touched and we're creating a new pawner
+    if (!this.selectedPawner && this.touchedFields.pawner[fieldKey]) {
+      switch (fieldName) {
+        case 'firstName':
+        case 'lastName':
+        case 'contactNumber':
+          return !field || (typeof field === 'string' && field.trim() === '');
+        case 'cityId':
+        case 'barangayId':
+          return !field;
+        default:
+          return false;
+      }
+    }
+    return false;
+  }
+
+  // Mark pawner field as touched
+  markPawnerFieldTouched(fieldName: string): void {
+    const fieldKey = fieldName as keyof typeof this.touchedFields.pawner;
+    if (this.touchedFields.pawner.hasOwnProperty(fieldKey)) {
+      this.touchedFields.pawner[fieldKey] = true;
+    }
+  }
+
   resetPawnerForm() {
     this.pawnerForm = {
       firstName: '',
@@ -691,6 +849,7 @@ export class NewLoan implements OnInit, OnDestroy {
       barangayId: '',
       addressDetails: ''
     };
+    // Clear barangays when pawner form is reset
     this.barangays = [];
   }
 

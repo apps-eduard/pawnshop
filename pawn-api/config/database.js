@@ -6,19 +6,35 @@ const pool = new Pool({
   database: process.env.DB_NAME || 'pawnshop_db',
   password: process.env.DB_PASSWORD || '123',
   port: process.env.DB_PORT || 5432,
-  max: 20, // maximum number of clients in the pool
-  idleTimeoutMillis: 30000, // how long a client is allowed to remain idle
-  connectionTimeoutMillis: 2000, // how long to wait for connection
+  max: 10, // Reduced from 20 to prevent connection overload
+  idleTimeoutMillis: 10000, // Reduced idle timeout to free connections faster
+  connectionTimeoutMillis: 3000, // Slightly increased timeout for reliability
+  allowExitOnIdle: true, // Allow pool to exit when idle
 });
 
-// Test database connection
-pool.on('connect', () => {
-  console.log('📄 Connected to PostgreSQL database');
+// Connection monitoring and error handling
+pool.on('connect', (client) => {
+  if (process.env.NODE_ENV === 'development') {
+    console.log('📄 Database connection established');
+  }
 });
 
 pool.on('error', (err) => {
-  console.error('❌ Database connection error:', err);
-  process.exit(-1);
+  console.error('❌ Database pool error:', err.message);
+  // Don't exit process, let connection pool recover
+});
+
+pool.on('remove', (client) => {
+  if (process.env.NODE_ENV === 'development') {
+    console.log('🔌 Database connection removed from pool');
+  }
+});
+
+// Graceful shutdown handling
+process.on('SIGINT', async () => {
+  console.log('🛑 Shutting down database pool...');
+  await pool.end();
+  process.exit(0);
 });
 
 module.exports = {

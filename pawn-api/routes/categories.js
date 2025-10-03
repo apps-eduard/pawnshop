@@ -3,10 +3,24 @@ const { pool } = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
 const router = express.Router();
 
-// Get all categories
+// Simple cache for categories (1-minute cache)
+let categoriesCache = null;
+let categoriesCacheTime = 0;
+const CACHE_DURATION = 60000; // 1 minute
+
+// Get all categories with caching
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    console.log('📊 [Categories API] Getting all categories');
+    const now = Date.now();
+    
+    // Return cached data if still valid
+    if (categoriesCache && (now - categoriesCacheTime) < CACHE_DURATION) {
+      return res.json({
+        success: true,
+        data: categoriesCache,
+        message: 'Categories retrieved successfully (cached)'
+      });
+    }
     
     const result = await pool.query(`
       SELECT * FROM categories 
@@ -14,13 +28,21 @@ router.get('/', authenticateToken, async (req, res) => {
       ORDER BY name
     `);
 
+    // Update cache
+    categoriesCache = result.rows.map(category => ({
+      ...category,
+      displayName: `${category.name} ${category.interest_rate}%`,
+      interest_rate: parseFloat(category.interest_rate)
+    }));
+    categoriesCacheTime = now;
+
+    if (process.env.NODE_ENV === 'development') {
+      console.log('📊 [Categories API] Getting all categories (cached)');
+    }
+
     res.json({
       success: true,
-      data: result.rows.map(category => ({
-        ...category,
-        displayName: `${category.name} ${category.interest_rate}%`,
-        interest_rate: parseFloat(category.interest_rate)
-      })),
+      data: categoriesCache,
       message: 'Categories retrieved successfully'
     });
 

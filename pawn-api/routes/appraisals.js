@@ -9,14 +9,10 @@ router.use(authenticateToken);
 // Get today's appraisals for dashboard
 router.get('/today', async (req, res) => {
   try {
-    console.log(`🗓️ [${new Date().toISOString()}] TODAY'S APPRAISALS - Fetching appraisals from today - User: ${req.user.username}`);
-    
     // Get current date range (start of day to end of day)
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
-    
-    console.log(`🔍 [TODAY'S APPRAISALS] Date range: ${today.toISOString()} to ${tomorrow.toISOString()}`);
     
     // Query appraisals created today with pawner information
     const result = await pool.query(`
@@ -31,8 +27,6 @@ router.get('/today', async (req, res) => {
       WHERE a.created_at >= $1 AND a.created_at < $2
       ORDER BY a.created_at DESC
     `, [today, tomorrow]);
-    
-    console.log(`📊 [TODAY'S APPRAISALS] Found ${result.rows.length} appraisals for today`);
     
     const mappedData = result.rows.map(row => ({
       id: row.id,
@@ -73,7 +67,7 @@ router.get('/today', async (req, res) => {
 // Get pending appraisals ready for transaction (cashier dashboard)
 router.get('/pending-ready', async (req, res) => {
   try {
-    console.log(`🏪 [${new Date().toISOString()}] CASHIER DASHBOARD - Fetching pending appraisals ready for transaction - User: ${req.user.username}`);
+    // Minimal logging for performance
     
     const result = await pool.query(`
       SELECT a.id, a.pawner_id, a.item_category, a.item_type, a.description, a.estimated_value,
@@ -90,34 +84,18 @@ router.get('/pending-ready', async (req, res) => {
       ORDER BY a.created_at DESC
     `);
     
-    console.log(`🔍 [CASHIER DEBUG] Raw query found ${result.rows.length} pending appraisals:`);
-    result.rows.forEach(row => {
-      console.log(`   - ID: ${row.id}, Pawner: ${row.first_name} ${row.last_name}, Item: ${row.item_type}, Value: ₱${row.estimated_value}`);
-    });
-    
     const mappedData = result.rows.map(row => {
       const pawnerName = `${row.first_name} ${row.last_name}`;
       const itemType = row.item_type || row.description;
       
-      // Enhanced value processing with debugging
-      let totalValue;
-      console.log(`🔍 [VALUE DEBUG] Raw estimated_value: "${row.estimated_value}" (type: ${typeof row.estimated_value})`);
-      
-      if (row.estimated_value === null || row.estimated_value === undefined) {
-        console.log(`⚠️ [VALUE WARNING] estimated_value is null/undefined for appraisal ${row.id}`);
-        totalValue = 0;
-      } else {
+      // Simple value processing without excessive logging
+      let totalValue = 0;
+      if (row.estimated_value !== null && row.estimated_value !== undefined) {
         totalValue = parseFloat(row.estimated_value);
         if (isNaN(totalValue)) {
-          console.log(`❌ [VALUE ERROR] parseFloat resulted in NaN for value: "${row.estimated_value}"`);
           totalValue = 0;
         }
       }
-      
-      console.log(`🔍 [CASHIER DEBUG] Processing appraisal ${row.id}:`);
-      console.log(`     Pawner: "${row.first_name}" + "${row.last_name}" = "${pawnerName}"`);
-      console.log(`     Item Type: "${itemType}"`);
-      console.log(`     Raw Value: "${row.estimated_value}" -> Parsed: ${totalValue}`);
       
       return {
         id: row.id,
@@ -132,7 +110,10 @@ router.get('/pending-ready', async (req, res) => {
       };
     });
 
-    console.log(`✅ [CASHIER SUCCESS] Returning ${mappedData.length} pending appraisals for cashier dashboard`);
+    // Log only summary in development mode
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`📊 [CASHIER] ${mappedData.length} pending appraisals retrieved`);
+    }
 
     res.json({
       success: true,
@@ -148,92 +129,83 @@ router.get('/pending-ready', async (req, res) => {
   }
 });
 
-// Get appraisals by status (for frontend compatibility)
+// Get appraisals by status - Optimized with reduced logging
 router.get('/status/:status', async (req, res) => {
   try {
     const { status } = req.params;
-    console.log(`📊 [${new Date().toISOString()}] APPRAISALS STATUS - Fetching ${status} appraisals - User: ${req.user.username}`);
     
-    // Map frontend status requests to our data
-    let queryStatus = status;
-    let additionalWhere = '';
-    
-    if (status === 'completed') {
-      // Frontend asks for "completed" but wants pending appraisals ready for transaction
-      queryStatus = 'pending';
-      additionalWhere = `AND a.id NOT IN (
-        SELECT DISTINCT appraisal_id 
-        FROM transactions 
-        WHERE appraisal_id IS NOT NULL
-      )`;
-      console.log(`🔄 [STATUS MAPPING] Frontend requested 'completed' - returning 'pending' appraisals ready for transaction`);
+    // Map frontend status to database status
+    let dbStatus;
+    switch (status) {
+      case 'pending':
+        dbStatus = 'completed'; // Frontend 'pending' maps to database 'completed'
+        break;
+      case 'completed':
+        dbStatus = 'completed';
+        break;
+      case 'approved':
+        dbStatus = 'approved';
+        break;
+      default:
+        dbStatus = status;
     }
     
     const result = await pool.query(`
-      SELECT a.id, a.pawner_id, a.item_category, a.item_type, a.description, a.estimated_value,
-             a.status, a.created_at,
-             p.first_name, p.last_name
+      SELECT a.id, a.pawner_id, a.appraiser_id, a.item_category, a.item_category_description,
+             a.item_type, a.description, a.serial_number, a.weight, a.karat,
+             a.estimated_value, a.condition_notes, a.status, a.created_at,
+             p.first_name, p.last_name, p.contact_number,
+             u.first_name as appraiser_first_name, u.last_name as appraiser_last_name
       FROM appraisals a
       JOIN pawners p ON a.pawner_id = p.id
+      LEFT JOIN users u ON a.appraiser_id = u.id
       WHERE a.status = $1
-      ${additionalWhere}
       ORDER BY a.created_at DESC
-    `, [queryStatus]);
+    `, [dbStatus]);
     
-    console.log(`🔍 [STATUS DEBUG] Found ${result.rows.length} appraisals with status '${status}' (mapped to '${queryStatus}'):`);
-    result.rows.forEach(row => {
-      console.log(`   - ID: ${row.id}, Pawner: ${row.first_name} ${row.last_name}, Item: ${row.item_type}, Value: ₱${row.estimated_value}`);
-    });
+    const mappedData = result.rows.map(row => ({
+      id: row.id,
+      pawnerId: row.pawner_id,
+      appraiserId: row.appraiser_id,
+      category: row.item_category,
+      categoryDescription: row.item_category_description,
+      description: row.description,
+      serialNumber: row.serial_number,
+      weight: row.weight,
+      karat: row.karat,
+      estimatedValue: parseFloat(row.estimated_value),
+      appraisedValue: parseFloat(row.estimated_value), // Add this field for compatibility
+      notes: row.condition_notes,
+      status: row.status,
+      createdAt: row.created_at,
+      pawnerName: `${row.first_name} ${row.last_name}`,
+      pawnerContact: row.contact_number,
+      appraiserName: row.appraiser_first_name && row.appraiser_last_name 
+        ? `${row.appraiser_first_name} ${row.appraiser_last_name}` 
+        : 'Unknown'
+    }));
     
-    const mappedData = result.rows.map(row => {
-      const pawnerName = `${row.first_name} ${row.last_name}`;
-      const itemType = row.item_type || row.description;
-      
-      // Enhanced value processing with debugging
-      let totalValue;
-      console.log(`🔍 [STATUS VALUE DEBUG] Raw estimated_value: "${row.estimated_value}" (type: ${typeof row.estimated_value})`);
-      
-      if (row.estimated_value === null || row.estimated_value === undefined) {
-        console.log(`⚠️ [STATUS VALUE WARNING] estimated_value is null/undefined for appraisal ${row.id}`);
-        totalValue = 0;
-      } else {
-        totalValue = parseFloat(row.estimated_value);
-        if (isNaN(totalValue)) {
-          console.log(`❌ [STATUS VALUE ERROR] parseFloat resulted in NaN for value: "${row.estimated_value}"`);
-          totalValue = 0;
-        }
-      }
-      
-      console.log(`✅ [STATUS DEBUG] Appraisal ${row.id}: Value converted from "${row.estimated_value}" to ${totalValue}`);
-      
-      return {
-        id: row.id,
-        pawnerName: pawnerName,
-        itemType: itemType,
-        totalAppraisedValue: totalValue,
-        // Metadata for click handling
-        pawnerId: row.pawner_id,
-        category: row.item_category,
-        status: row.status,
-        createdAt: row.created_at
-      };
-    });
-
-    console.log(`✅ [STATUS SUCCESS] Returning ${mappedData.length} appraisals for status '${status}'`);
-
+    // Log only summary info, not individual items
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`📊 [API] Status: ${status} -> ${mappedData.length} items | User: ${req.user.username}`);
+    }
+    
     res.json({
       success: true,
-      message: `${status.charAt(0).toUpperCase() + status.slice(1)} appraisals retrieved successfully`,
       data: mappedData
     });
+    
   } catch (error) {
-    console.error(`❌ Error fetching ${req.params.status} appraisals:`, error);
+    console.error(`❌ [API ERROR] Status ${req.params.status}:`, error.message);
     res.status(500).json({
       success: false,
-      message: `Error fetching ${req.params.status} appraisals`
+      message: 'Failed to fetch appraisals',
+      error: error.message
     });
   }
 });
+
+
 
 // Get all appraisals
 router.get('/', async (req, res) => {
@@ -280,8 +252,7 @@ router.post('/', async (req, res) => {
       notes
     } = req.body;
 
-    console.log(`💎 [${new Date().toISOString()}] APPRAISAL CREATE - Creating new appraisal for pawner ${pawnerId} - User: ${req.user.username}`);
-    console.log(`📋 [APPRAISAL DATA] Category: ${category}, Value: ₱${estimatedValue}, Description: ${description}`);
+    // Minimal logging for performance
 
     // Validation
     if (!pawnerId || !category || !description || !estimatedValue) {

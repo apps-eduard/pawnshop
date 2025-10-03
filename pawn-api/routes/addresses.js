@@ -11,10 +11,24 @@ router.use(authenticateToken);
 // CITIES MANAGEMENT
 // =============================================
 
-// Get all cities
+// Simple cache for cities (1-minute cache)
+let citiesCache = null;
+let citiesCacheTime = 0;
+const CACHE_DURATION = 60000; // 1 minute
+
+// Get all cities with caching
 router.get('/cities', async (req, res) => {
   try {
-    console.log(`🏙️ [${new Date().toISOString()}] Fetching cities - User: ${req.user.username}`);
+    const now = Date.now();
+    
+    // Return cached data if still valid
+    if (citiesCache && (now - citiesCacheTime) < CACHE_DURATION) {
+      return res.json({
+        success: true,
+        message: 'Cities retrieved successfully (cached)',
+        data: citiesCache
+      });
+    }
     
     const result = await pool.query(`
       SELECT id, name, province, is_active, created_at, updated_at
@@ -22,19 +36,25 @@ router.get('/cities', async (req, res) => {
       ORDER BY name ASC
     `);
     
-    console.log(`✅ Found ${result.rows.length} cities`);
+    // Update cache
+    citiesCache = result.rows.map(row => ({
+      id: row.id,
+      name: row.name,
+      province: row.province,
+      isActive: row.is_active,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at
+    }));
+    citiesCacheTime = now;
+    
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`✅ Found ${result.rows.length} cities (cached)`);
+    }
     
     res.json({
       success: true,
       message: 'Cities retrieved successfully',
-      data: result.rows.map(row => ({
-        id: row.id,
-        name: row.name,
-        province: row.province,
-        isActive: row.is_active,
-        createdAt: row.created_at,
-        updatedAt: row.updated_at
-      }))
+      data: citiesCache
     });
   } catch (error) {
     console.error('❌ Error fetching cities:', error);
@@ -274,10 +294,23 @@ router.delete('/cities/:id', async (req, res) => {
 // BARANGAYS MANAGEMENT
 // =============================================
 
-// Get all barangays
+// Simple cache for barangays (1-minute cache)
+let barangaysCache = null;
+let barangaysCacheTime = 0;
+
+// Get all barangays with caching
 router.get('/barangays', async (req, res) => {
   try {
-    console.log(`🏘️ [${new Date().toISOString()}] Fetching barangays - User: ${req.user.username}`);
+    const now = Date.now();
+    
+    // Return cached data if still valid
+    if (barangaysCache && (now - barangaysCacheTime) < CACHE_DURATION) {
+      return res.json({
+        success: true,
+        message: 'Barangays retrieved successfully (cached)',
+        data: barangaysCache
+      });
+    }
     
     const result = await pool.query(`
       SELECT b.id, b.name, b.city_id, b.is_active, b.created_at, b.updated_at,
@@ -287,20 +320,26 @@ router.get('/barangays', async (req, res) => {
       ORDER BY c.name ASC, b.name ASC
     `);
     
-    console.log(`✅ Found ${result.rows.length} barangays`);
+    // Update cache
+    barangaysCache = result.rows.map(row => ({
+      id: row.id,
+      name: row.name,
+      cityId: row.city_id,
+      cityName: row.city_name,
+      isActive: row.is_active,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at
+    }));
+    barangaysCacheTime = now;
+    
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`✅ Found ${result.rows.length} barangays (cached)`);
+    }
     
     res.json({
       success: true,
       message: 'Barangays retrieved successfully',
-      data: result.rows.map(row => ({
-        id: row.id,
-        name: row.name,
-        cityId: row.city_id,
-        cityName: row.city_name,
-        isActive: row.is_active,
-        createdAt: row.created_at,
-        updatedAt: row.updated_at
-      }))
+      data: barangaysCache
     });
   } catch (error) {
     console.error('❌ Error fetching barangays:', error);
