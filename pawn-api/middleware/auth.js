@@ -35,8 +35,8 @@ const authenticateToken = async (req, res, next) => {
     // Verify user still exists and is active
     const userQuery = `
       SELECT id, username, email, first_name, last_name, role, branch_id, is_active 
-      FROM users 
-      WHERE id = $1 AND is_active = true
+      FROM employees 
+      WHERE user_id = $1 AND is_active = true
     `;
     
     const result = await db.query(userQuery, [decoded.userId]);

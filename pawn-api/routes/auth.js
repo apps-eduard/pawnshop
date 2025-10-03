@@ -32,10 +32,10 @@ router.post('/login', [
 
     // Find user by username or email
     const userQuery = `
-      SELECT u.*, b.name as branch_name
-      FROM users u
-      LEFT JOIN branches b ON u.branch_id = b.id
-      WHERE (u.username = $1 OR u.email = $1) AND u.is_active = true
+      SELECT e.*, b.name as branch_name
+      FROM employees e
+      LEFT JOIN branches b ON e.branch_id = b.id
+      WHERE (e.username = $1 OR e.email = $1) AND e.is_active = true
     `;
     
     const result = await pool.query(userQuery, [username]);
@@ -66,12 +66,12 @@ router.post('/login', [
     }
 
     console.log(`✅ Authentication successful for: ${username}`);
-    console.log(`🎫 Generating JWT tokens for user ID: ${user.id}`);
+    console.log(`🎫 Generating JWT tokens for user ID: ${user.user_id}`);
     
-    // Generate tokens
+    // Generate tokens (using user_id for consistency with existing foreign keys)
     const accessToken = jwt.sign(
       { 
-        userId: user.id, 
+        userId: user.user_id, 
         username: user.username, 
         role: user.role,
         branchId: user.branch_id 
@@ -81,7 +81,7 @@ router.post('/login', [
     );
 
     const refreshToken = jwt.sign(
-      { userId: user.id },
+      { userId: user.user_id },
       process.env.JWT_REFRESH_SECRET,
       { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d' }
     );
@@ -90,7 +90,7 @@ router.post('/login', [
 
     // Update last login
     await pool.query(
-      'UPDATE users SET updated_at = NOW() WHERE id = $1',
+      'UPDATE employees SET updated_at = NOW() WHERE id = $1',
       [user.id]
     );
 
@@ -108,7 +108,7 @@ router.post('/login', [
       message: 'Login successful',
       data: {
         user: {
-          id: user.id,
+          id: user.user_id,
           username: user.username,
           email: user.email,
           firstName: user.first_name,
@@ -155,9 +155,9 @@ router.post('/refresh', [
     
     // Get user data
     const userQuery = `
-      SELECT id, username, role, branch_id, is_active 
-      FROM users 
-      WHERE id = $1 AND is_active = true
+      SELECT user_id, username, role, branch_id, is_active 
+      FROM employees 
+      WHERE user_id = $1 AND is_active = true
     `;
     
     const result = await pool.query(userQuery, [decoded.userId]);
@@ -174,7 +174,7 @@ router.post('/refresh', [
     // Generate new access token
     const newAccessToken = jwt.sign(
       { 
-        userId: user.id, 
+        userId: user.user_id, 
         username: user.username, 
         role: user.role,
         branchId: user.branch_id 
@@ -218,17 +218,15 @@ router.post('/logout', authenticateToken, (req, res) => {
 router.get('/profile', authenticateToken, async (req, res) => {
   try {
     const userQuery = `
-      SELECT u.id, u.username, u.email, u.first_name, u.last_name, u.role, 
-             u.branch_id, u.created_at, u.last_login,
-             e.position, e.contact_number, e.address,
+      SELECT e.id, e.username, e.email, e.first_name, e.last_name, e.role, 
+             e.branch_id, e.created_at, e.position, e.contact_number, e.address,
              b.name as branch_name
-      FROM users u
-      LEFT JOIN employees e ON u.id = e.user_id
-      LEFT JOIN branches b ON u.branch_id = b.id
-      WHERE u.id = $1
+      FROM employees e
+      LEFT JOIN branches b ON e.branch_id = b.id
+      WHERE e.user_id = $1
     `;
     
-    const result = await pool.query(userQuery, [req.user.id]);
+    const result = await pool.query(userQuery, [req.user.userId]);
     
     if (result.rows.length === 0) {
       return res.status(404).json({

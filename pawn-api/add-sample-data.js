@@ -10,7 +10,7 @@ async function addSampleData() {
     await client.query('BEGIN');
     
     // Check if users already exist
-    const existingUsers = await client.query('SELECT COUNT(*) FROM users');
+    const existingUsers = await client.query('SELECT COUNT(*) FROM employees');
     const userCount = parseInt(existingUsers.rows[0].count);
     
     if (userCount === 0) {
@@ -20,19 +20,21 @@ async function addSampleData() {
       const sampleUsers = [
         {
           username: 'admin',
+          emoji: '⚡',
           email: 'admin@goldwin.com',
-          firstName: 'John',
+          firstName: 'Administrator',
           lastName: 'Admin',
-          role: 'admin',
+          role: 'administrator',
           password: 'admin123',
           position: 'System Administrator',
           contactNumber: '09123456789'
         },
         {
           username: 'manager1',
+          emoji: '👔',
           email: 'manager@goldwin.com',
-          firstName: 'Jane',
-          lastName: 'Manager',
+          firstName: 'Manager',
+          lastName: 'User',
           role: 'manager',
           password: 'manager123',
           position: 'Branch Manager',
@@ -40,34 +42,72 @@ async function addSampleData() {
         },
         {
           username: 'cashier1',
+          emoji: '💰',
           email: 'cashier@goldwin.com',
-          firstName: 'Mike',
-          lastName: 'Cashier',
+          firstName: 'Cashier',
+          lastName: 'User',
           role: 'cashier',
           password: 'cashier123',
           position: 'Senior Cashier',
           contactNumber: '09123456787'
+        },
+        {
+          username: 'auctioneer1',
+          emoji: '🔨',
+          email: 'auctioneer@goldwin.com',
+          firstName: 'Auctioneer',
+          lastName: 'User',
+          role: 'auctioneer',
+          password: 'auctioneer123',
+          position: 'Senior Auctioneer',
+          contactNumber: '09123456786'
+        },
+        {
+          username: 'appraiser1',
+          emoji: '💎',
+          email: 'appraiser@goldwin.com',
+          firstName: 'Appraiser',
+          lastName: 'User',
+          role: 'appraiser',
+          password: 'appraiser123',
+          position: 'Senior Appraiser',
+          contactNumber: '09123456785'
+        },
+        {
+          username: 'pawner1',
+          emoji: '👤',
+          email: 'pawner@goldwin.com',
+          firstName: 'Pawner',
+          lastName: 'User',
+          role: 'pawner',
+          password: 'pawner123',
+          position: 'Pawner Account',
+          contactNumber: '09123456784'
         }
       ];
       
-      for (const user of sampleUsers) {
+      for (let i = 0; i < sampleUsers.length; i++) {
+        const user = sampleUsers[i];
         const hashedPassword = await bcrypt.hash(user.password, 10);
+        const user_id = i + 1; // Sequential user_id starting from 1
         
-        const userResult = await client.query(`
-          INSERT INTO users (username, email, first_name, last_name, role, password_hash, is_active)
-          VALUES ($1, $2, $3, $4, $5, $6, true)
-          RETURNING id
-        `, [user.username, user.email, user.firstName, user.lastName, user.role, hashedPassword]);
-        
-        const userId = userResult.rows[0].id;
-        
-        // Add employee record
+        // Insert directly into employees table (since we migrated from users table)
         await client.query(`
-          INSERT INTO employees (user_id, position, contact_number)
-          VALUES ($1, $2, $3)
-        `, [userId, user.position, user.contactNumber]);
+          INSERT INTO employees (user_id, username, email, first_name, last_name, role, password_hash, is_active, position, contact_number, created_at)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, true, $8, $9, NOW())
+        `, [
+          user_id,
+          user.username, 
+          user.email, 
+          user.firstName, 
+          user.lastName, 
+          user.role, 
+          hashedPassword,
+          user.position,
+          user.contactNumber
+        ]);
         
-        console.log(`✅ Added user: ${user.username} (${user.role})`);
+        console.log(`${user.emoji} Added user: ${user.username} (${user.role}) with user_id: ${user_id}`);
       }
     } else {
       console.log(`ℹ️  Users already exist (${userCount} users found)`);
@@ -157,13 +197,16 @@ async function addSampleData() {
     
     // Display login credentials
     console.log('\n📋 Login Credentials:');
-    console.log('┌─────────────┬────────────┬─────────────┐');
-    console.log('│ Username    │ Password   │ Role        │');
-    console.log('├─────────────┼────────────┼─────────────┤');
-    console.log('│ admin       │ admin123   │ admin       │');
-    console.log('│ manager1    │ manager123 │ manager     │');
-    console.log('│ cashier1    │ cashier123 │ cashier     │');
-    console.log('└─────────────┴────────────┴─────────────┘');
+    console.log('┌──────────────┬───────────────┬──────────────┐');
+    console.log('│ Username     │ Password      │ Role         │');
+    console.log('├──────────────┼───────────────┼──────────────┤');
+    console.log('│ ⚡ admin      │ admin123      │ administrator│');
+    console.log('│ 👔 manager1   │ manager123    │ manager      │');
+    console.log('│ 💰 cashier1   │ cashier123    │ cashier      │');
+    console.log('│ 🔨 auctioneer1│ auctioneer123 │ auctioneer   │');
+    console.log('│ 💎 appraiser1 │ appraiser123  │ appraiser    │');
+    console.log('│ 👤 pawner1    │ pawner123     │ pawner       │');
+    console.log('└──────────────┴───────────────┴──────────────┘');
     
   } catch (error) {
     await client.query('ROLLBACK');

@@ -1,149 +1,168 @@
-# 🏦 Pawnshop Management System - Quick Setup
+# � Pawnshop Management System - Quick Setup
 
-## One-Command Setup
+## 🚀 One-Command Setup (New & Improved!)
 
-This repository includes automated setup scripts that will:
+This repository includes **fully automated setup scripts** that will:
 - ✅ Install all dependencies (API + Web)
-- ✅ Create PostgreSQL database and tables
-- ✅ Seed with demo data and user accounts
-- ✅ Apply any pending migrations
-- ✅ Configure environment files
+- ✅ Create PostgreSQL database and all tables
+- ✅ Seed with 6 user accounts and demo data
+- ✅ Add Philippine cities and barangays (17 cities, 67 barangays)
+- ✅ Create sample pawners for testing
+- ✅ Configure environment files automatically
+- ✅ **Ready to use immediately after setup!**
 
 ## Prerequisites
 
 Before running the setup, ensure you have:
 
 1. **Node.js** (v16 or higher) - [Download here](https://nodejs.org/)
-2. **PostgreSQL** (v12 or higher) - [Download here](https://www.postgresql.org/download/)
-3. **Git** (for cloning) - [Download here](https://git-scm.com/)
+2. **PostgreSQL** (any version) - [Download here](https://www.postgresql.org/download/)
 
-## 🚀 Quick Start
+## 🎯 Two-Step Process
 
-### Option 1: Windows Batch File (Recommended for Windows)
+### Step 1: First Time Setup (Run Once)
 ```cmd
 setup.bat
 ```
+**What it does:**
+- Complete installation and database setup
+- Creates all user accounts automatically
+- Seeds all demo data
+- **Takes 2-3 minutes, then you're ready to go!**
 
-### Option 2: PowerShell (Windows)
-```powershell
-.\setup.ps1
+### Step 2: Daily Development (Run Every Time You Work)
+```cmd
+start.bat
 ```
+**What it does:**
+- Starts API server (http://localhost:3000)
+- Starts Web app (http://localhost:4200)
+- Opens both in separate terminal windows
+- **Takes 10 seconds, ready for development!**
 
-### Option 3: Node.js Script (Cross-platform)
-```bash
-node setup-complete.js
-```
+## 🌐 Access Your System
 
-### Option 4: Manual Step-by-Step
-```bash
-# 1. Install API dependencies
-cd pawn-api
-npm install
+After running `start.bat`, open your browser to: **http://localhost:4200**
 
-# 2. Install Web dependencies
-cd ../pawn-web
-npm install
+## 🔑 Login Credentials (Auto-Created During Setup)
 
-# 3. Setup database (from pawn-api directory)
-cd ../pawn-api
-npm run setup-db
-```
+| Emoji | Username      | Password      | Role          |
+|-------|---------------|---------------|---------------|
+| ⚡     | admin         | admin123      | Administrator |
+| 👔     | manager1      | manager123    | Manager       |
+| 💰     | cashier1      | cashier123    | Cashier       |
+| 🔨     | auctioneer1   | auctioneer123 | Auctioneer    |
+| 💎     | appraiser1    | appraiser123  | Appraiser     |
+| 👤     | pawner1       | pawner123     | Pawner        |
 
-## 🎯 After Setup
-
-Once setup is complete, start the applications:
-
-### Terminal 1 - API Server
-```bash
-cd pawn-api
-npm start
-```
-
-### Terminal 2 - Web Application
-```bash
-cd pawn-web
-ng serve
-```
-
-Then open your browser to: **http://localhost:4200**
-
-## 🔑 Demo Accounts
-
-| Role          | Username    | Password     |
-|---------------|-------------|--------------|
-| Administrator | admin       | admin123     |
-| Manager       | manager1    | manager123   |
-| Cashier       | cashier1    | cashier123   |
-| Appraiser     | appraiser1  | appraiser123 |
-| Auctioneer    | auctioneer1 | auctioneer123|
+**Note:** These accounts are automatically created during `setup.bat` - no manual setup required!
 
 ## 🔧 Database Configuration
 
-Default database settings (modify in `pawn-api/.env` if needed):
+The setup script will prompt you for database credentials, but defaults are:
 - **Database**: pawnshop_db
 - **Host**: localhost
 - **Port**: 5432
 - **User**: postgres
-- **Password**: 123
+- **Password**: (you'll be prompted)
 
-## 🛠️ Useful Commands
+The `.env` file is automatically created with your settings.
+
+## 🛠️ Development Commands
 
 ```bash
-# Reset entire database
-cd pawn-api && npm run reset-db
+# Daily development (both servers)
+start.bat
 
-# Seed data only (database must exist)
-cd pawn-api && npm run seed-db
+# Manual server startup:
+# Terminal 1 - API Server
+cd pawn-api
+node server.js
 
-# API development mode (auto-reload)
-cd pawn-api && npm run dev
+# Terminal 2 - Web Application  
+cd pawn-web
+npm start
 
-# Web development mode
-cd pawn-web && ng serve --open
+# Check current database state
+cd pawn-api
+node test-fresh-install.js
+
+# Kill all Node processes (if needed)
+taskkill /F /IM node.exe
 ```
 
 ## 🚨 Troubleshooting
 
-### Database Connection Issues
-1. Ensure PostgreSQL service is running
-2. Verify database credentials in `pawn-api/.env`
-3. Check if database `pawnshop_db` exists:
-   ```sql
-   psql -U postgres -c "CREATE DATABASE pawnshop_db;"
-   ```
+### ❌ Setup Issues
+**Problem:** `setup.bat` fails
+**Solutions:**
+1. Ensure PostgreSQL is running: `pg_isready`
+2. Ensure Node.js is installed: `node --version`
+3. Run as Administrator if permission errors occur
+4. Check PostgreSQL password is correct
 
-### Permission Issues
-- Run setup as Administrator (Windows) or with sudo (Linux/Mac)
-- Ensure PostgreSQL user has database creation privileges
+### ❌ Database Connection Issues
+**Problem:** API can't connect to database
+**Solutions:**
+1. Verify PostgreSQL service is running
+2. Check credentials in `pawn-api/.env` file
+3. Test connection: `psql -U postgres -d pawnshop_db -c "SELECT 1;"`
 
-### Port Issues
-- API runs on port 3000
-- Web runs on port 4200
-- Ensure these ports are not in use
+### ❌ Port Issues
+**Problem:** Servers won't start
+**Solutions:**
+- API runs on port **3000**, Web on port **4200**
+- Kill existing processes: `taskkill /F /IM node.exe`
+- Check what's using ports: `netstat -ano | findstr :3000`
 
-### Module Issues
-- Delete `node_modules` and `package-lock.json`
-- Run `npm install` again
+### ❌ Login Issues
+**Problem:** Can't login after setup
+**Solutions:**
+1. Run `node test-fresh-install.js` to verify users were created
+2. Use exact credentials from the table above
+3. Check browser console for errors
+4. Verify API server is running on http://localhost:3000
 
 ## 📁 Project Structure
 
 ```
 pawnshop/
-├── pawn-api/          # Backend API (Node.js + Express)
-├── pawn-web/          # Frontend Web App (Angular)
-├── setup-complete.js  # Main setup script
-├── setup.bat          # Windows batch setup
-├── setup.ps1          # PowerShell setup
-└── README.md          # This file
+├── pawn-api/                    # Backend API (Node.js + Express)
+│   ├── server.js               # Main API server
+│   ├── add-sample-data.js      # Seeds user accounts & demo data
+│   ├── create-cities-barangays.js  # Philippine location data
+│   ├── test-fresh-install.js   # Verify setup completion
+│   └── routes/                 # API endpoints
+├── pawn-web/                   # Frontend Web App (Angular 20.3.x)
+│   ├── src/app/               # Angular application
+│   └── src/pages/             # Dashboard pages for each role
+├── setup.bat                  # 🚀 Complete setup script
+├── start.bat                  # ⚡ Daily development script
+└── NEW_PC_SETUP_GUIDE.md      # Transfer to new PC guide
 ```
 
 ## 🎉 You're Ready!
 
 After successful setup, you can:
-- Login with any demo account
-- Create new pawn transactions
-- Manage items and customers
-- Generate reports
-- Configure system settings
+- ✅ **Login with any of the 6 demo accounts**
+- ✅ **Create new pawn transactions** (loans, redemptions)
+- ✅ **Manage items and pawners** with full CRUD operations
+- ✅ **Search and filter** transactions by multiple criteria
+- ✅ **Role-based access** (admin, manager, cashier, etc.)
+- ✅ **Philippine address system** (cities & barangays)
+- ✅ **Audit trail** for all system activities
 
-For detailed documentation, check the individual README files in `pawn-api` and `pawn-web` folders.
+## 🔗 Quick Links
+
+- **API Health Check:** http://localhost:3000/api/health
+- **Web Application:** http://localhost:4200  
+- **Database Migration Guide:** [Database schema uses `employees` table]
+- **New PC Setup:** See `NEW_PC_SETUP_GUIDE.md`
+
+## 💡 Pro Tips
+
+1. **First time?** Run `setup.bat` once, then use `start.bat` daily
+2. **Moving to new PC?** Just copy folder + run `setup.bat`
+3. **Development?** Use `start.bat` to start both servers quickly
+4. **Testing?** Use `node test-fresh-install.js` to verify system state
+5. **Database issues?** Check `pawn-api/.env` for connection settings
