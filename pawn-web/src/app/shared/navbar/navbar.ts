@@ -143,6 +143,16 @@ export class NavbarComponent implements OnInit, OnDestroy {
       this.currentPageTitle = 'Admin Settings';
     } else if (url.includes('/transactions/appraisal')) {
       this.currentPageTitle = 'Create Appraisal';
+    } else if (url.includes('/transactions/redeem')) {
+      this.currentPageTitle = 'Redeem';
+    } else if (url.includes('/transactions/new-loan')) {
+      this.currentPageTitle = 'New Loan';
+    } else if (url.includes('/transactions/additional-loan')) {
+      this.currentPageTitle = 'Additional';
+    } else if (url.includes('/transactions/partial-payment')) {
+      this.currentPageTitle = 'Partial';
+    } else if (url.includes('/transactions/renew')) {
+      this.currentPageTitle = 'Renew';
     } else if (url.includes('/transactions/')) {
       this.currentPageTitle = 'Transaction';
     } else {

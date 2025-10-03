@@ -6,14 +6,20 @@
       
       <!-- LEFT COLUMN: Customer & Transaction Info -->
       <div class="lg:col-span-2">
-<app-transaction-info
-  [customerInfo]="customerInfo"
-  [transactionInfo]="transactionInfo"
-  [pawnedItems]="items"
-  [(searchTicketNumber)]="searchTicketNumber"
-  [isLoading]="isLoading"
-  (search)="onSearchTicket($event)">
-</app-transaction-info>
+        <app-transaction-info
+          [customerInfo]="customerInfo"
+          [transactionInfo]="transactionInfo"
+          [pawnedItems]="items"
+          [(searchTicketNumber)]="searchTicketNumber"
+          [isLoading]="isLoading"
+          [status]="getLoanStatus()"
+          [statusClass]="getLoanStatusClass()"
+          [duration]="{ years: getYearsDifference(), months: getMonthsDifference(), days: getDaysDifference() }"
+          [durationBadgeColors]="getDurationBadgeColors()"
+          [durationAnimationClass]="getDurationAnimationClass()"
+          (search)="searchTransaction()"
+          [showNoTransactionMessage]="!transactionFound">
+        </app-transaction-info>
       </div>
 
       <!-- RIGHT COLUMN: Redeem Computation -->
@@ -131,28 +137,13 @@
 
           </div>
           
-          <!-- Action Buttons -->
+          <!-- Action Button -->
           <div class="p-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
-            <div class="grid grid-cols-3 gap-2">
-              <!-- Save Button -->
-              <button (click)="processRedeem()" [disabled]="!canProcessRedeem() || isProcessing" 
-                class="py-2 px-3 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 disabled:from-gray-400 disabled:to-gray-500 text-white font-medium rounded-md transition-all duration-200 text-xs shadow-md hover:shadow-lg disabled:cursor-not-allowed">
-                <span *ngIf="!isProcessing">Save</span>
-                <span *ngIf="isProcessing">Processing...</span>
-              </button>
-              
-              <!-- Reset Button -->
-              <button (click)="resetForm()" [disabled]="isProcessing" 
-                class="py-2 px-3 bg-gradient-to-r from-yellow-600 to-yellow-700 hover:from-yellow-700 hover:to-yellow-800 disabled:from-gray-400 disabled:to-gray-500 text-white font-medium rounded-md transition-all duration-200 text-xs shadow-md hover:shadow-lg disabled:cursor-not-allowed">
-                Reset
-              </button>
-              
-              <!-- Cancel Button -->
-              <button (click)="goBack()" [disabled]="isProcessing" 
-                class="py-2 px-3 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 disabled:from-gray-400 disabled:to-gray-500 text-white font-medium rounded-md transition-all duration-200 text-xs shadow-md hover:shadow-lg disabled:cursor-not-allowed">
-                Cancel
-              </button>
-            </div>
+            <button (click)="processRedeem()" [disabled]="!canProcessRedeem()" 
+              class="w-full py-2 px-4 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 disabled:from-gray-400 disabled:to-gray-500 text-white font-medium rounded-md transition-all duration-200 text-sm shadow-md hover:shadow-lg disabled:cursor-not-allowed">
+              <span *ngIf="!isProcessing">Process Redeem</span>
+              <span *ngIf="isProcessing">Processing...</span>
+            </button>
           </div>
         </div>
       </div>

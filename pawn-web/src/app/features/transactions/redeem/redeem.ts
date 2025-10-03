@@ -4,30 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Location } from '@angular/common';
 import { ToastService } from '../../../core/services/toast.service';
-
-interface CustomerInfo {
-  contactNumber: string;
-  firstName: string;
-  lastName: string;
-  city: string;
-  barangay: string;
-  completeAddress: string;
-}
-
-interface TransactionInfo {
-  transactionDate: string;
-  grantedDate: string;
-  maturedDate: string;
-  expiredDate: string;
-  loanStatus: string;
-}
-
-interface PawnedItem {
-  category: string;
-  categoryDescription: string;
-  itemsDescription: string;
-  appraisalValue: number;
-}
+import { TransactionInfoComponent, CustomerInfo, TransactionInfo, PawnedItem } from '../../../shared/components/transaction/transaction-info.component';
 
 interface RedeemComputation {
   principalLoan: number;
@@ -44,7 +21,7 @@ interface RedeemComputation {
 @Component({
   selector: 'app-redeem',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, TransactionInfoComponent],
   templateUrl: './redeem.html',
   styleUrl: './redeem.css'
 })
@@ -52,6 +29,7 @@ export class Redeem implements OnInit {
   searchTicketNumber: string = '';
   transactionNumber: string = '';
   isLoading: boolean = false;
+  isProcessing: boolean = false;
   transactionFound: boolean = false;
   
   customerInfo: CustomerInfo = {
@@ -67,8 +45,7 @@ export class Redeem implements OnInit {
     transactionDate: '',
     grantedDate: '',
     maturedDate: '',
-    expiredDate: '',
-    loanStatus: ''
+    expiredDate: ''
   };
   
   items: PawnedItem[] = [];
@@ -91,50 +68,124 @@ export class Redeem implements OnInit {
     private toastService: ToastService
   ) {}
 
+  onSearchTicket(ticketNumber: string) {
+    console.log('Parent onSearchTicket called with:', ticketNumber);
+    this.searchTicketNumber = ticketNumber;
+    this.searchTransaction();
+  }
+
   ngOnInit() {
     // Start with empty form - no initial calculation
     console.log('Redeem page loaded - form cleared');
   }
 
   getTotalAppraisalValue(): number {
-    return this.items.reduce((total, item) => total + item.appraisalValue, 0);
+    return this.items.reduce((total, item) => total + (item.appraisalValue || item.appraisedValue || 0), 0);
   }
 
   getLoanStatusClass(): string {
-    switch (this.transactionInfo.loanStatus.toLowerCase()) {
-      case 'active':
-        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
+    const status = this.getLoanStatus().toLowerCase();
+    switch (status) {
+      case 'premature':
+        return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
       case 'matured':
         return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
       case 'expired':
         return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
-      case 'premature':
-        return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
       default:
         return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
     }
   }
 
+  getDurationBadgeColors(): {years: string, months: string, days: string} {
+    const status = this.getLoanStatus().toLowerCase();
+    switch (status) {
+      case 'premature':
+        return {
+          years: 'from-blue-500 to-blue-600',
+          months: 'from-indigo-500 to-indigo-600', 
+          days: 'from-cyan-500 to-cyan-600'
+        };
+      case 'matured':
+        return {
+          years: 'from-yellow-500 to-yellow-600',
+          months: 'from-orange-500 to-orange-600',
+          days: 'from-amber-500 to-amber-600'
+        };
+      case 'expired':
+        return {
+          years: 'from-red-500 to-red-600',
+          months: 'from-rose-500 to-rose-600', 
+          days: 'from-pink-500 to-pink-600'
+        };
+      default:
+        return {
+          years: 'from-gray-500 to-gray-600',
+          months: 'from-slate-500 to-slate-600',
+          days: 'from-zinc-500 to-zinc-600'
+        };
+    }
+  }
+
+  getDurationAnimationClass(): string {
+    const status = this.getLoanStatus().toLowerCase();
+    return status === 'expired' ? 'animate-pulse' : '';
+  }
+
   getYearsDifference(): number {
-    const granted = new Date(this.transactionInfo.grantedDate);
+    if (!this.transactionInfo.transactionDate) return 0;
+    const transactionDate = new Date(this.transactionInfo.transactionDate);
     const now = new Date();
-    return Math.floor((now.getTime() - granted.getTime()) / (1000 * 60 * 60 * 24 * 365));
+    const diffTime = now.getTime() - transactionDate.getTime();
+    return Math.floor(diffTime / (1000 * 60 * 60 * 24 * 365.25));
   }
 
   getMonthsDifference(): number {
-    const granted = new Date(this.transactionInfo.grantedDate);
+    if (!this.transactionInfo.transactionDate) return 0;
+    const transactionDate = new Date(this.transactionInfo.transactionDate);
     const now = new Date();
-    return Math.floor((now.getTime() - granted.getTime()) / (1000 * 60 * 60 * 24 * 30));
+    
+    const years = this.getYearsDifference();
+    const totalMonths = Math.floor((now.getTime() - transactionDate.getTime()) / (1000 * 60 * 60 * 24 * 30.44));
+    return totalMonths - (years * 12);
   }
 
   getDaysDifference(): number {
-    const granted = new Date(this.transactionInfo.grantedDate);
+    if (!this.transactionInfo.transactionDate) return 0;
+    const transactionDate = new Date(this.transactionInfo.transactionDate);
     const now = new Date();
-    return Math.floor((now.getTime() - granted.getTime()) / (1000 * 60 * 60 * 24));
+    
+    const years = this.getYearsDifference();
+    const months = this.getMonthsDifference();
+    const totalDays = Math.floor((now.getTime() - transactionDate.getTime()) / (1000 * 60 * 60 * 24));
+    return totalDays - (years * 365) - (months * 30);
+  }
+
+  getLoanStatus(): string {
+    if (!this.transactionInfo.maturedDate || !this.transactionInfo.expiredDate) {
+      return 'Unknown';
+    }
+
+    const now = new Date();
+    const maturedDate = new Date(this.transactionInfo.maturedDate);
+    const expiredDate = new Date(this.transactionInfo.expiredDate);
+
+    // Clear time components for accurate date comparison
+    now.setHours(0, 0, 0, 0);
+    maturedDate.setHours(0, 0, 0, 0);
+    expiredDate.setHours(0, 0, 0, 0);
+
+    if (now > expiredDate) {
+      return 'Expired';
+    } else if (now > maturedDate) {
+      return 'Matured';
+    } else {
+      return 'Premature';
+    }
   }
 
   calculateRedeemAmount() {
-    // Calculate interest based on days
+    // Calculate interest based on days from transaction date
     const days = this.getDaysDifference();
     const monthlyRate = this.redeemComputation.interestRate / 100;
     const dailyRate = monthlyRate / 30;
@@ -167,7 +218,9 @@ export class Redeem implements OnInit {
   }
 
   async searchTransaction() {
+    console.log('searchTransaction called with searchTicketNumber:', this.searchTicketNumber);
     if (!this.searchTicketNumber.trim()) {
+      console.log('Search ticket number is empty or whitespace');
       this.toastService.showError('Error', 'Please enter a transaction number');
       return;
     }
@@ -204,12 +257,24 @@ export class Redeem implements OnInit {
   }
 
   private populateForm(data: any) {
-    // Set transaction number
-    this.transactionNumber = data.ticketNumber;
+    console.log('Populating form with data:', data);
+    console.log('Customer data fields:', {
+      contactNumber: data.contactNumber,
+      pawnerContact: data.pawnerContact,
+      firstName: data.firstName,
+      lastName: data.lastName,
+      cityName: data.cityName,
+      barangayName: data.barangayName,
+      completeAddress: data.completeAddress,
+      status: data.status
+    });
 
-    // Populate customer info
+    // Set transaction number
+    this.transactionNumber = data.ticketNumber || data.transactionNumber;
+
+    // Populate customer info - try multiple field mappings
     this.customerInfo = {
-      contactNumber: data.contactNumber || '',
+      contactNumber: data.contactNumber || data.pawnerContact || '',
       firstName: data.firstName || '',
       lastName: data.lastName || '',
       city: data.cityName || '',
@@ -220,14 +285,24 @@ export class Redeem implements OnInit {
     // Populate transaction info
     this.transactionInfo = {
       transactionDate: this.formatDate(data.transactionDate),
-      grantedDate: this.formatDate(data.dateGranted),
-      maturedDate: this.formatDate(data.dateMatured),
-      expiredDate: this.formatDate(data.dateExpired),
-      loanStatus: this.getStatusText(data.status)
+      grantedDate: this.formatDate(data.dateGranted || data.loanDate),
+      maturedDate: this.formatDate(data.dateMatured || data.maturityDate),
+      expiredDate: this.formatDate(data.dateExpired || data.expiryDate)
     };
 
-    // Populate items
-    this.items = data.items || [];
+    // Populate items - map to component interface structure
+    console.log('Items data from API:', data.items);
+    this.items = (data.items || []).map((item: any) => {
+      console.log('Mapping item:', item);
+      return {
+        categoryName: item.categoryName || item.category || '',
+        itemName: item.itemName || item.description || '',
+        description: item.description || '',
+        appraisedValue: item.appraisedValue || item.appraisalValue || 0,
+        appraisalValue: item.appraisalValue || item.appraisedValue || 0,
+        category: item.categoryName || item.category || ''
+      };
+    });
 
     // Populate redeem computation
     this.redeemComputation = {
@@ -263,8 +338,7 @@ export class Redeem implements OnInit {
       transactionDate: '',
       grantedDate: '',
       maturedDate: '',
-      expiredDate: '',
-      loanStatus: ''
+      expiredDate: ''
     };
     
     this.items = [];
@@ -305,15 +379,26 @@ export class Redeem implements OnInit {
     this.toastService.showInfo('Reset', 'Form has been reset');
   }
 
-  processRedeem() {
+  async processRedeem() {
     if (!this.canProcessRedeem()) {
       this.toastService.showError('Error', 'Please ensure all requirements are met');
       return;
     }
     
-    // TODO: Implement actual redeem processing
-    this.toastService.showSuccess('Success', `Item redeemed successfully! Change: ₱${this.redeemComputation.change.toFixed(2)}`);
-    // this.goBack();
+    this.isProcessing = true;
+    
+    try {
+      // TODO: Implement actual redeem processing API call
+      await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate API call
+      
+      this.toastService.showSuccess('Success', `Item redeemed successfully! Change: ₱${this.redeemComputation.change.toFixed(2)}`);
+      // this.goBack();
+    } catch (error) {
+      console.error('Error processing redeem:', error);
+      this.toastService.showError('Error', 'Failed to process redeem transaction');
+    } finally {
+      this.isProcessing = false;
+    }
   }
 
   goBack() {

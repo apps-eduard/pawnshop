@@ -1,0 +1,16 @@
+Jewely 3%
+Appliance 6%
+
+
+*************START PENALTY COMPUTAION*************
+penalty 2% permonth -> formula  (principalLoan * 0.02)
+penalty per day = (principalLoan * 0.02)
+
+lessthan 3 days upon maturity
+penalty = ((principalLoan * 0.02) / 30) * numberOfDays
+
+four days up upon maturity -> whole amount of the month is the penalty
+penalty = principalLoan * 0.02
+*************END PENALTY COMPUTAION*************
+
+
