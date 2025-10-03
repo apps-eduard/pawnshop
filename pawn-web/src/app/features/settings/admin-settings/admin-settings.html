@@ -51,6 +51,149 @@
             </div>
           </div>
 
+          <!-- Transaction Number Configuration -->
+          <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 mb-6">
+            <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">
+              📋 Transaction Number Configuration
+            </h3>
+
+            <form [formGroup]="transactionConfigForm" (ngSubmit)="saveTransactionConfig()" class="space-y-4">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Transaction Prefix
+                  </label>
+                  <input
+                    type="text"
+                    formControlName="prefix"
+                    placeholder="TXN"
+                    maxlength="5"
+                    class="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900 dark:text-white">
+                  <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    Prefix for all transaction numbers (2-5 characters)
+                  </p>
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Separator
+                  </label>
+                  <select
+                    formControlName="separator"
+                    class="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900 dark:text-white">
+                    <option value="-">Hyphen (-)</option>
+                    <option value="">No separator</option>
+                    <option value=".">Dot (.)</option>
+                    <option value="_">Underscore (_)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="flex items-center">
+                  <input
+                    type="checkbox"
+                    formControlName="branchCodePrefix"
+                    id="branch_code_prefix"
+                    class="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded">
+                  <label for="branch_code_prefix" class="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                    Include Branch Code
+                  </label>
+                </div>
+
+                <div class="flex items-center">
+                  <input
+                    type="checkbox"
+                    formControlName="includeYear"
+                    id="include_year"
+                    class="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded">
+                  <label for="include_year" class="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                    Include Year
+                  </label>
+                </div>
+
+                <div class="flex items-center">
+                  <input
+                    type="checkbox"
+                    formControlName="includeMonth"
+                    id="include_month"
+                    class="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded">
+                  <label for="include_month" class="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                    Include Month
+                  </label>
+                </div>
+
+                <div class="flex items-center">
+                  <input
+                    type="checkbox"
+                    formControlName="includeDay"
+                    id="include_day"
+                    class="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded">
+                  <label for="include_day" class="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                    Include Day
+                  </label>
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Sequence Digits
+                </label>
+                <select
+                  formControlName="sequenceDigits"
+                  class="w-full md:w-48 px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900 dark:text-white">
+                  <option value="2">2 digits (01-99)</option>
+                  <option value="3">3 digits (001-999)</option>
+                  <option value="4">4 digits (0001-9999)</option>
+                </select>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  Number of digits for daily sequence counter
+                </p>
+              </div>
+
+              <!-- Current Branch Code Display -->
+              <div *ngIf="branchConfig?.currentBranch?.code" class="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                <div class="flex items-center">
+                  <div class="flex-shrink-0">
+                    <svg class="h-5 w-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
+                    </svg>
+                  </div>
+                  <div class="ml-3">
+                    <p class="text-sm font-medium text-blue-900 dark:text-blue-100">
+                      Current Branch Code: <span class="font-mono">{{ branchConfig?.currentBranch?.code }}</span>
+                    </p>
+                    <p class="text-xs text-blue-700 dark:text-blue-300">
+                      This code will be used in transaction numbers when "Include Branch Code" is enabled
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Preview Section -->
+              <div class="p-4 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg">
+                <h4 class="text-sm font-medium text-gray-900 dark:text-white mb-2">
+                  Preview Transaction Number:
+                </h4>
+                <div class="p-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded font-mono text-lg text-center">
+                  {{ generatePreviewTransactionNumber() }}
+                </div>
+                <p class="mt-2 text-xs text-gray-500 dark:text-gray-400 text-center">
+                  This is how new transaction numbers will look
+                </p>
+              </div>
+
+              <div class="flex justify-end">
+                <button
+                  type="submit"
+                  [disabled]="!transactionConfigForm.valid"
+                  class="bg-primary-600 hover:bg-primary-700 disabled:bg-gray-400 text-white px-6 py-2 rounded-lg text-sm font-medium transition-colors">
+                  Save Transaction Configuration
+                </button>
+              </div>
+            </form>
+          </div>
+
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             
             <!-- Branch Configuration Form -->
@@ -392,8 +535,18 @@
                   <input
                     type="text"
                     formControlName="code"
-                    placeholder="MAIN"
-                    class="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900 dark:text-white">
+                    placeholder="MNL"
+                    maxlength="3"
+                    style="text-transform: uppercase"
+                    class="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900 dark:text-white font-mono">
+                  <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    Exactly 3 uppercase letters (e.g., MNL, QZN, CDO). Used in transaction numbers.
+                  </p>
+                  <div *ngIf="branchForm.get('code')?.invalid && branchForm.get('code')?.touched" class="mt-1">
+                    <p class="text-xs text-red-600 dark:text-red-400">
+                      Branch code must be exactly 3 uppercase letters
+                    </p>
+                  </div>
                 </div>
               </div>
 

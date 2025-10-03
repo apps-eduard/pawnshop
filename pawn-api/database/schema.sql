@@ -151,3 +151,20 @@ CREATE TRIGGER update_pawners_updated_at BEFORE UPDATE ON pawners
 
 CREATE TRIGGER update_pawn_tickets_updated_at BEFORE UPDATE ON pawn_tickets
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Create system_config table for storing application configuration
+CREATE TABLE system_config (
+    id SERIAL PRIMARY KEY,
+    config_key VARCHAR(100) UNIQUE NOT NULL,
+    config_value TEXT NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TRIGGER update_system_config_updated_at BEFORE UPDATE ON system_config
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Insert default transaction configuration
+INSERT INTO system_config (config_key, config_value, description) VALUES 
+('transaction_number_format', '{"prefix":"TXN","includeYear":true,"includeMonth":true,"includeDay":true,"sequenceDigits":2,"branchCodePrefix":true,"separator":"-"}', 'Transaction number format configuration');

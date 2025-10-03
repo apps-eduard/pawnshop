@@ -53,6 +53,10 @@ interface RenewComputation {
 })
 export class Renew implements OnInit {
 
+  searchTicketNumber: string = '';
+  isLoading: boolean = false;
+  transactionFound: boolean = false;
+
   customerInfo: CustomerInfo = {
     firstName: '',
     lastName: '',
@@ -87,7 +91,7 @@ export class Renew implements OnInit {
     change: 0
   };
 
-  searchQuery: string = '';
+  searchQuery: string = ''; // Keep for backward compatibility
 
   constructor(
     private router: Router,
@@ -96,47 +100,150 @@ export class Renew implements OnInit {
   ) {}
 
   ngOnInit() {
-    // Initialize component
+    // Start with empty form - no initial calculation
+    console.log('Renew page loaded - form cleared');
   }
 
-  searchTransaction() {
-    if (!this.searchQuery.trim()) {
+  async searchTransaction() {
+    const ticketNumber = this.searchTicketNumber || this.searchQuery; // Support both properties
+    
+    if (!ticketNumber.trim()) {
       this.toastService.showError('Error', 'Please enter a transaction number');
       return;
     }
 
-    // Mock search implementation
-    this.customerInfo = {
-      firstName: 'Sample',
-      lastName: 'Customer',
-      middleName: 'M',
-      contactNumber: '+63 912 345 6789',
-      address: '123 Sample Street',
-      city: 'Sample City',
-      barangay: 'Sample Barangay'
-    };
+    this.isLoading = true;
+    this.clearForm();
 
-    this.transactionInfo = {
-      transactionNumber: this.searchQuery,
-      transactionDate: '2024-01-15',
-      grantedDate: '2024-01-15',
-      maturedDate: '2024-02-15',
-      expiredDate: '2024-03-15',
-      loanStatus: 'Active'
-    };
+    try {
+      const response = await fetch(`http://localhost:3000/api/transactions/search/${ticketNumber}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
 
-    this.items = [
-      {
-        category: 'Jewelry',
-        categoryDescription: 'Gold Ring',
-        itemsDescription: '18K Gold Ring with Diamond',
-        appraisalValue: 25000
+      const result = await response.json();
+
+      if (result.success && result.data) {
+        this.populateForm(result.data);
+        this.transactionFound = true;
+        this.toastService.showSuccess('Success', 'Transaction found and loaded!');
+      } else {
+        this.toastService.showError('Not Found', result.message || 'Transaction not found');
+        this.transactionFound = false;
       }
-    ];
+    } catch (error) {
+      console.error('Error searching transaction:', error);
+      this.toastService.showError('Error', 'Failed to search transaction');
+      this.transactionFound = false;
+    } finally {
+      this.isLoading = false;
+    }
+  }
 
-    this.renewComputation.principalLoan = 20000;
+  private populateForm(data: any) {
+    // Populate customer info
+    this.customerInfo = {
+      firstName: data.firstName || '',
+      lastName: data.lastName || '',
+      middleName: '', // Not available in current API
+      contactNumber: data.contactNumber || '',
+      address: data.completeAddress || '',
+      city: data.cityName || '',
+      barangay: data.barangayName || ''
+    };
+
+    // Populate transaction info
+    this.transactionInfo = {
+      transactionNumber: data.ticketNumber || '',
+      transactionDate: this.formatDate(data.transactionDate),
+      grantedDate: this.formatDate(data.dateGranted),
+      maturedDate: this.formatDate(data.dateMatured),
+      expiredDate: this.formatDate(data.dateExpired),
+      loanStatus: this.getStatusText(data.status)
+    };
+
+    // Populate items
+    this.items = (data.items || []).map((item: any) => ({
+      category: item.category || '',
+      categoryDescription: item.categoryDescription || '',
+      itemsDescription: item.description || item.itemsDescription || '',
+      appraisalValue: parseFloat(item.appraisalValue || 0)
+    }));
+
+    // Populate renew computation
+    this.renewComputation = {
+      principalLoan: data.principalAmount || 0,
+      interestRate: data.interestRate || 3.5,
+      interest: 0, // Will be calculated
+      penalty: data.penaltyAmount || 0,
+      dueAmount: 0, // Will be calculated
+      newLoanAmount: 0,
+      serviceFee: 0, // Will be calculated
+      totalRenewAmount: 0, // Will be calculated
+      receivedAmount: 0,
+      change: 0
+    };
+
+    // Calculate renewal amounts
     this.calculateRenewAmount();
-    this.toastService.showSuccess('Success', 'Transaction found');
+  }
+
+  private clearForm() {
+    this.transactionFound = false;
+    
+    this.customerInfo = {
+      firstName: '',
+      lastName: '',
+      middleName: '',
+      contactNumber: '',
+      address: '',
+      city: '',
+      barangay: ''
+    };
+    
+    this.transactionInfo = {
+      transactionNumber: '',
+      transactionDate: '',
+      grantedDate: '',
+      maturedDate: '',
+      expiredDate: '',
+      loanStatus: ''
+    };
+    
+    this.items = [];
+    
+    this.renewComputation = {
+      principalLoan: 0,
+      interestRate: 3.5,
+      interest: 0,
+      penalty: 0,
+      dueAmount: 0,
+      newLoanAmount: 0,
+      serviceFee: 0,
+      totalRenewAmount: 0,
+      receivedAmount: 0,
+      change: 0
+    };
+  }
+
+  private formatDate(dateString: string): string {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toISOString().split('T')[0];
+  }
+
+  private getStatusText(status: string): string {
+    switch (status?.toLowerCase()) {
+      case 'active': return 'Active';
+      case 'matured': return 'Matured';
+      case 'expired': return 'Expired';
+      case 'redeemed': return 'Redeemed';
+      case 'defaulted': return 'Defaulted';
+      default: return status || 'Unknown';
+    }
   }
 
   calculateRenewAmount() {
@@ -206,8 +313,10 @@ export class Renew implements OnInit {
   }
 
   canProcessRenew(): boolean {
-    return this.renewComputation.totalRenewAmount > 0 && 
-           this.renewComputation.receivedAmount >= this.renewComputation.totalRenewAmount;
+    return this.transactionFound &&
+           this.renewComputation.totalRenewAmount > 0 && 
+           this.renewComputation.receivedAmount >= this.renewComputation.totalRenewAmount &&
+           this.items.length > 0;
   }
 
   processRenew() {
@@ -222,37 +331,10 @@ export class Renew implements OnInit {
   }
 
   resetForm() {
+    this.searchTicketNumber = '';
     this.searchQuery = '';
-    this.customerInfo = {
-      firstName: '',
-      lastName: '',
-      middleName: '',
-      contactNumber: '',
-      address: '',
-      city: '',
-      barangay: ''
-    };
-    this.transactionInfo = {
-      transactionNumber: '',
-      transactionDate: '',
-      grantedDate: '',
-      maturedDate: '',
-      expiredDate: '',
-      loanStatus: ''
-    };
-    this.items = [];
-    this.renewComputation = {
-      principalLoan: 0,
-      interestRate: 3.5,
-      interest: 0,
-      penalty: 0,
-      dueAmount: 0,
-      newLoanAmount: 0,
-      serviceFee: 0,
-      totalRenewAmount: 0,
-      receivedAmount: 0,
-      change: 0
-    };
+    this.clearForm();
+    this.toastService.showInfo('Reset', 'Form has been reset');
   }
 
   goBack() {

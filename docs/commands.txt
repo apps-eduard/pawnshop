@@ -1,4 +1,10 @@
+# Terminal 1 - Start API Server
+cd "C:\Users\speed\Desktop\pawnshopv1\pawnshop\pawn-api"
+node server.js
 
+# Terminal 2 - Start Frontend with Proxy
+cd "C:\Users\speed\Desktop\pawnshopv1\pawnshop\pawn-web"
+npm start
 
 Stop-Process -Id (Get-NetTCPConnection -LocalPort 3000).OwningProcess -Force -ErrorAction SilentlyContinue
 
@@ -27,7 +33,7 @@ cd "C:\Users\speed\Desktop\pawnshopv1\pawnshop\pawn-web"; ng serve
 
 cd "C:\Users\speed\Desktop\pawnshopv1\pawnshop\pawn-web"; npm start
 
-
+cd "C:\Users\speed\Desktop\pawnshopv1\pawnshop\pawn-web"; ng serve --proxy-config proxy.conf.json
 
 
 cd "C:\Users\speed\Desktop\pawnshopv1\pawnshop\pawn-web";npm run ng -- serve --host localhost --port 4200 
@@ -38,8 +44,27 @@ taskkill /F /IM node.exe
 
 cd "C:\Users\speed\Desktop\pawnshopv1\pawnshop\pawn-api"; npm run dev
 
+
+cd "C:\Users\speed\Desktop\pawnshopv1\pawnshop\pawn-api"; node server.js
+
 taskkill /F /IM node.exe
 taskkill /F /IM nodemon.exe
 
 
 Get-Process node -ErrorAction SilentlyContinue | Select-Object Id, ProcessName, WorkingSet
+
+
+Invoke-WebRequest -Uri "http://localhost:3000/api/health" -Method GET
+
+
+# Test API server health
+Invoke-WebRequest -Uri "http://localhost:3000/api/health" -Method GET
+
+# Test transactions endpoint (will require auth)
+Invoke-WebRequest -Uri "http://localhost:3000/api/transactions" -Method GET
+
+# Check if servers are running
+Get-Process node -ErrorAction SilentlyContinue | Select-Object Id, ProcessName, WorkingSet
+
+
+taskkill /F /IM node.exe 2>$null; Start-Sleep -Seconds 2; cd C:\Users\speed\Desktop\pawnshopv1\pawnshop\pawn-api; node server.js

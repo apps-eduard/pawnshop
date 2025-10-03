@@ -49,44 +49,40 @@ interface RedeemComputation {
   styleUrl: './redeem.css'
 })
 export class Redeem implements OnInit {
-  transactionNumber: string = '1';
+  searchTicketNumber: string = '';
+  transactionNumber: string = '';
+  isLoading: boolean = false;
+  transactionFound: boolean = false;
   
   customerInfo: CustomerInfo = {
-    contactNumber: '111111111',
-    firstName: 'romel',
-    lastName: 'pacs',
-    city: 'iloilo',
-    barangay: 'Monay',
-    completeAddress: 'san pedro'
+    contactNumber: '',
+    firstName: '',
+    lastName: '',
+    city: '',
+    barangay: '',
+    completeAddress: ''
   };
   
   transactionInfo: TransactionInfo = {
-    transactionDate: '2025-09-29',
-    grantedDate: '2025-09-29',
-    maturedDate: '2025-10-29',
-    expiredDate: '2026-01-29',
-    loanStatus: 'Premature'
+    transactionDate: '',
+    grantedDate: '',
+    maturedDate: '',
+    expiredDate: '',
+    loanStatus: ''
   };
   
-  items: PawnedItem[] = [
-    {
-      category: 'Appliances',
-      categoryDescription: '50" Television',
-      itemsDescription: '',
-      appraisalValue: 10000.00
-    }
-  ];
+  items: PawnedItem[] = [];
   
   redeemComputation: RedeemComputation = {
-    principalLoan: 5000.00,
-    interestRate: 6,
-    interest: 0.00,
-    penalty: 100.00,
-    dueAmount: 100.00,
-    discount: 0.00,
-    redeemAmount: 5100.00,
-    receivedAmount: 0.00,
-    change: 5100.00
+    principalLoan: 0,
+    interestRate: 0,
+    interest: 0,
+    penalty: 0,
+    dueAmount: 0,
+    discount: 0,
+    redeemAmount: 0,
+    receivedAmount: 0,
+    change: 0
   };
 
   constructor(
@@ -96,8 +92,8 @@ export class Redeem implements OnInit {
   ) {}
 
   ngOnInit() {
-    // Calculate initial redeem amount
-    this.calculateRedeemAmount();
+    // Start with empty form - no initial calculation
+    console.log('Redeem page loaded - form cleared');
   }
 
   getTotalAppraisalValue(): number {
@@ -164,19 +160,148 @@ export class Redeem implements OnInit {
   }
 
   canProcessRedeem(): boolean {
-    return this.redeemComputation.receivedAmount >= this.redeemComputation.redeemAmount &&
-           this.items.length > 0;
+    return this.transactionFound &&
+           this.redeemComputation.receivedAmount >= this.redeemComputation.redeemAmount &&
+           this.items.length > 0 &&
+           this.redeemComputation.redeemAmount > 0;
   }
 
-  searchTransaction() {
-    // TODO: Implement transaction search functionality
-    this.toastService.showInfo('Info', 'Transaction search functionality will be implemented');
+  async searchTransaction() {
+    if (!this.searchTicketNumber.trim()) {
+      this.toastService.showError('Error', 'Please enter a transaction number');
+      return;
+    }
+
+    this.isLoading = true;
+    this.clearForm();
+
+    try {
+      const response = await fetch(`http://localhost:3000/api/transactions/search/${this.searchTicketNumber}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      const result = await response.json();
+
+      if (result.success && result.data) {
+        this.populateForm(result.data);
+        this.transactionFound = true;
+        this.toastService.showSuccess('Success', 'Transaction found and loaded!');
+      } else {
+        this.toastService.showError('Not Found', result.message || 'Transaction not found');
+        this.transactionFound = false;
+      }
+    } catch (error) {
+      console.error('Error searching transaction:', error);
+      this.toastService.showError('Error', 'Failed to search transaction');
+      this.transactionFound = false;
+    } finally {
+      this.isLoading = false;
+    }
+  }
+
+  private populateForm(data: any) {
+    // Set transaction number
+    this.transactionNumber = data.ticketNumber;
+
+    // Populate customer info
+    this.customerInfo = {
+      contactNumber: data.contactNumber || '',
+      firstName: data.firstName || '',
+      lastName: data.lastName || '',
+      city: data.cityName || '',
+      barangay: data.barangayName || '',
+      completeAddress: data.completeAddress || ''
+    };
+
+    // Populate transaction info
+    this.transactionInfo = {
+      transactionDate: this.formatDate(data.transactionDate),
+      grantedDate: this.formatDate(data.dateGranted),
+      maturedDate: this.formatDate(data.dateMatured),
+      expiredDate: this.formatDate(data.dateExpired),
+      loanStatus: this.getStatusText(data.status)
+    };
+
+    // Populate items
+    this.items = data.items || [];
+
+    // Populate redeem computation
+    this.redeemComputation = {
+      principalLoan: data.principalAmount || 0,
+      interestRate: data.interestRate || 0,
+      interest: 0, // Will be calculated
+      penalty: data.penaltyAmount || 0,
+      dueAmount: 0, // Will be calculated
+      discount: 0,
+      redeemAmount: 0, // Will be calculated
+      receivedAmount: 0,
+      change: 0
+    };
+
+    // Calculate redeem amount
+    this.calculateRedeemAmount();
+  }
+
+  private clearForm() {
+    this.transactionNumber = '';
+    this.transactionFound = false;
+    
+    this.customerInfo = {
+      contactNumber: '',
+      firstName: '',
+      lastName: '',
+      city: '',
+      barangay: '',
+      completeAddress: ''
+    };
+    
+    this.transactionInfo = {
+      transactionDate: '',
+      grantedDate: '',
+      maturedDate: '',
+      expiredDate: '',
+      loanStatus: ''
+    };
+    
+    this.items = [];
+    
+    this.redeemComputation = {
+      principalLoan: 0,
+      interestRate: 0,
+      interest: 0,
+      penalty: 0,
+      dueAmount: 0,
+      discount: 0,
+      redeemAmount: 0,
+      receivedAmount: 0,
+      change: 0
+    };
+  }
+
+  private formatDate(dateString: string): string {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toISOString().split('T')[0];
+  }
+
+  private getStatusText(status: string): string {
+    switch (status?.toLowerCase()) {
+      case 'active': return 'Active';
+      case 'matured': return 'Matured';
+      case 'expired': return 'Expired';
+      case 'redeemed': return 'Redeemed';
+      case 'defaulted': return 'Defaulted';
+      default: return status || 'Unknown';
+    }
   }
 
   resetForm() {
-    this.redeemComputation.discount = 0;
-    this.redeemComputation.receivedAmount = 0;
-    this.calculateRedeemAmount();
+    this.searchTicketNumber = '';
+    this.clearForm();
     this.toastService.showInfo('Reset', 'Form has been reset');
   }
 

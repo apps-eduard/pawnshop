@@ -360,4 +360,322 @@ router.delete('/voucher-types/:id', async (req, res) => {
   }
 });
 
+// =============================================
+// TRANSACTION CONFIGURATION
+// =============================================
+
+// TRANSACTION MANAGEMENT
+// =============================================
+
+// Get all transactions with filters
+router.get('/transactions', async (req, res) => {
+  try {
+    const { 
+      page = 1, 
+      limit = 50, 
+      search, 
+      type, 
+      status, 
+      dateFrom, 
+      dateTo,
+      branchId 
+    } = req.query;
+    
+    console.log(`📋 [${new Date().toISOString()}] Admin fetching transactions - User: ${req.user?.username || 'Unauthenticated'}`);
+    
+    let query = `
+      SELECT 
+        pt.id,
+        pt.ticket_number,
+        'pawn_ticket' as transaction_type,
+        pt.principal_amount,
+        pt.total_amount,
+        pt.principal_amount as balance_remaining,
+        pt.status,
+        pt.created_at as loan_date,
+        pt.maturity_date,
+        pt.created_at,
+        p.first_name,
+        p.last_name,
+        b.name as branch_name
+      FROM pawn_tickets pt
+      LEFT JOIN pawners p ON pt.pawner_id = p.id
+      LEFT JOIN branches b ON pt.branch_id = b.id
+      WHERE 1=1
+    `;
+    
+    const params = [];
+    let paramCount = 0;
+    
+    if (search) {
+      paramCount++;
+      query += ` AND (pt.ticket_number ILIKE $${paramCount} OR p.first_name ILIKE $${paramCount} OR p.last_name ILIKE $${paramCount})`;
+      params.push(`%${search}%`);
+    }
+    
+    if (type) {
+      paramCount++;
+      query += ` AND 'pawn_ticket' = $${paramCount}`;
+      params.push(type);
+    }
+    
+    if (status) {
+      paramCount++;
+      query += ` AND pt.status = $${paramCount}`;
+      params.push(status);
+    }
+    
+    if (dateFrom) {
+      paramCount++;
+      query += ` AND pt.created_at >= $${paramCount}`;
+      params.push(dateFrom);
+    }
+    
+    if (dateTo) {
+      paramCount++;
+      query += ` AND pt.created_at <= $${paramCount}`;
+      params.push(dateTo);
+    }
+    
+    if (branchId) {
+      paramCount++;
+      query += ` AND pt.branch_id = $${paramCount}`;
+      params.push(branchId);
+    }
+    
+    // Get total count
+    const countQuery = query.replace(/SELECT.*FROM/, 'SELECT COUNT(*) as total FROM');
+    const countResult = await pool.query(countQuery, params);
+    const total = parseInt(countResult.rows[0].total);
+    
+    // Add pagination
+    paramCount++;
+    query += ` ORDER BY pt.created_at DESC LIMIT $${paramCount}`;
+    params.push(limit);
+    
+    paramCount++;
+    query += ` OFFSET $${paramCount}`;
+    params.push((page - 1) * limit);
+    
+    const result = await pool.query(query, params);
+    
+    console.log(`✅ Found ${result.rows.length} transactions (${total} total)`);
+    
+    res.json({
+      success: true,
+      data: result.rows,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total: total,
+        pages: Math.ceil(total / limit)
+      }
+    });
+  } catch (error) {
+    console.error('❌ Error fetching transactions:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching transactions'
+    });
+  }
+});
+
+// Get transaction statistics
+router.get('/transactions/stats', async (req, res) => {
+  try {
+    console.log(`📊 [${new Date().toISOString()}] Admin fetching transaction stats - User: ${req.user?.username || 'Unauthenticated'}`);
+    
+    const stats = await pool.query(`
+      SELECT 
+        COUNT(*) as total_transactions,
+        COUNT(CASE WHEN DATE(created_at) = CURRENT_DATE THEN 1 END) as today_transactions,
+        COUNT(CASE WHEN status = 'active' THEN 1 END) as active_loans,
+        COALESCE(SUM(CASE WHEN status = 'active' THEN principal_amount ELSE 0 END), 0) as active_amount,
+        COALESCE(AVG(CASE WHEN principal_amount > 0 THEN principal_amount END), 0) as avg_loan_amount
+      FROM pawn_tickets
+    `);
+    
+    console.log('✅ Transaction stats retrieved');
+    
+    res.json({
+      success: true,
+      data: stats.rows[0]
+    });
+  } catch (error) {
+    console.error('❌ Error fetching transaction statistics:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching statistics'
+    });
+  }
+});
+
+// Update transaction status (admin override)
+router.put('/transactions/:id/status', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, reason } = req.body;
+    
+    console.log(`🔄 [${new Date().toISOString()}] Admin updating transaction ${id} status to ${status} - User: ${req.user?.username || 'Unauthenticated'}`);
+    
+    // Get current transaction status
+    const currentTransaction = await pool.query('SELECT status FROM pawn_tickets WHERE id = $1', [id]);
+    
+    if (currentTransaction.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Pawn ticket not found'
+      });
+    }
+    
+    const oldStatus = currentTransaction.rows[0].status;
+    
+    // Update transaction status
+    const result = await pool.query(`
+      UPDATE pawn_tickets 
+      SET status = $1, updated_at = CURRENT_TIMESTAMP
+      WHERE id = $2
+      RETURNING *
+    `, [status, id]);
+    
+    // Log admin action in audit trail if table exists
+    try {
+      await pool.query(`
+        INSERT INTO audit_logs (
+          user_id, action, table_name, record_id, 
+          old_values, new_values, reason, created_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+      `, [
+        req.user.userId,
+        'ADMIN_STATUS_CHANGE',
+        'pawn_tickets',
+        id,
+        JSON.stringify({ status: oldStatus }),
+        JSON.stringify({ status }),
+        reason || 'Admin override'
+      ]);
+    } catch (auditError) {
+      console.log('⚠️ Could not log to audit trail (table may not exist):', auditError.message);
+    }
+    
+    console.log(`✅ Transaction ${id} status updated from ${oldStatus} to ${status}`);
+    
+    res.json({
+      success: true,
+      message: 'Transaction status updated successfully',
+      data: result.rows[0]
+    });
+  } catch (error) {
+    console.error('❌ Error updating transaction status:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error updating transaction status'
+    });
+  }
+});
+
+// =============================================
+// TRANSACTION CONFIGURATION
+// =============================================
+
+// Get transaction configuration
+router.get('/transaction-config', async (req, res) => {
+  try {
+    console.log(`📋 [${new Date().toISOString()}] Admin fetching transaction config - User: ${req.user?.username || 'Unauthenticated'}`);
+    
+    const result = await pool.query(`
+      SELECT config_value 
+      FROM system_config 
+      WHERE config_key = 'transaction_number_format'
+      LIMIT 1
+    `);
+    
+    let config = {
+      prefix: 'TXN',
+      includeYear: true,
+      includeMonth: true,
+      includeDay: true,
+      sequenceDigits: 2,
+      branchCodePrefix: true,
+      separator: '-'
+    };
+    
+    if (result.rows.length > 0) {
+      config = { ...config, ...JSON.parse(result.rows[0].config_value) };
+    }
+    
+    console.log('✅ Transaction config retrieved:', config);
+    
+    res.json({
+      success: true,
+      data: config
+    });
+  } catch (error) {
+    console.error('❌ Error fetching transaction configuration:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching transaction configuration'
+    });
+  }
+});
+
+// Update transaction configuration
+router.put('/transaction-config', async (req, res) => {
+  try {
+    console.log(`⚙️ [${new Date().toISOString()}] Admin updating transaction config - User: ${req.user?.username || 'Unauthenticated'}`);
+    
+    const {
+      prefix,
+      includeYear,
+      includeMonth,
+      includeDay,
+      sequenceDigits,
+      branchCodePrefix,
+      separator
+    } = req.body;
+    
+    // Validate required fields
+    if (!prefix || typeof sequenceDigits !== 'number') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid configuration data'
+      });
+    }
+    
+    const config = {
+      prefix: prefix.toUpperCase(),
+      includeYear: !!includeYear,
+      includeMonth: !!includeMonth,
+      includeDay: !!includeDay,
+      sequenceDigits: parseInt(sequenceDigits),
+      branchCodePrefix: !!branchCodePrefix,
+      separator: separator || '-'
+    };
+    
+    // Insert or update configuration
+    await pool.query(`
+      INSERT INTO system_config (config_key, config_value, created_at, updated_at)
+      VALUES ('transaction_number_format', $1, NOW(), NOW())
+      ON CONFLICT (config_key)
+      DO UPDATE SET 
+        config_value = $1,
+        updated_at = NOW()
+    `, [JSON.stringify(config)]);
+    
+    console.log('✅ Transaction configuration updated:', config);
+    
+    res.json({
+      success: true,
+      message: 'Transaction configuration updated successfully',
+      data: config
+    });
+  } catch (error) {
+    console.error('❌ Error updating transaction configuration:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error updating transaction configuration'
+    });
+  }
+});
+
 module.exports = router;

@@ -76,7 +76,9 @@
             },
             "development": {
               "buildTarget": "pawn-web:build:development",
-              "proxyConfig": "proxy.conf.json"
+              "proxyConfig": "proxy.conf.json",
+              "host": "localhost",
+              "port": 4200
             }
           },
           "defaultConfiguration": "development"

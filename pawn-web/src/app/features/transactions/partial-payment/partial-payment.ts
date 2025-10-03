@@ -61,52 +61,47 @@ interface PartialComputation {
 })
 export class PartialPayment implements OnInit {
 
-  transactionNumber: string = '1';
+  searchTicketNumber: string = '';
+  transactionNumber: string = '';
+  isLoading: boolean = false;
+  transactionFound: boolean = false;
 
   customerInfo: CustomerInfo = {
-    contactNumber: '111111111',
-    firstName: 'romel',
-    lastName: 'pacs',
-    transactionDate: '9/29/2025',
-    grantedDate: '9/29/2025',
-    city: 'Iloilo',
-    barangay: 'Monay',
-    maturedDate: '10/29/2025',
-    expiredDate: '1/29/2026',
-    completeAddress: 'san pedro'
+    contactNumber: '',
+    firstName: '',
+    lastName: '',
+    transactionDate: '',
+    grantedDate: '',
+    city: '',
+    barangay: '',
+    maturedDate: '',
+    expiredDate: '',
+    completeAddress: ''
   };
 
   transactionInfo: TransactionInfo = {
-    transactionDate: '2025-10-02',
-    grantedDate: '2025-10-02',
-    maturedDate: '2025-11-02',
-    expiredDate: '2026-02-02',
-    loanStatus: 'Active'
+    transactionDate: '',
+    grantedDate: '',
+    maturedDate: '',
+    expiredDate: '',
+    loanStatus: ''
   };
 
-  pawnedItems: PawnedItem[] = [
-    {
-      id: 1,
-      category: 'Appliances',
-      categoryDescription: '50" Television',
-      itemsDescription: '50" Television',
-      appraisalValue: 10000.00
-    }
-  ];
+  pawnedItems: PawnedItem[] = [];
 
   partialComputation: PartialComputation = {
-    appraisalValue: 10000.00,
+    appraisalValue: 0,
     discount: 0,
-    principalLoan: 5000.00,
+    principalLoan: 0,
     interestRate: 5,
     interest: 0,
-    penalty: 100.00,
+    penalty: 0,
     partialPay: 0,
-    newPrincipalLoan: 5000.00,
-    advanceInterest: 300.00,
-    advServiceCharge: 5.00,
-    redeemAmount: 5100.00,
-    netPayment: 305.00,
+    newPrincipalLoan: 0,
+    advanceInterest: 0,
+    advServiceCharge: 0,
+    redeemAmount: 0,
+    netPayment: 0,
     amountReceived: 0,
     change: 0
   };
@@ -118,7 +113,8 @@ export class PartialPayment implements OnInit {
   ) {}
 
   ngOnInit() {
-    this.calculatePartialPayment();
+    // Start with empty form - no initial calculation
+    console.log('Partial Payment page loaded - form cleared');
   }
 
   getTotalAppraisalValue(): number {
@@ -158,32 +154,179 @@ export class PartialPayment implements OnInit {
   }
 
   canProcessPayment(): boolean {
-    return this.partialComputation.amountReceived >= this.partialComputation.netPayment;
+    return this.transactionFound && 
+           this.partialComputation.amountReceived >= this.partialComputation.netPayment &&
+           this.partialComputation.partialPay > 0 &&
+           this.pawnedItems.length > 0;
   }
 
   resetForm() {
+    this.searchTicketNumber = '';
+    this.clearForm();
+    this.toastService.showInfo('Reset', 'Form has been reset');
+  }
+
+  async searchTransaction() {
+    if (!this.searchTicketNumber.trim()) {
+      this.toastService.showError('Error', 'Please enter a transaction number');
+      return;
+    }
+
+    this.isLoading = true;
+    this.clearForm();
+
+    try {
+      const response = await fetch(`http://localhost:3000/api/transactions/search/${this.searchTicketNumber}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      const result = await response.json();
+
+      if (result.success && result.data) {
+        this.populateForm(result.data);
+        this.transactionFound = true;
+        this.toastService.showSuccess('Success', 'Transaction found and loaded!');
+      } else {
+        this.toastService.showError('Not Found', result.message || 'Transaction not found');
+        this.transactionFound = false;
+      }
+    } catch (error) {
+      console.error('Error searching transaction:', error);
+      this.toastService.showError('Error', 'Failed to search transaction');
+      this.transactionFound = false;
+    } finally {
+      this.isLoading = false;
+    }
+  }
+
+  private populateForm(data: any) {
+    // Set transaction number
+    this.transactionNumber = data.ticketNumber;
+
+    // Populate customer info
+    this.customerInfo = {
+      contactNumber: data.contactNumber || '',
+      firstName: data.firstName || '',
+      lastName: data.lastName || '',
+      transactionDate: this.formatDateDisplay(data.transactionDate),
+      grantedDate: this.formatDateDisplay(data.dateGranted),
+      city: data.cityName || '',
+      barangay: data.barangayName || '',
+      maturedDate: this.formatDateDisplay(data.dateMatured),
+      expiredDate: this.formatDateDisplay(data.dateExpired),
+      completeAddress: data.completeAddress || ''
+    };
+
+    // Populate transaction info
+    this.transactionInfo = {
+      transactionDate: this.formatDate(data.transactionDate),
+      grantedDate: this.formatDate(data.dateGranted),
+      maturedDate: this.formatDate(data.dateMatured),
+      expiredDate: this.formatDate(data.dateExpired),
+      loanStatus: this.getStatusText(data.status)
+    };
+
+    // Populate items
+    this.pawnedItems = (data.items || []).map((item: any, index: number) => ({
+      id: index + 1,
+      category: item.category || '',
+      categoryDescription: item.categoryDescription || '',
+      itemsDescription: item.description || item.itemsDescription || '',
+      appraisalValue: parseFloat(item.appraisalValue || 0)
+    }));
+
+    // Populate partial computation
     this.partialComputation = {
       appraisalValue: this.getTotalAppraisalValue(),
       discount: 0,
-      principalLoan: 5000.00,
+      principalLoan: data.principalAmount || 0,
+      interestRate: data.interestRate || 5,
+      interest: 0, // Will be calculated
+      penalty: data.penaltyAmount || 0,
+      partialPay: 0,
+      newPrincipalLoan: 0, // Will be calculated
+      advanceInterest: 0, // Will be calculated
+      advServiceCharge: 0,
+      redeemAmount: 0, // Will be calculated
+      netPayment: 0, // Will be calculated
+      amountReceived: 0,
+      change: 0
+    };
+
+    // Calculate partial payment amounts
+    this.calculatePartialPayment();
+  }
+
+  private clearForm() {
+    this.transactionNumber = '';
+    this.transactionFound = false;
+    
+    this.customerInfo = {
+      contactNumber: '',
+      firstName: '',
+      lastName: '',
+      transactionDate: '',
+      grantedDate: '',
+      city: '',
+      barangay: '',
+      maturedDate: '',
+      expiredDate: '',
+      completeAddress: ''
+    };
+    
+    this.transactionInfo = {
+      transactionDate: '',
+      grantedDate: '',
+      maturedDate: '',
+      expiredDate: '',
+      loanStatus: ''
+    };
+    
+    this.pawnedItems = [];
+    
+    this.partialComputation = {
+      appraisalValue: 0,
+      discount: 0,
+      principalLoan: 0,
       interestRate: 5,
       interest: 0,
-      penalty: 100.00,
+      penalty: 0,
       partialPay: 0,
-      newPrincipalLoan: 5000.00,
-      advanceInterest: 300.00,
-      advServiceCharge: 5.00,
+      newPrincipalLoan: 0,
+      advanceInterest: 0,
+      advServiceCharge: 0,
       redeemAmount: 0,
       netPayment: 0,
       amountReceived: 0,
       change: 0
     };
-    this.calculatePartialPayment();
   }
 
-  searchTransaction() {
-    // TODO: Implement transaction search functionality
-    this.toastService.showInfo('Info', 'Search transaction feature will be implemented');
+  private formatDate(dateString: string): string {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toISOString().split('T')[0];
+  }
+
+  private formatDateDisplay(dateString: string): string {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleDateString();
+  }
+
+  private getStatusText(status: string): string {
+    switch (status?.toLowerCase()) {
+      case 'active': return 'Active';
+      case 'matured': return 'Matured';
+      case 'expired': return 'Expired';
+      case 'redeemed': return 'Redeemed';
+      case 'defaulted': return 'Defaulted';
+      default: return status || 'Unknown';
+    }
   }
 
   goBack() {

@@ -21,6 +21,7 @@ const categoryRoutes = require('./routes/categories');
 const addressRoutes = require('./routes/addresses');
 const branchConfigRoutes = require('./routes/branch-config');
 const syncLogsRoutes = require('./routes/sync-logs');
+const transactionRoutes = require('./routes/transactions');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -61,6 +62,19 @@ app.use(cors({
   preflightContinue: false,
   optionsSuccessStatus: 204
 }));
+
+// Additional CORS middleware for development
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', 'http://localhost:4200');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  if (req.method === 'OPTIONS') {
+    res.sendStatus(204);
+  } else {
+    next();
+  }
+});
 
 // Enhanced CORS middleware should handle preflight requests automatically
 
@@ -189,6 +203,7 @@ app.use('/api/categories', categoryRoutes);
 app.use('/api/addresses', addressRoutes);
 app.use('/api/branch-config', branchConfigRoutes);
 app.use('/api/sync-logs', syncLogsRoutes);
+app.use('/api/transactions', transactionRoutes);
 
 // Enhanced error handling middleware with CORS support
 app.use((err, req, res, next) => {

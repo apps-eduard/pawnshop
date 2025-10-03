@@ -8,7 +8,16 @@ import { PartialPayment } from '../partial-payment/partial-payment';
 import { Redeem } from '../redeem/redeem';
 import { Renew } from '../renew/renew';
 
+// Admin Transaction Management
+import { TransactionManagement } from '../../../pages/transaction-management/transaction-management';
+
 export const transactionRoutes: Routes = [
+  // Admin Transaction Management
+  {
+    path: '',
+    component: TransactionManagement,
+    data: { roles: ['administrator', 'manager'] }
+  },
   {
     path: 'appraisal',
     component: Appraisal,

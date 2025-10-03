@@ -55,48 +55,44 @@ interface AdditionalComputation {
 })
 export class AdditionalLoan implements OnInit {
 
-  transactionNumber: string = '1';
+  searchTicketNumber: string = '';
+  transactionNumber: string = '';
+  isLoading: boolean = false;
+  transactionFound: boolean = false;
 
   customerInfo: CustomerInfo = {
-    contactNumber: '111111111',
-    firstName: 'romel',
-    lastName: 'pacs',
-    city: 'Iloilo',
-    barangay: 'Monay',
-    completeAddress: 'san pedro'
+    contactNumber: '',
+    firstName: '',
+    lastName: '',
+    city: '',
+    barangay: '',
+    completeAddress: ''
   };
 
   transactionInfo: TransactionInfo = {
-    transactionDate: '2025-10-02',
-    grantedDate: '2025-10-02',
-    maturedDate: '2025-11-02',
-    expiredDate: '2026-02-02',
-    loanStatus: 'Active'
+    transactionDate: '',
+    grantedDate: '',
+    maturedDate: '',
+    expiredDate: '',
+    loanStatus: ''
   };
 
-  items: PawnedItem[] = [
-    {
-      category: 'Appliances',
-      categoryDescription: '50" Television',
-      itemsDescription: '50" Television',
-      appraisalValue: 10000.00
-    }
-  ];
+  items: PawnedItem[] = [];
 
   additionalComputation: AdditionalComputation = {
-    appraisalValue: 10000.00,
-    availableAmount: 5000.00,
+    appraisalValue: 0,
+    availableAmount: 0,
     discount: 0,
-    previousLoan: 5000.00,
+    previousLoan: 0,
     interest: 0,
-    penalty: 100.00,
+    penalty: 0,
     additionalAmount: 0,
-    newPrincipalLoan: 5000.00,
+    newPrincipalLoan: 0,
     interestRate: 6,
     advanceInterest: 0,
     advServiceCharge: 0,
-    netProceed: 100.00,
-    redeemAmount: 5100.00
+    netProceed: 0,
+    redeemAmount: 0
   };
 
   constructor(
@@ -106,7 +102,8 @@ export class AdditionalLoan implements OnInit {
   ) {}
 
   ngOnInit() {
-    this.calculateAdditionalLoan();
+    // Start with empty form - no initial calculation
+    console.log('Additional Loan page loaded - form cleared');
   }
 
   getTotalAppraisalValue(): number {
@@ -146,27 +143,157 @@ export class AdditionalLoan implements OnInit {
       this.additionalComputation.penalty;
   }
 
-  canProcessAdditionalLoan(): boolean {
-    return this.additionalComputation.additionalAmount > 0;
+  async searchTransaction() {
+    if (!this.searchTicketNumber.trim()) {
+      this.toastService.showError('Error', 'Please enter a transaction number');
+      return;
+    }
+
+    this.isLoading = true;
+    this.clearForm();
+
+    try {
+      const response = await fetch(`http://localhost:3000/api/transactions/search/${this.searchTicketNumber}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      const result = await response.json();
+
+      if (result.success && result.data) {
+        this.populateForm(result.data);
+        this.transactionFound = true;
+        this.toastService.showSuccess('Success', 'Transaction found and loaded!');
+      } else {
+        this.toastService.showError('Not Found', result.message || 'Transaction not found');
+        this.transactionFound = false;
+      }
+    } catch (error) {
+      console.error('Error searching transaction:', error);
+      this.toastService.showError('Error', 'Failed to search transaction');
+      this.transactionFound = false;
+    } finally {
+      this.isLoading = false;
+    }
   }
 
-  resetForm() {
+  private populateForm(data: any) {
+    // Set transaction number
+    this.transactionNumber = data.ticketNumber;
+
+    // Populate customer info
+    this.customerInfo = {
+      contactNumber: data.contactNumber || '',
+      firstName: data.firstName || '',
+      lastName: data.lastName || '',
+      city: data.cityName || '',
+      barangay: data.barangayName || '',
+      completeAddress: data.completeAddress || ''
+    };
+
+    // Populate transaction info
+    this.transactionInfo = {
+      transactionDate: this.formatDate(data.transactionDate),
+      grantedDate: this.formatDate(data.dateGranted),
+      maturedDate: this.formatDate(data.dateMatured),
+      expiredDate: this.formatDate(data.dateExpired),
+      loanStatus: this.getStatusText(data.status)
+    };
+
+    // Populate items
+    this.items = data.items || [];
+
+    // Populate additional computation
     this.additionalComputation = {
       appraisalValue: this.getTotalAppraisalValue(),
-      availableAmount: 5000.00,
+      availableAmount: 0, // Will be calculated
       discount: 0,
-      previousLoan: 5000.00,
+      previousLoan: data.principalAmount || 0,
+      interest: data.interestAmount || 0,
+      penalty: data.penaltyAmount || 0,
+      additionalAmount: 0, // Will be calculated
+      newPrincipalLoan: 0, // Will be calculated  
+      interestRate: data.interestRate || 6,
+      advanceInterest: 0, // Will be calculated
+      advServiceCharge: 0,
+      netProceed: 0, // Will be calculated
+      redeemAmount: 0 // Will be calculated
+    };
+
+    // Calculate additional loan amounts
+    this.calculateAdditionalLoan();
+  }
+
+  private clearForm() {
+    this.transactionNumber = '';
+    this.transactionFound = false;
+    
+    this.customerInfo = {
+      contactNumber: '',
+      firstName: '',
+      lastName: '',
+      city: '',
+      barangay: '',
+      completeAddress: ''
+    };
+    
+    this.transactionInfo = {
+      transactionDate: '',
+      grantedDate: '',
+      maturedDate: '',
+      expiredDate: '',
+      loanStatus: ''
+    };
+    
+    this.items = [];
+    
+    this.additionalComputation = {
+      appraisalValue: 0,
+      availableAmount: 0,
+      discount: 0,
+      previousLoan: 0,
       interest: 0,
-      penalty: 100.00,
+      penalty: 0,
       additionalAmount: 0,
-      newPrincipalLoan: 5000.00,
+      newPrincipalLoan: 0,
       interestRate: 6,
       advanceInterest: 0,
       advServiceCharge: 0,
       netProceed: 0,
       redeemAmount: 0
     };
-    this.calculateAdditionalLoan();
+  }
+
+  private formatDate(dateString: string): string {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toISOString().split('T')[0];
+  }
+
+  private getStatusText(status: string): string {
+    switch (status?.toLowerCase()) {
+      case 'active': return 'Active';
+      case 'matured': return 'Matured';
+      case 'expired': return 'Expired';
+      case 'redeemed': return 'Redeemed';
+      case 'defaulted': return 'Defaulted';
+      default: return status || 'Unknown';
+    }
+  }
+
+  canProcessAdditionalLoan(): boolean {
+    return this.transactionFound && 
+           this.additionalComputation.additionalAmount > 0 &&
+           this.items.length > 0;
+  }
+
+  resetForm() {
+    this.searchTicketNumber = '';
+    this.clearForm();
+    this.toastService.showInfo('Reset', 'Form has been reset');
   }
 
   getLoanStatusClass(): string {

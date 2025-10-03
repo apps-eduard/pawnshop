@@ -55,6 +55,17 @@ interface SystemStats {
   recent_changes: number;
 }
 
+interface TransactionConfig {
+  prefix: string;
+  includeYear: boolean;
+  includeMonth: boolean;
+  includeDay: boolean;
+  sequenceDigits: number;
+  branchCodePrefix: boolean;
+  separator: string;
+  branchCode?: string;
+}
+
 interface BranchConfig {
   config: {
     current_branch_id: string;
@@ -65,6 +76,7 @@ interface BranchConfig {
   currentBranch: {
     id: number;
     name: string;
+    code: string;
     address: string;
     contact_number?: string;
     installation_type?: string;
@@ -73,6 +85,7 @@ interface BranchConfig {
   availableBranches: {
     id: number;
     name: string;
+    code: string;
     address: string;
     is_active: boolean;
   }[];
@@ -114,6 +127,16 @@ export class AdminSettingsComponent implements OnInit {
     minimum_loan_for_service: 500
   };
   branchConfig: BranchConfig | null = null;
+  transactionConfig: TransactionConfig = {
+    prefix: 'TXN',
+    includeYear: true,
+    includeMonth: true,
+    includeDay: true,
+    sequenceDigits: 2,
+    branchCodePrefix: true,
+    separator: '-',
+    branchCode: ''
+  };
 
   // Make Math available in template
   Math = Math;
@@ -124,6 +147,7 @@ export class AdminSettingsComponent implements OnInit {
   voucherForm!: FormGroup;
   loanRulesForm!: FormGroup;
   branchConfigForm!: FormGroup;
+  transactionConfigForm!: FormGroup;
 
   // Edit states
   editingCategory: Category | null = null;
@@ -165,7 +189,7 @@ export class AdminSettingsComponent implements OnInit {
 
     this.branchForm = this.fb.group({
       name: ['', [Validators.required, Validators.minLength(2)]],
-      code: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(10)]],
+      code: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(3), Validators.pattern(/^[A-Z]{3}$/)]],
       address: ['', [Validators.required]],
       phone: ['', [Validators.required]],
       email: ['', [Validators.email]],
@@ -191,6 +215,16 @@ export class AdminSettingsComponent implements OnInit {
       installationType: ['branch', [Validators.required]],
       syncEnabled: [true]
     });
+
+    this.transactionConfigForm = this.fb.group({
+      prefix: ['TXN', [Validators.required, Validators.minLength(2), Validators.maxLength(5)]],
+      includeYear: [true],
+      includeMonth: [true],
+      includeDay: [true],
+      sequenceDigits: [2, [Validators.required, Validators.min(2), Validators.max(4)]],
+      branchCodePrefix: [true],
+      separator: ['-', [Validators.required]]
+    });
   }
 
   loadAllSettings(): void {
@@ -200,7 +234,8 @@ export class AdminSettingsComponent implements OnInit {
       this.loadCategories(),
       this.loadBranches(),
       this.loadVoucherTypes(),
-      this.loadLoanRules()
+      this.loadLoanRules(),
+      this.loadTransactionConfig()
     ]).finally(() => {
       this.isLoading = false;
       // Force change detection to ensure UI updates
@@ -748,6 +783,96 @@ export class AdminSettingsComponent implements OnInit {
         console.error('❌ Error updating sync status:', error);
       }
     });
+  }
+
+  // Transaction Configuration Methods
+  loadTransactionConfig(): Promise<void> {
+    console.log('🔄 Loading transaction configuration...');
+    return new Promise((resolve, reject) => {
+      this.http.get<{success: boolean, data: TransactionConfig}>('http://localhost:3000/api/admin/transaction-config').subscribe({
+        next: (response) => {
+          console.log('✅ Transaction config loaded:', response);
+          if (response.success && response.data) {
+            this.transactionConfig = response.data;
+            this.transactionConfigForm.patchValue(response.data);
+            console.log('📝 Transaction form updated with values');
+          }
+          resolve();
+        },
+        error: (error) => {
+          console.error('❌ Error loading transaction configuration:', error);
+          // Use default config on error
+          this.transactionConfigForm.patchValue(this.transactionConfig);
+          resolve();
+        }
+      });
+    });
+  }
+
+  saveTransactionConfig(): void {
+    if (!this.transactionConfigForm.valid) return;
+
+    const formData = this.transactionConfigForm.value;
+    
+    // Update local config
+    this.transactionConfig = { ...formData };
+    
+    // If branch code prefix is enabled, get current branch code
+    if (formData.branchCodePrefix && this.branchConfig?.currentBranch?.code) {
+      this.transactionConfig.branchCode = this.branchConfig.currentBranch.code;
+    }
+
+    this.http.put<{success: boolean, message: string}>('http://localhost:3000/api/admin/transaction-config', this.transactionConfig).subscribe({
+      next: (response) => {
+        if (response.success) {
+          console.log('✅ Transaction configuration updated successfully');
+          // Show success message or toast
+        }
+      },
+      error: (error) => {
+        console.error('❌ Error updating transaction configuration:', error);
+      }
+    });
+  }
+
+  generatePreviewTransactionNumber(): string {
+    const config = { ...this.transactionConfig, ...this.transactionConfigForm.value };
+    const today = new Date();
+    const year = today.getFullYear().toString();
+    const month = (today.getMonth() + 1).toString().padStart(2, '0');
+    const day = today.getDate().toString().padStart(2, '0');
+    const sequence = '1'.padStart(config.sequenceDigits, '0');
+    
+    let parts = [config.prefix];
+    
+    // Add branch code if enabled and available
+    if (config.branchCodePrefix && this.branchConfig?.currentBranch?.code) {
+      parts.push(this.branchConfig.currentBranch.code);
+    }
+    
+    // Build date part
+    let datePart = '';
+    if (config.includeYear) datePart += year;
+    if (config.includeMonth) datePart += month;
+    if (config.includeDay) datePart += day;
+    
+    if (datePart) parts.push(datePart);
+    parts.push(sequence);
+    
+    return parts.join(config.separator);
+  }
+
+  // Update branch code validation
+  validateBranchCode(control: any): {[key: string]: any} | null {
+    const value = control.value;
+    if (!value) return null;
+    
+    // Check if exactly 3 characters and all uppercase letters
+    if (!/^[A-Z]{3}$/.test(value)) {
+      return { 'invalidBranchCode': { value: value } };
+    }
+    
+    return null;
   }
 }
 

@@ -1,0 +1,41 @@
+/* Transaction Management Component Styles */
+
+.transaction-management {
+  min-height: 100vh;
+}
+
+/* Loading Animation */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* Custom hover effects for dropdowns */
+.group:hover .group-hover\\:opacity-100 {
+  opacity: 1;
+}
+
+.group:hover .group-hover\\:visible {
+  visibility: visible;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .transaction-table {
+    font-size: 0.875rem;
+  }
+  
+  .transaction-table th,
+  .transaction-table td {
+    padding: 0.75rem 0.5rem;
+  }
+}
+
+/* Utility for trackBy function */
+.transaction-row {
+  transition: background-color 0.2s ease-in-out;
+}

@@ -779,11 +779,55 @@ export class NewLoan implements OnInit, OnDestroy {
       return;
     }
     
-    // TODO: Implement actual loan creation logic
-    // This would involve calling a service to save the loan data
+    // Prepare loan data for API
+    const loanData = {
+      pawnerData: this.selectedPawner || {
+        firstName: this.pawnerForm.firstName,
+        lastName: this.pawnerForm.lastName,
+        contactNumber: this.pawnerForm.contactNumber,
+        email: this.pawnerForm.email || null,
+        cityId: parseInt(this.pawnerForm.cityId as string),
+        barangayId: parseInt(this.pawnerForm.barangayId as string),
+        addressDetails: this.pawnerForm.addressDetails || ''
+      },
+      items: this.selectedItems.map(item => ({
+        category: item.category,
+        categoryDescription: item.categoryDescription,
+        description: item.description || '',
+        appraisalValue: item.appraisalValue
+      })),
+      loanData: {
+        principalLoan: this.loanForm.loanAmount,
+        interestRate: this.loanForm.interestRate,
+        interestAmount: this.getInterestAmount(),
+        serviceCharge: this.getServiceCharge(),
+        netProceeds: this.getNetProceeds()
+      },
+      transactionDate: this.loanForm.transactionDate,
+      loanDate: this.loanForm.loanDate,
+      maturityDate: this.loanForm.maturityDate,
+      expiryDate: this.loanForm.expiryDate,
+      notes: 'New loan created from frontend'
+    };
     
-    this.toastService.showSuccess('Success', 'New loan created successfully');
-    this.goBack();
+    console.log('🔄 Creating new loan with data:', loanData);
+    
+    // Call API to create loan
+    this.http.post('http://localhost:3000/api/transactions/new-loan', loanData).subscribe({
+      next: (response: any) => {
+        if (response.success) {
+          this.toastService.showSuccess('Success', `New loan created successfully! Ticket: ${response.data.ticketNumber}`);
+          this.resetForm();
+          this.goBack();
+        } else {
+          this.toastService.showError('Error', response.message || 'Failed to create loan');
+        }
+      },
+      error: (error) => {
+        console.error('❌ Error creating loan:', error);
+        this.toastService.showError('Error', error.error?.message || 'Failed to create loan');
+      }
+    });
   }
 
   // Pawner form management
