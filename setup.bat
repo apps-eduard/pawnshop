@@ -309,14 +309,26 @@ if exist database\setup.js (
         exit /b 1
     )
 ) else (
-    echo 🔧 Running migration script...
-    node run-migration.js
-    if %errorlevel% equ 0 (
-        echo ✅ Database tables created via migration
+    if exist run-comprehensive-migration.js (
+        echo 🔧 Running comprehensive database migration...
+        node run-comprehensive-migration.js
+        if %errorlevel% equ 0 (
+            echo ✅ Database tables and structure created successfully
+        ) else (
+            echo ❌ ERROR: Failed to create database tables!
+            pause
+            exit /b 1
+        )
     ) else (
-        echo ❌ ERROR: Failed to create database tables!
-        pause
-        exit /b 1
+        echo 🔧 Running basic migration script...
+        node run-migration.js
+        if %errorlevel% equ 0 (
+            echo ✅ Database tables created via migration
+        ) else (
+            echo ❌ ERROR: Failed to create database tables!
+            pause
+            exit /b 1
+        )
     )
 )
 
@@ -336,12 +348,27 @@ REM Seed initial data
 echo.
 echo [7/8] Seeding initial data...
 
-REM Add cities and barangays if script exists
+REM Fix database columns first
 echo.
-echo [7.1/8] Seeding cities and barangays...
-if exist create-cities-barangays.js (
-    echo 🏙️  Adding Philippine cities and barangays...
-    node create-cities-barangays.js
+echo [7.1/8] Fixing database structure...
+if exist fix-address-tables-columns.js (
+    echo 🔧 Fixing cities and barangays table columns...
+    node fix-address-tables-columns.js
+    if %errorlevel% equ 0 (
+        echo ✅ Database structure fixed successfully
+    ) else (
+        echo ⚠️  WARNING: Failed to fix database structure, continuing...
+    )
+) else (
+    echo ⚠️  Skipping database fix - script not found
+)
+
+REM Add Visayas and Mindanao cities and barangays
+echo.
+echo [7.2/8] Seeding Visayas and Mindanao cities and barangays...
+if exist add-visayas-mindanao-cities.js (
+    echo 🏙️  Adding Philippine cities and barangays (Visayas and Mindanao regions only)...
+    node add-visayas-mindanao-cities.js
     if %errorlevel% equ 0 (
         echo ✅ Cities and barangays added successfully
         REM Count cities and barangays
@@ -349,7 +376,7 @@ if exist create-cities-barangays.js (
         psql -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d %DB_NAME% -c "SELECT COUNT(*) FROM barangays;" -t -A > temp_barangay_count.txt
         set /p CITY_COUNT=<temp_city_count.txt
         set /p BARANGAY_COUNT=<temp_barangay_count.txt
-        echo    📊 %CITY_COUNT% cities and %BARANGAY_COUNT% barangays added
+        echo    📊 %CITY_COUNT% cities and %BARANGAY_COUNT% barangays available
         del temp_city_count.txt temp_barangay_count.txt 2>nul
     ) else (
         echo ⚠️  WARNING: Failed to add cities and barangays, continuing...
@@ -358,9 +385,33 @@ if exist create-cities-barangays.js (
     echo ⚠️  Skipping cities and barangays - script not found
 )
 
+REM Seed comprehensive item descriptions
+echo.
+echo [7.3/8] Seeding selectable item descriptions...
+if exist seed-item-descriptions.js (
+    echo 💎 Seeding comprehensive jewelry and appliance descriptions...
+    node seed-item-descriptions.js
+    if %errorlevel% equ 0 (
+        echo ✅ Item descriptions seeded successfully
+        REM Count descriptions by category
+        psql -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d %DB_NAME% -c "SELECT COUNT(*) FROM descriptions;" -t -A > temp_desc_count.txt 2>nul
+        if exist temp_desc_count.txt (
+            set /p DESC_COUNT=<temp_desc_count.txt
+            echo    📊 %DESC_COUNT% selectable item descriptions available
+            del temp_desc_count.txt
+        )
+        REM Show breakdown
+        psql -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d %DB_NAME% -c "SELECT c.name || ': ' || COUNT(d.id) || ' items' FROM categories c LEFT JOIN descriptions d ON c.id = d.category_id GROUP BY c.name ORDER BY c.name;" -t -A
+    ) else (
+        echo ⚠️  WARNING: Failed to seed item descriptions, continuing...
+    )
+) else (
+    echo ⚠️  Skipping item descriptions seeding - script not found
+)
+
 REM Add sample users and pawners
 echo.
-echo [7.2/8] Seeding sample users and pawners...
+echo [7.4/8] Seeding sample users and pawners...
 echo 👥 Adding 6 user accounts and sample pawners...
 node add-sample-data.js
 if %errorlevel% equ 0 (
@@ -404,7 +455,7 @@ echo ✅ Initial data seeded successfully
 
 REM Show database summary
 echo.
-echo [7.3/8] Database setup summary...
+echo [7.5/8] Database setup summary...
 echo 📊 Database Setup Summary:
 echo ┌─────────────────────────────────────────┐
 psql -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d %DB_NAME% -c "SELECT 'Tables: ' || COUNT(*) FROM information_schema.tables WHERE table_schema = 'public';" -t -A | findstr /V "^$"

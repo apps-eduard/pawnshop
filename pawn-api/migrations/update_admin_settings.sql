@@ -19,7 +19,7 @@ ALTER TABLE branches ADD CONSTRAINT branches_code_unique UNIQUE (code);
 -- Insert default categories with proper interest rates if they don't exist
 INSERT INTO categories (name, description, interest_rate) VALUES
     ('Jewelry', 'Gold, silver, and precious metal items', 3.00),
-    ('Appliance', 'Electronic appliances and gadgets', 6.00)
+    ('Appliances', 'Electronic appliances and gadgets', 6.00)
 ON CONFLICT (name) DO UPDATE SET 
     interest_rate = EXCLUDED.interest_rate,
     description = EXCLUDED.description;
