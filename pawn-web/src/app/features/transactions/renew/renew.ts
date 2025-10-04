@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Location } from '@angular/common';
 import { ToastService } from '../../../core/services/toast.service';
+import { TransactionInfoComponent } from '../../../shared/components/transaction/transaction-info.component';
 
 interface CustomerInfo {
   firstName: string;
@@ -47,7 +48,7 @@ interface RenewComputation {
 @Component({
   selector: 'app-renew',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, TransactionInfoComponent],
   templateUrl: './renew.html',
   styleUrl: './renew.css'
 })
@@ -106,7 +107,7 @@ export class Renew implements OnInit {
 
   async searchTransaction() {
     const ticketNumber = this.searchTicketNumber || this.searchQuery; // Support both properties
-    
+
     if (!ticketNumber.trim()) {
       this.toastService.showError('Error', 'Please enter a transaction number');
       return;
@@ -193,7 +194,7 @@ export class Renew implements OnInit {
 
   private clearForm() {
     this.transactionFound = false;
-    
+
     this.customerInfo = {
       firstName: '',
       lastName: '',
@@ -203,7 +204,7 @@ export class Renew implements OnInit {
       city: '',
       barangay: ''
     };
-    
+
     this.transactionInfo = {
       transactionNumber: '',
       transactionDate: '',
@@ -212,9 +213,9 @@ export class Renew implements OnInit {
       expiredDate: '',
       loanStatus: ''
     };
-    
+
     this.items = [];
-    
+
     this.renewComputation = {
       principalLoan: 0,
       interestRate: 3.5,
@@ -249,19 +250,19 @@ export class Renew implements OnInit {
   calculateRenewAmount() {
     // Calculate interest (example: 1 month at 3.5%)
     this.renewComputation.interest = this.renewComputation.principalLoan * (this.renewComputation.interestRate / 100);
-    
+
     // Calculate penalty if applicable
     this.renewComputation.penalty = 500; // Example penalty
-    
+
     // Calculate due amount
     this.renewComputation.dueAmount = this.renewComputation.principalLoan + this.renewComputation.interest + this.renewComputation.penalty;
-    
+
     // Calculate service fee (example: 2% of new loan)
     this.renewComputation.serviceFee = this.renewComputation.newLoanAmount * 0.02;
-    
+
     // Total renew amount = due amount + service fee - new loan
     this.renewComputation.totalRenewAmount = this.renewComputation.dueAmount + this.renewComputation.serviceFee - this.renewComputation.newLoanAmount;
-    
+
     this.calculateChange();
   }
 
@@ -314,7 +315,7 @@ export class Renew implements OnInit {
 
   canProcessRenew(): boolean {
     return this.transactionFound &&
-           this.renewComputation.totalRenewAmount > 0 && 
+           this.renewComputation.totalRenewAmount > 0 &&
            this.renewComputation.receivedAmount >= this.renewComputation.totalRenewAmount &&
            this.items.length > 0;
   }

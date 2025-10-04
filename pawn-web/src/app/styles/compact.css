@@ -94,42 +94,87 @@
    ========================= */
 
 /* Global Compact Mode - Add this class to body or main container */
-.compact-mode {
-  /* Form elements become compact by default */
-  input, select, textarea {
-    @apply input-compact;
-  }
+.compact-mode input,
+.compact-mode select,
+.compact-mode textarea {
+  padding: var(--spacing-compact-xs);
+  font-size: var(--text-compact-xs);
+  border-radius: var(--border-radius-compact);
+}
 
-  button {
-    @apply button-compact;
-  }
+.compact-mode button {
+  padding: var(--button-padding-compact);
+  font-size: var(--text-compact-xs);
+  border-radius: var(--border-radius-compact);
+}
 
-  /* Cards and containers */
-  .card, .panel {
-    @apply card-compact;
-  }
+/* Cards and containers */
+.compact-mode .card,
+.compact-mode .panel {
+  padding: var(--card-padding-compact);
+  border-radius: var(--border-radius-compact);
+}
 
-  /* Text becomes more compact */
-  .text-sm { font-size: var(--text-compact-sm) !important; }
-  .text-xs { font-size: var(--text-compact-xs) !important; }
+/* Compact mode overrides for existing Tailwind classes */
+.compact-mode .text-sm {
+  font-size: var(--text-compact-sm) !important;
+}
 
-  /* Spacing becomes tighter */
-  .gap-2 { gap: var(--spacing-compact-xs) !important; }
-  .gap-3 { gap: var(--spacing-compact-sm) !important; }
-  .gap-4 { gap: var(--spacing-compact-md) !important; }
+.compact-mode .text-xs {
+  font-size: var(--text-compact-xs) !important;
+}
 
-  .p-2 { padding: var(--spacing-compact-xs) !important; }
-  .p-3 { padding: var(--spacing-compact-sm) !important; }
-  .p-4 { padding: var(--spacing-compact-md) !important; }
+/* Spacing becomes tighter */
+.compact-mode .gap-2 {
+  gap: var(--spacing-compact-xs) !important;
+}
 
-  .px-2 { padding-left: var(--spacing-compact-xs) !important; padding-right: var(--spacing-compact-xs) !important; }
-  .px-3 { padding-left: var(--spacing-compact-sm) !important; padding-right: var(--spacing-compact-sm) !important; }
+.compact-mode .gap-3 {
+  gap: var(--spacing-compact-sm) !important;
+}
 
-  .py-1\.5 { padding-top: var(--spacing-compact-xs) !important; padding-bottom: var(--spacing-compact-xs) !important; }
-  .py-2 { padding-top: var(--spacing-compact-xs) !important; padding-bottom: var(--spacing-compact-xs) !important; }
+.compact-mode .gap-4 {
+  gap: var(--spacing-compact-md) !important;
+}
 
-  .mb-2 { margin-bottom: var(--spacing-compact-xs) !important; }
-  .mb-3 { margin-bottom: var(--spacing-compact-sm) !important; }
+.compact-mode .p-2 {
+  padding: var(--spacing-compact-xs) !important;
+}
+
+.compact-mode .p-3 {
+  padding: var(--spacing-compact-sm) !important;
+}
+
+.compact-mode .p-4 {
+  padding: var(--spacing-compact-md) !important;
+}
+
+.compact-mode .px-2 {
+  padding-left: var(--spacing-compact-xs) !important;
+  padding-right: var(--spacing-compact-xs) !important;
+}
+
+.compact-mode .px-3 {
+  padding-left: var(--spacing-compact-sm) !important;
+  padding-right: var(--spacing-compact-sm) !important;
+}
+
+.compact-mode .py-1\.5 {
+  padding-top: var(--spacing-compact-xs) !important;
+  padding-bottom: var(--spacing-compact-xs) !important;
+}
+
+.compact-mode .py-2 {
+  padding-top: var(--spacing-compact-xs) !important;
+  padding-bottom: var(--spacing-compact-xs) !important;
+}
+
+.compact-mode .mb-2 {
+  margin-bottom: var(--spacing-compact-xs) !important;
+}
+
+.compact-mode .mb-3 {
+  margin-bottom: var(--spacing-compact-sm) !important;
 }
 
 /* =========================

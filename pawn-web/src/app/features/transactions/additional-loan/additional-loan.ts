@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Location } from '@angular/common';
 import { ToastService } from '../../../core/services/toast.service';
+import { TransactionInfoComponent } from '../../../shared/components/transaction/transaction-info.component';
 
 // Interfaces
 interface CustomerInfo {
@@ -49,7 +50,7 @@ interface AdditionalComputation {
 @Component({
   selector: 'app-additional-loan',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, TransactionInfoComponent],
   templateUrl: './additional-loan.html',
   styleUrl: './additional-loan.css'
 })
@@ -113,33 +114,33 @@ export class AdditionalLoan implements OnInit {
   calculateAdditionalLoan() {
     // Update appraisal value from items
     this.additionalComputation.appraisalValue = this.getTotalAppraisalValue();
-    
+
     // Calculate available amount (example: 50% of appraisal value minus previous loan)
-    this.additionalComputation.availableAmount = 
+    this.additionalComputation.availableAmount =
       (this.additionalComputation.appraisalValue * 0.5) - this.additionalComputation.previousLoan;
-    
+
     // Calculate additional amount after discount
-    this.additionalComputation.additionalAmount = 
+    this.additionalComputation.additionalAmount =
       this.additionalComputation.availableAmount - this.additionalComputation.discount;
-    
+
     // Calculate new principal loan
-    this.additionalComputation.newPrincipalLoan = 
+    this.additionalComputation.newPrincipalLoan =
       this.additionalComputation.previousLoan + this.additionalComputation.additionalAmount;
-    
+
     // Calculate advance interest (example calculation)
-    this.additionalComputation.advanceInterest = 
+    this.additionalComputation.advanceInterest =
       (this.additionalComputation.newPrincipalLoan * this.additionalComputation.interestRate) / 100;
-    
+
     // Calculate net proceed
-    this.additionalComputation.netProceed = 
-      this.additionalComputation.additionalAmount - 
-      this.additionalComputation.advanceInterest - 
+    this.additionalComputation.netProceed =
+      this.additionalComputation.additionalAmount -
+      this.additionalComputation.advanceInterest -
       this.additionalComputation.advServiceCharge;
-    
+
     // Calculate redeem amount
-    this.additionalComputation.redeemAmount = 
-      this.additionalComputation.newPrincipalLoan + 
-      this.additionalComputation.interest + 
+    this.additionalComputation.redeemAmount =
+      this.additionalComputation.newPrincipalLoan +
+      this.additionalComputation.interest +
       this.additionalComputation.penalty;
   }
 
@@ -215,7 +216,7 @@ export class AdditionalLoan implements OnInit {
       interest: data.interestAmount || 0,
       penalty: data.penaltyAmount || 0,
       additionalAmount: 0, // Will be calculated
-      newPrincipalLoan: 0, // Will be calculated  
+      newPrincipalLoan: 0, // Will be calculated
       interestRate: data.interestRate || 6,
       advanceInterest: 0, // Will be calculated
       advServiceCharge: 0,
@@ -230,7 +231,7 @@ export class AdditionalLoan implements OnInit {
   private clearForm() {
     this.transactionNumber = '';
     this.transactionFound = false;
-    
+
     this.customerInfo = {
       contactNumber: '',
       firstName: '',
@@ -239,7 +240,7 @@ export class AdditionalLoan implements OnInit {
       barangay: '',
       completeAddress: ''
     };
-    
+
     this.transactionInfo = {
       transactionDate: '',
       grantedDate: '',
@@ -247,9 +248,9 @@ export class AdditionalLoan implements OnInit {
       expiredDate: '',
       loanStatus: ''
     };
-    
+
     this.items = [];
-    
+
     this.additionalComputation = {
       appraisalValue: 0,
       availableAmount: 0,
@@ -285,7 +286,7 @@ export class AdditionalLoan implements OnInit {
   }
 
   canProcessAdditionalLoan(): boolean {
-    return this.transactionFound && 
+    return this.transactionFound &&
            this.additionalComputation.additionalAmount > 0 &&
            this.items.length > 0;
   }

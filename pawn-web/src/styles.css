@@ -1,4 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import './app/styles/compact.css';
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -45,3 +46,154 @@ body {
 .overflow-y-auto::-webkit-scrollbar-thumb:hover {
   background: rgba(0, 0, 0, 0.3);
 }
+
+/* =================================
+   COMPACT DISPLAY SYSTEM
+   ================================= */
+
+/* Compact CSS Variables - Global Sizing System */
+:root {
+  /* Text sizes - more compact alternatives */
+  --text-compact-xs: 0.625rem;     /* 10px vs text-xs 12px */
+  --text-compact-sm: 0.75rem;      /* 12px vs text-sm 14px */
+  --text-compact-base: 0.875rem;   /* 14px vs text-base 16px */
+  --text-compact-lg: 1rem;         /* 16px vs text-lg 18px */
+
+  /* Spacing - tighter gaps and padding */
+  --spacing-compact-xs: 0.25rem;   /* 4px vs default 6px */
+  --spacing-compact-sm: 0.375rem;  /* 6px vs default 8px */
+  --spacing-compact-md: 0.5rem;    /* 8px vs default 12px */
+  --spacing-compact-lg: 0.75rem;   /* 12px vs default 16px */
+
+  /* Form elements - more compact inputs */
+  --input-height-compact: 1.75rem; /* 28px vs default 40px */
+  --input-padding-compact: 0.375rem 0.5rem; /* 6px 8px vs 12px 16px */
+
+  /* Borders and radius - slightly smaller */
+  --border-radius-compact: 0.25rem; /* 4px vs default 6px */
+
+  /* Layout spacing */
+  --section-gap-compact: 0.75rem;   /* 12px vs default 24px */
+  --card-padding-compact: 0.75rem;  /* 12px vs default 24px */
+}
+
+/* Compact Utility Classes */
+.text-compact-xs { font-size: var(--text-compact-xs); line-height: 1.2; }
+.text-compact-sm { font-size: var(--text-compact-sm); line-height: 1.3; }
+.text-compact-base { font-size: var(--text-compact-base); line-height: 1.4; }
+.text-compact-lg { font-size: var(--text-compact-lg); line-height: 1.4; }
+
+.spacing-compact-xs { margin: var(--spacing-compact-xs); }
+.spacing-compact-sm { margin: var(--spacing-compact-sm); }
+.spacing-compact-md { margin: var(--spacing-compact-md); }
+.spacing-compact-lg { margin: var(--spacing-compact-lg); }
+
+.gap-compact { gap: var(--spacing-compact-md); }
+.gap-compact-sm { gap: var(--spacing-compact-sm); }
+.gap-compact-lg { gap: var(--spacing-compact-lg); }
+
+.p-compact { padding: var(--card-padding-compact); }
+.px-compact { padding-left: var(--spacing-compact-md); padding-right: var(--spacing-compact-md); }
+.py-compact { padding-top: var(--spacing-compact-sm); padding-bottom: var(--spacing-compact-sm); }
+
+.mb-compact { margin-bottom: var(--spacing-compact-md); }
+.mt-compact { margin-top: var(--spacing-compact-md); }
+
+/* Compact Form Elements */
+.input-compact {
+  height: var(--input-height-compact);
+  padding: var(--input-padding-compact);
+  font-size: var(--text-compact-sm);
+  border-radius: var(--border-radius-compact);
+}
+
+.select-compact {
+  height: var(--input-height-compact);
+  padding: var(--input-padding-compact);
+  font-size: var(--text-compact-sm);
+  border-radius: var(--border-radius-compact);
+}
+
+.textarea-compact {
+  padding: var(--input-padding-compact);
+  font-size: var(--text-compact-sm);
+  border-radius: var(--border-radius-compact);
+  min-height: calc(var(--input-height-compact) * 2);
+}
+
+.button-compact {
+  height: var(--input-height-compact);
+  padding: var(--input-padding-compact);
+  font-size: var(--text-compact-sm);
+  border-radius: var(--border-radius-compact);
+}
+
+/* Compact Cards and Sections */
+.card-compact {
+  padding: var(--card-padding-compact);
+  border-radius: var(--border-radius-compact);
+}
+
+.section-compact {
+  margin-bottom: var(--section-gap-compact);
+}
+
+/* Component-Specific Compact Styles */
+.form-group-compact {
+  margin-bottom: var(--spacing-compact-md);
+}
+
+.form-group-compact label {
+  font-size: var(--text-compact-sm);
+  font-weight: 500;
+  margin-bottom: var(--spacing-compact-xs);
+  display: block;
+}
+
+.grid-compact {
+  gap: var(--spacing-compact-md);
+}
+
+/* Responsive Compact Mode */
+@media (max-width: 1024px) {
+  :root {
+    --text-compact-xs: 0.625rem;
+    --text-compact-sm: 0.6875rem;
+    --text-compact-base: 0.8125rem;
+    --input-height-compact: 1.625rem;
+    --card-padding-compact: 0.625rem;
+  }
+}
+
+/* Table Compact Styles */
+.table-compact th,
+.table-compact td {
+  padding: var(--spacing-compact-xs) var(--spacing-compact-sm);
+  font-size: var(--text-compact-sm);
+}
+
+.table-compact th {
+  font-weight: 600;
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+/* Navigation Compact */
+.nav-compact {
+  padding: var(--spacing-compact-sm) var(--spacing-compact-md);
+  font-size: var(--text-compact-sm);
+}
+
+/* Compact Mode Toggle Class */
+.compact-mode {
+  --text-base-override: var(--text-compact-base);
+  --spacing-base-override: var(--spacing-compact-md);
+}
+
+.compact-mode .text-sm { font-size: var(--text-compact-sm) !important; }
+.compact-mode .text-xs { font-size: var(--text-compact-xs) !important; }
+.compact-mode .px-3 { padding-left: var(--spacing-compact-md) !important; padding-right: var(--spacing-compact-md) !important; }
+.compact-mode .py-2 { padding-top: var(--spacing-compact-sm) !important; padding-bottom: var(--spacing-compact-sm) !important; }
+.compact-mode .gap-4 { gap: var(--spacing-compact-lg) !important; }
+.compact-mode .gap-2 { gap: var(--spacing-compact-sm) !important; }
+.compact-mode .mb-3 { margin-bottom: var(--spacing-compact-lg) !important; }
+.compact-mode .mb-2 { margin-bottom: var(--spacing-compact-md) !important; }

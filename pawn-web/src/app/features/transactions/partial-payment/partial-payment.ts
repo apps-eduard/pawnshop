@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Location } from '@angular/common';
 import { ToastService } from '../../../core/services/toast.service';
+import { TransactionInfoComponent } from '../../../shared/components/transaction/transaction-info.component';
 
 // Interfaces
 interface CustomerInfo {
@@ -55,7 +56,7 @@ interface PartialComputation {
 @Component({
   selector: 'app-partial-payment',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, TransactionInfoComponent],
   templateUrl: './partial-payment.html',
   styleUrl: './partial-payment.css'
 })
@@ -124,37 +125,37 @@ export class PartialPayment implements OnInit {
   calculatePartialPayment() {
     // Update appraisal value from items
     this.partialComputation.appraisalValue = this.getTotalAppraisalValue();
-    
+
     // Calculate interest (example calculation)
     this.partialComputation.interest = (this.partialComputation.principalLoan * this.partialComputation.interestRate) / 100;
-    
+
     // Calculate redeem amount
-    this.partialComputation.redeemAmount = 
-      this.partialComputation.principalLoan + 
-      this.partialComputation.interest + 
-      this.partialComputation.penalty - 
+    this.partialComputation.redeemAmount =
+      this.partialComputation.principalLoan +
+      this.partialComputation.interest +
+      this.partialComputation.penalty -
       this.partialComputation.discount;
 
     // Calculate net payment
-    this.partialComputation.netPayment = 
-      this.partialComputation.partialPay + 
-      this.partialComputation.advanceInterest + 
+    this.partialComputation.netPayment =
+      this.partialComputation.partialPay +
+      this.partialComputation.advanceInterest +
       this.partialComputation.advServiceCharge;
 
     // Calculate new principal loan
-    this.partialComputation.newPrincipalLoan = 
+    this.partialComputation.newPrincipalLoan =
       this.partialComputation.principalLoan - this.partialComputation.partialPay;
 
     this.calculateChange();
   }
 
   calculateChange() {
-    this.partialComputation.change = 
+    this.partialComputation.change =
       this.partialComputation.amountReceived - this.partialComputation.netPayment;
   }
 
   canProcessPayment(): boolean {
-    return this.transactionFound && 
+    return this.transactionFound &&
            this.partialComputation.amountReceived >= this.partialComputation.netPayment &&
            this.partialComputation.partialPay > 0 &&
            this.pawnedItems.length > 0;
@@ -264,7 +265,7 @@ export class PartialPayment implements OnInit {
   private clearForm() {
     this.transactionNumber = '';
     this.transactionFound = false;
-    
+
     this.customerInfo = {
       contactNumber: '',
       firstName: '',
@@ -277,7 +278,7 @@ export class PartialPayment implements OnInit {
       expiredDate: '',
       completeAddress: ''
     };
-    
+
     this.transactionInfo = {
       transactionDate: '',
       grantedDate: '',
@@ -285,9 +286,9 @@ export class PartialPayment implements OnInit {
       expiredDate: '',
       loanStatus: ''
     };
-    
+
     this.pawnedItems = [];
-    
+
     this.partialComputation = {
       appraisalValue: 0,
       discount: 0,
