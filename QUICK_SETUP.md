@@ -35,10 +35,19 @@ setup.bat
 start.bat
 ```
 **What it does:**
-- Starts API server (http://localhost:3000)
-- Starts Web app (http://localhost:4200)
-- Opens both in separate terminal windows
-- **Takes 10 seconds, ready for development!**
+- ✅ Starts API server (http://localhost:3000)
+- ✅ Starts Web app (http://localhost:4200)
+- ✅ Opens both in separate terminal windows
+- ✅ **Takes 10 seconds, ready for development!**
+
+**What it does NOT do:**
+- ❌ **No database seeding**
+- ❌ **No table creation**
+- ❌ **No data modification**
+- ❌ **No user account creation**
+- ❌ **Does NOT modify any data**
+- ❌ **Does NOT interact with database directly**
+- ✅ **100% SAFE to run multiple times!**
 
 ## 🌐 Access Your System
 
@@ -70,10 +79,22 @@ The `.env` file is automatically created with your settings.
 
 ## 🛠️ Development Commands
 
+### Daily Development (Safe - No Database Changes)
 ```bash
-# Daily development (both servers)
+# Start both servers (safe to run multiple times)
 start.bat
 
+# ✅ What start.bat does:
+#   - Starts API server on port 3000
+#   - Starts Web app on port 4200  
+#   - NO database seeding or modifications
+#   - Does NOT modify any data
+#   - Does NOT interact with database directly
+#   - 100% safe for daily use
+```
+
+### Manual Server Control
+```bash
 # Manual server startup:
 # Terminal 1 - API Server
 cd pawn-api
@@ -83,12 +104,18 @@ node server.js
 cd pawn-web
 npm start
 
-# Check current database state
+# Kill all Node processes (if needed)
+taskkill /F /IM node.exe
+```
+
+### Database Utilities
+```bash
+# Check current database state (read-only)
 cd pawn-api
 node test-fresh-install.js
 
-# Kill all Node processes (if needed)
-taskkill /F /IM node.exe
+# Fresh setup (DROPS all data and recreates)
+setup.bat
 ```
 
 ## 🚨 Troubleshooting
@@ -163,6 +190,15 @@ After successful setup, you can:
 
 1. **First time?** Run `setup.bat` once, then use `start.bat` daily
 2. **Moving to new PC?** Just copy folder + run `setup.bat`
-3. **Development?** Use `start.bat` to start both servers quickly
-4. **Testing?** Use `node test-fresh-install.js` to verify system state
-5. **Database issues?** Check `pawn-api/.env` for connection settings
+3. **Daily development?** Use `start.bat` - it's 100% safe, no database changes
+4. **Multiple startups?** `start.bat` can be run many times safely
+5. **Testing database?** Use `node test-fresh-install.js` to verify system state
+6. **Database reset needed?** Only `setup.bat` modifies database (drops & recreates)
+7. **Database issues?** Check `pawn-api/.env` for connection settings
+
+## ⚠️ Important Distinction
+
+| Script | Purpose | Database Interaction | Data Modification | Safe to Repeat |
+|--------|---------|---------------------|-------------------|----------------|
+| `setup.bat` | Initial setup | ✅ DROPS & recreates tables | ✅ Modifies all data | ⚠️ Data loss |
+| `start.bat` | Daily development | ❌ NO database interaction | ❌ Does NOT modify data | ✅ 100% safe |
