@@ -280,9 +280,9 @@ async function seedItemDescriptions() {
       console.log(`💍 Adding ${jewelryDescriptions.length} jewelry descriptions...`);
       for (const description of jewelryDescriptions) {
         await client.query(`
-          INSERT INTO descriptions (category_id, notes, is_active, created_at, updated_at) 
-          VALUES ($1, $2, true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-        `, [jewelryId, description]);
+          INSERT INTO descriptions (category_id, name, notes, is_active, created_at, updated_at) 
+          VALUES ($1, $2, $3, true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        `, [jewelryId, description, description]);
       }
       console.log(`✅ Added ${jewelryDescriptions.length} jewelry descriptions`);
     }
@@ -293,9 +293,9 @@ async function seedItemDescriptions() {
       console.log(`🔌 Adding ${applianceDescriptions.length} appliance descriptions...`);
       for (const description of applianceDescriptions) {
         await client.query(`
-          INSERT INTO descriptions (category_id, notes, is_active, created_at, updated_at) 
-          VALUES ($1, $2, true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-        `, [appliancesId, description]);
+          INSERT INTO descriptions (category_id, name, notes, is_active, created_at, updated_at) 
+          VALUES ($1, $2, $3, true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        `, [appliancesId, description, description]);
       }
       console.log(`✅ Added ${applianceDescriptions.length} appliance descriptions`);
     }

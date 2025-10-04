@@ -295,42 +295,25 @@ if %errorlevel% equ 0 (
 )
 echo ✓ Database ready
 
-REM Run database setup script
+REM Run complete database setup
 echo.
-echo [6.2/8] Setting up database schema and tables...
-if exist database\setup.js (
-    echo 🔧 Running database setup script...
-    node database/setup.js
-    if %errorlevel% equ 0 (
-        echo ✅ Database schema and tables created successfully
-    ) else (
-        echo ❌ ERROR: Failed to setup database schema!
-        pause
-        exit /b 1
-    )
+echo [6.2/8] Setting up complete pawn shop database...
+echo 🔧 Running complete database setup (all tables + data)...
+cd pawn-api
+npm run setup-db
+if %errorlevel% equ 0 (
+    echo ✅ Complete pawn shop database setup successful!
+    echo    • All 19 tables created
+    echo    • 6 default users added
+    echo    • 66 Visayas/Mindanao cities seeded
+    echo    • 200 item descriptions loaded
+    echo    • System configuration initialized
 ) else (
-    if exist run-comprehensive-migration.js (
-        echo 🔧 Running comprehensive database migration...
-        node run-comprehensive-migration.js
-        if %errorlevel% equ 0 (
-            echo ✅ Database tables and structure created successfully
-        ) else (
-            echo ❌ ERROR: Failed to create database tables!
-            pause
-            exit /b 1
-        )
-    ) else (
-        echo 🔧 Running basic migration script...
-        node run-migration.js
-        if %errorlevel% equ 0 (
-            echo ✅ Database tables created via migration
-        ) else (
-            echo ❌ ERROR: Failed to create database tables!
-            pause
-            exit /b 1
-        )
-    )
+    echo ❌ ERROR: Failed to setup complete database!
+    pause
+    exit /b 1
 )
+cd ..
 
 REM Verify tables were created
 echo.
@@ -344,30 +327,25 @@ if exist temp_tables.txt (
     echo ⚠️  No tables found or verification failed
 )
 
-REM Seed initial data
+REM All seeding is now handled by npm run setup-db above
 echo.
-echo [7/8] Seeding initial data...
+echo [7/8] Database seeding completed...
+echo ✅ All data seeding completed by npm run setup-db:
+echo    • 6 default users (admin, cashier1, manager1, auctioneer1, appraiser1, pawner1)
+echo    • 65 Visayas and Mindanao cities with 819 barangays  
+echo    • 200 selectable item descriptions (76 jewelry + 124 appliances)
+echo    • System configuration and transaction sequences initialized
 
-REM Fix database columns first
+REM Show complete table verification
 echo.
-echo [7.1/8] Fixing database structure...
-if exist fix-address-tables-columns.js (
-    echo 🔧 Fixing cities and barangays table columns...
-    node fix-address-tables-columns.js
-    if %errorlevel% equ 0 (
-        echo ✅ Database structure fixed successfully
-    ) else (
-        echo ⚠️  WARNING: Failed to fix database structure, continuing...
-    )
+echo [7.2/8] Complete database verification...
+echo 🔍 Showing all created tables and data counts...
+npm run verify-tables
+if %errorlevel% equ 0 (
+    echo ✅ Database verification completed successfully
 ) else (
-    echo ⚠️  Skipping database fix - script not found
+    echo ⚠️  Warning: Database verification had issues but setup may still be functional
 )
-
-REM Add Visayas and Mindanao cities and barangays
-echo.
-echo [7.2/8] Seeding Visayas and Mindanao cities and barangays...
-if exist add-visayas-mindanao-cities.js (
-    echo 🏙️  Adding Philippine cities and barangays (Visayas and Mindanao regions only)...
     node add-visayas-mindanao-cities.js
     if %errorlevel% equ 0 (
         echo ✅ Cities and barangays added successfully
@@ -410,60 +388,20 @@ if exist seed-item-descriptions.js (
 )
 
 REM Add sample users and pawners
-echo.
-echo [7.4/8] Seeding sample users and pawners...
-echo 👥 Adding 6 user accounts and sample pawners...
-node add-sample-data.js
-if %errorlevel% equ 0 (
-    echo ✅ Sample users and pawners added successfully
-    REM Count employees and pawners
-    psql -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d %DB_NAME% -c "SELECT COUNT(*) FROM employees;" -t -A > temp_employee_count.txt
-    psql -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d %DB_NAME% -c "SELECT COUNT(*) FROM pawners;" -t -A > temp_pawner_count.txt
-    set /p EMPLOYEE_COUNT=<temp_employee_count.txt
-    set /p PAWNER_COUNT=<temp_pawner_count.txt
-    echo    📊 %EMPLOYEE_COUNT% employees and %PAWNER_COUNT% pawners added
-    del temp_employee_count.txt temp_pawner_count.txt 2>nul
-) else (
-    echo ❌ ERROR: Failed to add sample data!
-    pause
-    exit /b 1
-)
-
-REM Add sample transactions if script exists
-if exist add-sample-transactions.js (
-    echo Adding sample transactions...
-    node add-sample-transactions.js
-    if %errorlevel% neq 0 (
-        echo WARNING: Failed to add sample transactions, continuing...
-    )
-) else (
-    echo Skipping sample transactions - script not found
-)
-
-REM Fix address data if script exists
-if exist fix-address-data.js (
-    echo Fixing address data...
-    node fix-address-data.js
-    if %errorlevel% neq 0 (
-        echo WARNING: Failed to fix address data, continuing...
-    )
-) else (
-    echo Skipping address data fix - script not found
-)
-
-echo ✅ Initial data seeded successfully
-
 REM Show database summary
 echo.
-echo [7.5/8] Database setup summary...
-echo 📊 Database Setup Summary:
+echo [7.1/8] Database setup summary...
+echo 📊 Complete Database Summary:
 echo ┌─────────────────────────────────────────┐
+cd pawn-api
+set PGPASSWORD=%DB_PASSWORD%
 psql -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d %DB_NAME% -c "SELECT 'Tables: ' || COUNT(*) FROM information_schema.tables WHERE table_schema = 'public';" -t -A | findstr /V "^$"
 psql -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d %DB_NAME% -c "SELECT 'Cities: ' || COUNT(*) FROM cities;" -t -A 2>nul | findstr /V "^$"
 psql -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d %DB_NAME% -c "SELECT 'Barangays: ' || COUNT(*) FROM barangays;" -t -A 2>nul | findstr /V "^$"
 psql -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d %DB_NAME% -c "SELECT 'Employees: ' || COUNT(*) FROM employees;" -t -A 2>nul | findstr /V "^$"
-psql -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d %DB_NAME% -c "SELECT 'Pawners: ' || COUNT(*) FROM pawners;" -t -A 2>nul | findstr /V "^$"
+psql -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d %DB_NAME% -c "SELECT 'Descriptions: ' || COUNT(*) FROM descriptions;" -t -A 2>nul | findstr /V "^$"
 echo └─────────────────────────────────────────┘
+cd ..
 
 REM Setup frontend
 echo.

@@ -11,6 +11,7 @@
     "migrate": "node run-comprehensive-migration.js",
     "seed-cities": "node seed-visayas-mindanao-cities-barangays.js",
     "seed-descriptions": "node seed-item-descriptions.js",
+    "verify-tables": "node verify-all-tables.js",
     "reset-db": "npm run setup-db"
   },
   "keywords": [],

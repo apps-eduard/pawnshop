@@ -6,13 +6,19 @@ async function runComprehensiveMigration() {
   try {
     console.log('🔄 Starting comprehensive database migration...');
     
-    // Read and execute the admin_settings.sql file
-    console.log('📋 Step 1: Creating all tables from admin_settings.sql...');
-    const sqlPath = path.join(__dirname, 'migrations', 'admin_settings.sql');
-    const sql = fs.readFileSync(sqlPath, 'utf8');
+    // Step 1: Create admin and basic tables
+    console.log('📋 Step 1: Creating admin tables from admin_settings.sql...');
+    const adminSqlPath = path.join(__dirname, 'migrations', 'admin_settings.sql');
+    const adminSql = fs.readFileSync(adminSqlPath, 'utf8');
+    await pool.query(adminSql);
+    console.log('✅ Admin tables created from admin_settings.sql');
     
-    await pool.query(sql);
-    console.log('✅ All tables created from admin_settings.sql');
+    // Step 2: Create core pawn shop business tables
+    console.log('📋 Step 2: Creating core pawn shop tables...');
+    const coreSqlPath = path.join(__dirname, 'migrations', 'pawn_shop_core_tables.sql');
+    const coreSql = fs.readFileSync(coreSqlPath, 'utf8');
+    await pool.query(coreSql);
+    console.log('✅ Core pawn shop tables created');
     
     // Verify tables were created
     console.log('🔍 Verifying created tables...');
@@ -41,8 +47,11 @@ async function runComprehensiveMigration() {
       console.log(`   • ${cat.name}: ${cat.interest_rate}% interest - ${cat.description}`);
     });
     
-    await pool.end();
     console.log('🎉 Comprehensive migration completed successfully!');
+    
+    // Show all created tables
+    const showAllTables = require('./verify-all-tables');
+    await showAllTables();
     
   } catch (error) {
     console.error('❌ Error during migration:', error);

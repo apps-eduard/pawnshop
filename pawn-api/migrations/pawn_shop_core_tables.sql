@@ -334,12 +334,23 @@ INSERT INTO system_config (config_key, config_value, description, data_type) VAL
     ('require_appraisal_approval', 'true', 'Require manager approval for appraisals', 'boolean')
 ON CONFLICT (config_key) DO NOTHING;
 
--- Insert default transaction sequences for main branch
+-- Insert default transaction sequences for all branches
 INSERT INTO transaction_sequences (branch_id, sequence_type, prefix, current_number) VALUES
+    -- Main Branch (Branch ID 1)
     (1, 'LOAN', 'L', 0),
     (1, 'PAYMENT', 'P', 0),
     (1, 'TICKET', 'T', 0),
-    (1, 'APPRAISAL', 'A', 0)
+    (1, 'APPRAISAL', 'A', 0),
+    -- Branch 2 (Branch ID 2)
+    (2, 'LOAN', 'L2', 0),
+    (2, 'PAYMENT', 'P2', 0),
+    (2, 'TICKET', 'T2', 0),
+    (2, 'APPRAISAL', 'A2', 0),
+    -- Branch 3 (Branch ID 3)
+    (3, 'LOAN', 'L3', 0),
+    (3, 'PAYMENT', 'P3', 0),
+    (3, 'TICKET', 'T3', 0),
+    (3, 'APPRAISAL', 'A3', 0)
 ON CONFLICT (branch_id, sequence_type, year, month) DO NOTHING;
 
 -- Create indexes for better performance

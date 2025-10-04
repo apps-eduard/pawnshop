@@ -47,6 +47,41 @@ CREATE TABLE IF NOT EXISTS branches (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Cities table for address management
+CREATE TABLE IF NOT EXISTS cities (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    province VARCHAR(100) NOT NULL,
+    region VARCHAR(100),
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(name, province)
+);
+
+-- Barangays table for address management  
+CREATE TABLE IF NOT EXISTS barangays (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    city_id INTEGER REFERENCES cities(id) ON DELETE CASCADE,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(name, city_id)
+);
+
+-- Descriptions table for item descriptions
+CREATE TABLE IF NOT EXISTS descriptions (
+    id SERIAL PRIMARY KEY,
+    category_id INTEGER REFERENCES categories(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    notes TEXT,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Insert default categories if they don't exist
 INSERT INTO categories (name, description, interest_rate) VALUES
     ('Jewelry', 'Gold, silver, and precious metal items', 3.00),
@@ -83,9 +118,11 @@ CREATE TABLE IF NOT EXISTS employees (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Insert default branch
+-- Insert default branches
 INSERT INTO branches (name, code, address, phone, email, manager_name) VALUES
-    ('Main Branch', 'MAIN', '123 Main Street, Manila, Philippines', '+63-2-123-4567', 'main@goldwin.ph', 'Juan Dela Cruz')
+    ('Main Branch', 'MAIN', '123 Main Street, Cebu City, Philippines', '+63-32-123-4567', 'main@goldwin.ph', 'Juan Dela Cruz'),
+    ('Branch 2', 'BR02', '456 Secondary Avenue, Davao City, Philippines', '+63-82-987-6543', 'branch2@goldwin.ph', 'Maria Santos'),
+    ('Branch 3', 'BR03', '789 Tertiary Road, Iloilo City, Philippines', '+63-33-555-1234', 'branch3@goldwin.ph', 'Pedro Garcia')
 ON CONFLICT (code) DO NOTHING;
 
 -- Insert 6 default users with password = "password"
@@ -155,6 +192,14 @@ CREATE INDEX IF NOT EXISTS idx_audit_trails_user_id ON audit_trails(user_id);
 CREATE INDEX IF NOT EXISTS idx_audit_trails_action_type ON audit_trails(action_type);
 CREATE INDEX IF NOT EXISTS idx_audit_trails_created_at ON audit_trails(created_at);
 CREATE INDEX IF NOT EXISTS idx_audit_trails_branch_id ON audit_trails(branch_id);
+CREATE INDEX IF NOT EXISTS idx_cities_province ON cities(province);
+CREATE INDEX IF NOT EXISTS idx_cities_region ON cities(region);
+CREATE INDEX IF NOT EXISTS idx_cities_active ON cities(is_active);
+CREATE INDEX IF NOT EXISTS idx_barangays_city ON barangays(city_id);
+CREATE INDEX IF NOT EXISTS idx_barangays_name ON barangays(name);
+CREATE INDEX IF NOT EXISTS idx_barangays_active ON barangays(is_active);
+CREATE INDEX IF NOT EXISTS idx_descriptions_category ON descriptions(category_id);
+CREATE INDEX IF NOT EXISTS idx_descriptions_active ON descriptions(is_active);
 
 -- Success message
 SELECT 'Admin settings tables created successfully!' as message;

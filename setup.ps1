@@ -40,8 +40,30 @@ Write-Host ""
 
 # Run the main setup script
 Write-Host "Running complete setup script..." -ForegroundColor Yellow
+Write-Host "Setting up API dependencies..." -ForegroundColor Cyan
+Set-Location "pawn-api"
+npm install
+if ($LASTEXITCODE -ne 0) { throw "Failed to install API dependencies" }
+
+Write-Host "Setting up complete database..." -ForegroundColor Cyan
+npm run setup-db
+if ($LASTEXITCODE -ne 0) { throw "Failed to setup database" }
+
+Set-Location ".."
+
+Write-Host "Setting up frontend dependencies..." -ForegroundColor Cyan
+Set-Location "pawn-web"
+npm install
+if ($LASTEXITCODE -ne 0) { throw "Failed to install frontend dependencies" }
+
+Set-Location ".."
+
+Write-Host "Verifying complete database setup..." -ForegroundColor Cyan
+Set-Location "pawn-api"
+npm run verify-tables
+Set-Location ".."
+
 try {
-    node setup-complete.js
     if ($LASTEXITCODE -eq 0) {
         Write-Host ""
         Write-Host "============================================================" -ForegroundColor Green
