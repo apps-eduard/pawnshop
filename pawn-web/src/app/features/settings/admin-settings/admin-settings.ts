@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
+import { ToastService } from '../../../core/services/toast.service';
 
 interface Category {
   id?: number;
@@ -61,9 +62,7 @@ interface TransactionConfig {
   includeMonth: boolean;
   includeDay: boolean;
   sequenceDigits: number;
-  branchCodePrefix: boolean;
   separator: string;
-  branchCode?: string;
 }
 
 interface BranchConfig {
@@ -133,9 +132,7 @@ export class AdminSettingsComponent implements OnInit {
     includeMonth: true,
     includeDay: true,
     sequenceDigits: 2,
-    branchCodePrefix: true,
-    separator: '-',
-    branchCode: ''
+    separator: '-'
   };
 
   // Make Math available in template
@@ -167,7 +164,8 @@ export class AdminSettingsComponent implements OnInit {
   constructor(
     private fb: FormBuilder,
     private http: HttpClient,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private toastService: ToastService
   ) {
     this.initializeForms();
   }
@@ -222,7 +220,6 @@ export class AdminSettingsComponent implements OnInit {
       includeMonth: [true],
       includeDay: [true],
       sequenceDigits: [2, [Validators.required, Validators.min(2), Validators.max(4)]],
-      branchCodePrefix: [true],
       separator: ['-', [Validators.required]]
     });
   }
@@ -259,48 +256,67 @@ export class AdminSettingsComponent implements OnInit {
   }
 
   saveCategory(): void {
-    if (this.categoryForm.valid) {
-      const categoryData = this.categoryForm.value;
+    if (!this.categoryForm.valid) {
+      this.toastService.showError('Validation Error', 'Please fill in all required fields correctly.');
+      return;
+    }
 
-      if (this.editingCategory) {
-        this.updateCategory(this.editingCategory.id!, categoryData);
-      } else {
-        this.createCategory(categoryData);
-      }
+    const categoryData = this.categoryForm.value;
+
+    if (this.editingCategory) {
+      this.updateCategory(this.editingCategory.id!, categoryData);
+    } else {
+      this.createCategory(categoryData);
     }
   }
 
   createCategory(categoryData: Category): void {
-    this.http.post<any>('http://localhost:3000/api/admin/categories', categoryData).subscribe({
+    this.http.post<{success: boolean, message: string, data?: any}>('http://localhost:3000/api/admin/categories', categoryData).subscribe({
       next: (response) => {
-        this.categories.push(response.data);
-        this.resetCategoryForm();
+        if (response.success) {
+          this.categories.push(response.data);
+          this.toastService.showSuccess('Category Created', response.message || 'Category created successfully!');
+          this.resetCategoryForm();
+        } else {
+          this.toastService.showError('Creation Failed', response.message || 'Failed to create category.');
+        }
       },
       error: (error) => {
         console.error('Error creating category:', error);
+        const errorMessage = error.error?.message || error.message || 'An unexpected error occurred while creating category.';
+        this.toastService.showError('Creation Failed', errorMessage);
         // For demo, add to local array
         this.categories.push({ ...categoryData, id: Date.now() });
+        this.toastService.showWarning('Demo Mode', 'Category added locally (demo mode).');
         this.resetCategoryForm();
       }
     });
   }
 
   updateCategory(id: number, categoryData: Category): void {
-    this.http.put<any>(`http://localhost:3000/api/admin/categories/${id}`, categoryData).subscribe({
+    this.http.put<{success: boolean, message: string, data?: any}>(`http://localhost:3000/api/admin/categories/${id}`, categoryData).subscribe({
       next: (response) => {
-        const index = this.categories.findIndex(c => c.id === id);
-        if (index !== -1) {
-          this.categories[index] = response.data;
+        if (response.success) {
+          const index = this.categories.findIndex(c => c.id === id);
+          if (index !== -1) {
+            this.categories[index] = response.data;
+          }
+          this.toastService.showSuccess('Category Updated', response.message || 'Category updated successfully!');
+          this.resetCategoryForm();
+        } else {
+          this.toastService.showError('Update Failed', response.message || 'Failed to update category.');
         }
-        this.resetCategoryForm();
       },
       error: (error) => {
         console.error('Error updating category:', error);
+        const errorMessage = error.error?.message || error.message || 'An unexpected error occurred while updating category.';
+        this.toastService.showError('Update Failed', errorMessage);
         // For demo, update local array
         const index = this.categories.findIndex(c => c.id === id);
         if (index !== -1) {
           this.categories[index] = { ...categoryData, id };
         }
+        this.toastService.showWarning('Demo Mode', 'Category updated locally (demo mode).');
         this.resetCategoryForm();
       }
     });
@@ -337,8 +353,13 @@ export class AdminSettingsComponent implements OnInit {
   // Branches Management
   async loadBranches(): Promise<void> {
     try {
+      console.log('🏢 Loading branches...');
+      const token = localStorage.getItem('token');
+      console.log('🔑 Token exists:', !!token);
       const response = await this.http.get<any>('http://localhost:3000/api/branches').toPromise();
+      console.log('✅ Branches response:', response);
       this.branches = response.data || [];
+      console.log('📊 Loaded branches count:', this.branches.length);
     } catch (error) {
       console.error('❌ Error loading branches:', error);
       // Initialize with default branches
@@ -534,22 +555,29 @@ export class AdminSettingsComponent implements OnInit {
   }
 
   saveLoanRules(): void {
-    if (this.loanRulesForm.valid) {
-      const rulesData = this.loanRulesForm.value;
-
-      this.http.put<any>('http://localhost:3000/api/admin/loan-rules', rulesData).subscribe({
-        next: (response) => {
-          this.loanRules = response.data;
-          alert('Loan rules updated successfully!');
-        },
-        error: (error) => {
-          console.error('Error updating loan rules:', error);
-          // For demo, update local data
-          this.loanRules = rulesData;
-          alert('Loan rules updated successfully!');
-        }
-      });
+    if (!this.loanRulesForm.valid) {
+      this.toastService.showError('Validation Error', 'Please fill in all required fields correctly.');
+      return;
     }
+
+    const rulesData = this.loanRulesForm.value;
+
+    this.http.put<{success: boolean, message: string, data?: any}>('http://localhost:3000/api/admin/loan-rules', rulesData).subscribe({
+      next: (response) => {
+        if (response.success) {
+          this.loanRules = response.data;
+          this.toastService.showSuccess('Rules Updated', response.message || 'Loan rules updated successfully!');
+        } else {
+          this.toastService.showError('Update Failed', response.message || 'Failed to update loan rules.');
+        }
+      },
+      error: (error) => {
+        console.error('Error updating loan rules:', error);
+        // For demo, update local data
+        this.loanRules = rulesData;
+        this.toastService.showWarning('Demo Mode', 'Loan rules updated locally (demo mode).');
+      }
+    });
   }
 
   setActiveTab(tab: string): void {
@@ -746,11 +774,14 @@ export class AdminSettingsComponent implements OnInit {
   }
 
   saveBranchConfig(): void {
-    if (!this.branchConfigForm.valid) return;
+    if (!this.branchConfigForm.valid) {
+      this.toastService.showError('Validation Error', 'Please fill in all required fields correctly.');
+      return;
+    }
 
     const formData = this.branchConfigForm.value;
-    
-    this.http.put<{success: boolean, message: string}>('http://localhost:3000/api/branch-config', {
+
+    this.http.put<{success: boolean, message: string, data?: any}>('http://localhost:3000/api/branch-config', {
       currentBranchId: formData.currentBranchId,
       installationType: formData.installationType,
       syncEnabled: formData.syncEnabled
@@ -758,11 +789,22 @@ export class AdminSettingsComponent implements OnInit {
       next: (response) => {
         if (response.success) {
           console.log('✅ Branch configuration updated successfully');
+          this.toastService.showSuccess(
+            'Configuration Updated',
+            response.message || 'Branch configuration has been updated successfully.'
+          );
           this.loadBranchConfig(); // Reload to get updated data
+        } else {
+          this.toastService.showError(
+            'Update Failed',
+            response.message || 'Failed to update branch configuration.'
+          );
         }
       },
       error: (error) => {
         console.error('❌ Error updating branch configuration:', error);
+        const errorMessage = error.error?.message || error.message || 'An unexpected error occurred while updating branch configuration.';
+        this.toastService.showError('Update Failed', errorMessage);
       }
     });
   }
@@ -776,11 +818,22 @@ export class AdminSettingsComponent implements OnInit {
       next: (response) => {
         if (response.success) {
           console.log('✅ Sync status updated');
+          this.toastService.showSuccess(
+            'Sync Triggered',
+            response.message || 'Manual sync has been triggered successfully.'
+          );
           this.loadBranchConfig(); // Reload to get updated sync timestamp
+        } else {
+          this.toastService.showError(
+            'Sync Failed',
+            response.message || 'Failed to trigger manual sync.'
+          );
         }
       },
       error: (error) => {
         console.error('❌ Error updating sync status:', error);
+        const errorMessage = error.error?.message || error.message || 'An unexpected error occurred while triggering sync.';
+        this.toastService.showError('Sync Failed', errorMessage);
       }
     });
   }
@@ -810,27 +863,35 @@ export class AdminSettingsComponent implements OnInit {
   }
 
   saveTransactionConfig(): void {
-    if (!this.transactionConfigForm.valid) return;
-
-    const formData = this.transactionConfigForm.value;
-    
-    // Update local config
-    this.transactionConfig = { ...formData };
-    
-    // If branch code prefix is enabled, get current branch code
-    if (formData.branchCodePrefix && this.branchConfig?.currentBranch?.code) {
-      this.transactionConfig.branchCode = this.branchConfig.currentBranch.code;
+    if (!this.transactionConfigForm.valid) {
+      this.toastService.showError('Validation Error', 'Please fill in all required fields correctly.');
+      return;
     }
 
-    this.http.put<{success: boolean, message: string}>('http://localhost:3000/api/admin/transaction-config', this.transactionConfig).subscribe({
+    const formData = this.transactionConfigForm.value;
+
+    // Update local config
+    this.transactionConfig = { ...formData };
+
+    this.http.put<{success: boolean, message: string, data?: any}>('http://localhost:3000/api/admin/transaction-config', this.transactionConfig).subscribe({
       next: (response) => {
         if (response.success) {
           console.log('✅ Transaction configuration updated successfully');
-          // Show success message or toast
+          this.toastService.showSuccess(
+            'Configuration Updated',
+            response.message || 'Transaction number configuration updated successfully.'
+          );
+        } else {
+          this.toastService.showError(
+            'Update Failed',
+            response.message || 'Failed to update transaction configuration.'
+          );
         }
       },
       error: (error) => {
         console.error('❌ Error updating transaction configuration:', error);
+        const errorMessage = error.error?.message || error.message || 'An unexpected error occurred while updating transaction configuration.';
+        this.toastService.showError('Update Failed', errorMessage);
       }
     });
   }
@@ -838,40 +899,49 @@ export class AdminSettingsComponent implements OnInit {
   generatePreviewTransactionNumber(): string {
     const config = { ...this.transactionConfig, ...this.transactionConfigForm.value };
     const today = new Date();
-    const year = today.getFullYear().toString();
-    const month = (today.getMonth() + 1).toString().padStart(2, '0');
-    const day = today.getDate().toString().padStart(2, '0');
-    const sequence = '1'.padStart(config.sequenceDigits, '0');
-    
-    let parts = [config.prefix];
-    
-    // Add branch code if enabled and available
-    if (config.branchCodePrefix && this.branchConfig?.currentBranch?.code) {
-      parts.push(this.branchConfig.currentBranch.code);
+    const parts = [];
+
+    // Add prefix
+    if (config.prefix) {
+      parts.push(config.prefix);
     }
-    
-    // Build date part
+
+    // Build date part (concatenated without separators)
     let datePart = '';
-    if (config.includeYear) datePart += year;
-    if (config.includeMonth) datePart += month;
-    if (config.includeDay) datePart += day;
-    
-    if (datePart) parts.push(datePart);
-    parts.push(sequence);
-    
-    return parts.join(config.separator);
+    if (config.includeYear) {
+      datePart += today.getFullYear().toString();
+    }
+    if (config.includeMonth) {
+      datePart += (today.getMonth() + 1).toString().padStart(2, '0');
+    }
+    if (config.includeDay) {
+      datePart += today.getDate().toString().padStart(2, '0');
+    }
+
+    // Add date part if any date components are enabled
+    if (datePart) {
+      parts.push(datePart);
+    }
+
+    // Add sequence number
+    const sequenceDigits = config.sequenceDigits || 6;
+    parts.push('1'.padStart(sequenceDigits, '0'));
+
+    // Join with separator
+    const separator = config.separator || '-';
+    return parts.join(separator);
   }
 
   // Update branch code validation
   validateBranchCode(control: any): {[key: string]: any} | null {
     const value = control.value;
     if (!value) return null;
-    
+
     // Check if exactly 3 characters and all uppercase letters
     if (!/^[A-Z]{3}$/.test(value)) {
       return { 'invalidBranchCode': { value: value } };
     }
-    
+
     return null;
   }
 }

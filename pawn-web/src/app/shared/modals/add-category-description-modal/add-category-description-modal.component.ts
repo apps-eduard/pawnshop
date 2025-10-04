@@ -161,7 +161,7 @@ export class AddCategoryDescriptionModalComponent implements OnInit, OnDestroy, 
           const result: ModalResult<CategoryDescriptionModalData> = {
             success: true,
             data: {
-              description: response.data.description,
+              description: response.data.name,
               categoryId: this.config!.selectedCategoryId,
               categoryName: this.config!.selectedCategoryName
             },

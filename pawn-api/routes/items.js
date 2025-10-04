@@ -13,34 +13,43 @@ router.get('/', async (req, res) => {
     console.log(`🔍 [${new Date().toISOString()}] Fetching items - User: ${req.user.username}`);
     
     const result = await pool.query(`
-      SELECT pi.id, pi.item_type, pi.brand, pi.model, pi.description, 
-             pi.estimated_value, pi.condition_notes, pi.serial_number, 
-             pi.weight, pi.karat, pi.created_at,
-             pt.ticket_number, pt.principal_amount, pt.status as ticket_status,
-             p.first_name, p.last_name, p.contact_number
+      SELECT pi.id, pi.brand, pi.model, pi.custom_description, 
+             pi.appraised_value, pi.loan_amount, pi.serial_number, 
+             pi.weight, pi.karat, pi.item_condition, pi.defects,
+             pi.status, pi.location, pi.created_at,
+             t.transaction_number, t.principal_amount, t.status as transaction_status,
+             p.first_name, p.last_name, p.mobile_number,
+             c.name as category_name,
+             d.description as description_text
       FROM pawn_items pi
-      LEFT JOIN pawn_tickets pt ON pi.ticket_id = pt.id
-      LEFT JOIN pawners p ON pt.pawner_id = p.id
+      LEFT JOIN transactions t ON pi.transaction_id = t.id
+      LEFT JOIN pawners p ON t.pawner_id = p.id
+      LEFT JOIN categories c ON pi.category_id = c.id
+      LEFT JOIN descriptions d ON pi.description_id = d.id
       ORDER BY pi.created_at DESC
     `);
     
     const items = result.rows.map(row => ({
       id: row.id,
-      itemType: row.item_type,
       brand: row.brand,
       model: row.model,
-      description: row.description,
-      estimatedValue: parseFloat(row.estimated_value),
-      conditionNotes: row.condition_notes,
+      description: row.custom_description || row.description_text,
+      categoryName: row.category_name,
+      appraisedValue: row.appraised_value ? parseFloat(row.appraised_value) : null,
+      loanAmount: row.loan_amount ? parseFloat(row.loan_amount) : null,
       serialNumber: row.serial_number,
       weight: row.weight ? parseFloat(row.weight) : null,
       karat: row.karat,
+      condition: row.item_condition,
+      defects: row.defects,
+      status: row.status,
+      location: row.location,
       createdAt: row.created_at,
-      ticketNumber: row.ticket_number,
+      transactionNumber: row.transaction_number,
       principalAmount: row.principal_amount ? parseFloat(row.principal_amount) : null,
-      ticketStatus: row.ticket_status,
+      transactionStatus: row.transaction_status,
       pawnerName: row.first_name && row.last_name ? `${row.first_name} ${row.last_name}` : null,
-      pawnerContact: row.contact_number
+      pawnerContact: row.mobile_number
     }));
     
     console.log(`✅ Found ${items.length} items`);

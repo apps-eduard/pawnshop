@@ -212,7 +212,7 @@ export class Appraisal implements OnInit, OnDestroy, AfterViewInit {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response: ApiResponse<any[]>) => {
-          this.categoryDescriptions = response.data?.map(desc => desc.description) || [];
+          this.categoryDescriptions = response.data?.map(desc => desc.name) || [];
           console.log(`Category descriptions loaded for category ${categoryId}:`, this.categoryDescriptions.length);
           this.isLoadingDescriptions = false;
         },

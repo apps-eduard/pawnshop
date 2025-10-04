@@ -596,7 +596,6 @@ router.get('/transaction-config', async (req, res) => {
       includeMonth: true,
       includeDay: true,
       sequenceDigits: 2,
-      branchCodePrefix: true,
       separator: '-'
     };
     
@@ -630,7 +629,6 @@ router.put('/transaction-config', async (req, res) => {
       includeMonth,
       includeDay,
       sequenceDigits,
-      branchCodePrefix,
       separator
     } = req.body;
     
@@ -648,7 +646,6 @@ router.put('/transaction-config', async (req, res) => {
       includeMonth: !!includeMonth,
       includeDay: !!includeDay,
       sequenceDigits: parseInt(sequenceDigits),
-      branchCodePrefix: !!branchCodePrefix,
       separator: separator || '-'
     };
     

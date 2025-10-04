@@ -14,10 +14,21 @@ router.get('/', authenticateToken, async (req, res) => {
       ORDER BY config_key
     `);
 
+    // Convert config array to object
+    const config = {};
+    configResult.rows.forEach(row => {
+      config[row.config_key] = row.config_value;
+    });
+
+    // If no current_branch_id is set, default to branch 1
+    const currentBranchId = config.current_branch_id || '1';
+    
     // Get current branch details
     const branchResult = await query(`
-      SELECT * FROM current_branch_info
-    `);
+      SELECT id, name, code, address, phone, email, manager_name, is_active 
+      FROM branches 
+      WHERE id = $1
+    `, [currentBranchId]);
 
     // Get all available branches for selection
     const branchesResult = await query(`
@@ -26,12 +37,6 @@ router.get('/', authenticateToken, async (req, res) => {
       WHERE is_active = true 
       ORDER BY name
     `);
-
-    // Convert config array to object
-    const config = {};
-    configResult.rows.forEach(row => {
-      config[row.config_key] = row.config_value;
-    });
 
     res.json({
       success: true,
@@ -47,6 +52,48 @@ router.get('/', authenticateToken, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch branch configuration',
+      error: error.message
+    });
+  }
+});
+
+// GET /api/branch-config/current - Get current branch info only
+router.get('/current', authenticateToken, async (req, res) => {
+  try {
+    // Get current branch ID from config
+    const configResult = await query(`
+      SELECT config_value 
+      FROM system_config 
+      WHERE config_key = 'current_branch_id'
+    `);
+
+    // If no current_branch_id is set, default to branch 1
+    const currentBranchId = configResult.rows[0]?.config_value || '1';
+    
+    // Get current branch details
+    const branchResult = await query(`
+      SELECT id, name, code, address, phone, email, manager_name, is_active 
+      FROM branches 
+      WHERE id = $1
+    `, [currentBranchId]);
+
+    if (branchResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Current branch not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: branchResult.rows[0]
+    });
+
+  } catch (error) {
+    console.error('Error fetching current branch:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch current branch',
       error: error.message
     });
   }

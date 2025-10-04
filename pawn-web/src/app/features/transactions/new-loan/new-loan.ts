@@ -474,7 +474,7 @@ export class NewLoan implements OnInit, OnDestroy {
       next: (response) => {
         this.isLoadingDescriptions = false;
         if (response.success && response.data) {
-          this.categoryDescriptions = response.data.map(desc => desc.description);
+          this.categoryDescriptions = response.data.map(desc => desc.name);
         } else {
           this.categoryDescriptions = [];
           this.toastService.showError('Error', 'Failed to load category descriptions');

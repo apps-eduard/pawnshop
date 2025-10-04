@@ -1,6 +1,7 @@
 const express = require('express');
 const { pool } = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
+const { generateTicketNumber } = require('../utils/transactionUtils');
 
 const router = express.Router();
 
@@ -383,25 +384,10 @@ router.post('/new-loan', async (req, res) => {
         console.log(`✅ Created new pawner: ${pawnerId}`);
       }
       
-      // 2. Generate ticket number
-      const year = new Date().getFullYear();
+      // 2. Generate ticket number using configuration
+      const branchId = req.user.branch_id || 1;
       
-      // Get or create sequence for this year  
-      await client.query(`
-        INSERT INTO transaction_sequences (year, next_number) 
-        VALUES ($1, 1) 
-        ON CONFLICT (year) DO NOTHING
-      `, [year]);
-      
-      // Get next ticket number
-      const sequenceResult = await client.query(`
-        UPDATE transaction_sequences 
-        SET next_number = next_number + 1 
-        WHERE year = $1 
-        RETURNING next_number - 1 as current_number
-      `, [year]);
-      
-      const ticketNumber = `PT${year}-${String(sequenceResult.rows[0].current_number).padStart(6, '0')}`;
+      const ticketNumber = await generateTicketNumber(branchId);
       
       // 3. Calculate dates
       const txnDate = transactionDate ? new Date(transactionDate) : new Date();
@@ -824,22 +810,9 @@ router.post('/additional-loan', async (req, res) => {
       const originalTicket = ticketResult.rows[0];
       
       // 2. Generate new ticket number for additional loan
-      const year = new Date().getFullYear();
+      const branchId = originalTicket.branch_id;
       
-      await client.query(`
-        INSERT INTO transaction_sequences (year, next_number) 
-        VALUES ($1, 1) 
-        ON CONFLICT (year) DO NOTHING
-      `, [year]);
-      
-      const sequenceResult = await client.query(`
-        UPDATE transaction_sequences 
-        SET next_number = next_number + 1 
-        WHERE year = $1 
-        RETURNING next_number - 1 as current_number
-      `, [year]);
-      
-      const newTicketNumber = `PT${year}-${String(sequenceResult.rows[0].current_number).padStart(6, '0')}`;
+      const newTicketNumber = await generateTicketNumber(branchId);
       
       // 3. Calculate new amounts
       const addAmount = parseFloat(additionalAmount);

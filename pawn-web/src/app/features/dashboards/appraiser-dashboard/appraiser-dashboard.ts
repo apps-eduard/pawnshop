@@ -300,7 +300,7 @@ export class AppraiserDashboard implements OnInit {
           if (category && category.descriptions && category.descriptions.length > 0) {
             // Update the category descriptions
             const mappedDescriptions = category.descriptions.map((desc: any) =>
-              ({ description: desc.description }));
+              ({ description: desc.name }));
 
             this.categoryDescriptions[categoryName] = mappedDescriptions;
 
@@ -489,7 +489,7 @@ export class AppraiserDashboard implements OnInit {
           this.categoryDescriptions = {};
           response.data.forEach(cat => {
             if (cat.descriptions && cat.descriptions.length > 0) {
-              this.categoryDescriptions[cat.name] = cat.descriptions.map(desc => ({ description: desc.description }));
+              this.categoryDescriptions[cat.name] = cat.descriptions.map(desc => ({ description: desc.name }));
             } else {
               this.categoryDescriptions[cat.name] = [];
             }

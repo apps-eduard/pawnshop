@@ -134,9 +134,9 @@ router.post('/:categoryId/descriptions', authenticateToken, async (req, res) => 
     // Insert new description
     const result = await pool.query(`
       INSERT INTO descriptions (category_id, name, notes, is_active)
-      VALUES ($1, $2, $2, true)
+      VALUES ($1, $2::varchar, $3::text, true)
       RETURNING *
-    `, [categoryId, description.trim()]);
+    `, [categoryId, description.trim(), description.trim()]);
 
     console.log('✅ [Categories API] Category description created:', result.rows[0]);
 

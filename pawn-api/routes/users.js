@@ -29,21 +29,18 @@ router.get('/', requireAdmin, async (req, res) => {
     console.log(`👥 [${new Date().toISOString()}] Admin fetching all users - User: ${req.user.username}`);
     
     const result = await pool.query(`
-      SELECT u.id, u.username, u.email, u.first_name, u.last_name, u.role, 
-             u.is_active, u.created_at,
-             e.position, e.contact_number, e.city_id, e.barangay_id, e.address,
-             b.name as branch_name,
-             c.name as city_name, br.name as barangay_name
-      FROM users u
-      LEFT JOIN employees e ON u.id = e.user_id
-      LEFT JOIN branches b ON u.branch_id = b.id
-      LEFT JOIN cities c ON e.city_id = c.id
-      LEFT JOIN barangays br ON e.barangay_id = br.id
-      ORDER BY u.created_at DESC
+      SELECT e.id, e.user_id, e.username, e.email, e.first_name, e.last_name, e.role, 
+             e.is_active, e.created_at, e.updated_at,
+             e.position, e.contact_number, e.address,
+             b.name as branch_name
+      FROM employees e
+      LEFT JOIN branches b ON e.branch_id = b.id
+      ORDER BY e.created_at DESC
     `);
     
     const users = result.rows.map(row => ({
       id: row.id,
+      userId: row.user_id,
       username: row.username,
       email: row.email,
       firstName: row.first_name,
@@ -52,13 +49,10 @@ router.get('/', requireAdmin, async (req, res) => {
       isActive: row.is_active,
       position: row.position,
       contactNumber: row.contact_number,
-      cityId: row.city_id,
-      barangayId: row.barangay_id,
       address: row.address,
       branchName: row.branch_name,
-      cityName: row.city_name,
-      barangayName: row.barangay_name,
-      createdAt: row.created_at
+      createdAt: row.created_at,
+      updatedAt: row.updated_at
     }));
     
     console.log(`✅ Found ${users.length} users`);
@@ -78,37 +72,34 @@ router.get('/', requireAdmin, async (req, res) => {
   }
 });
 
-// Get user by ID (Admin only)
+// Get employee by ID (Admin only)
 router.get('/:id', requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     
-    console.log(`👤 [${new Date().toISOString()}] Admin fetching user ${id} - User: ${req.user.username}`);
+    console.log(`👤 [${new Date().toISOString()}] Admin fetching employee ${id} - User: ${req.user.username}`);
     
     const result = await pool.query(`
-      SELECT u.id, u.username, u.email, u.first_name, u.last_name, u.role, 
-             u.is_active, u.created_at,
-             e.position, e.contact_number, e.city_id, e.barangay_id, e.address,
-             b.name as branch_name,
-             c.name as city_name, br.name as barangay_name
-      FROM users u
-      LEFT JOIN employees e ON u.id = e.user_id
-      LEFT JOIN branches b ON u.branch_id = b.id
-      LEFT JOIN cities c ON e.city_id = c.id
-      LEFT JOIN barangays br ON e.barangay_id = br.id
-      WHERE u.id = $1
+      SELECT e.id, e.user_id, e.username, e.email, e.first_name, e.last_name, e.role, 
+             e.is_active, e.created_at, e.updated_at,
+             e.position, e.contact_number, e.address,
+             b.name as branch_name
+      FROM employees e
+      LEFT JOIN branches b ON e.branch_id = b.id
+      WHERE e.id = $1
     `, [id]);
     
     if (result.rows.length === 0) {
       return res.status(404).json({
         success: false,
-        message: 'User not found'
+        message: 'Employee not found'
       });
     }
     
     const row = result.rows[0];
-    const user = {
+    const employee = {
       id: row.id,
+      userId: row.user_id,
       username: row.username,
       email: row.email,
       firstName: row.first_name,
@@ -117,31 +108,28 @@ router.get('/:id', requireAdmin, async (req, res) => {
       isActive: row.is_active,
       position: row.position,
       contactNumber: row.contact_number,
-      cityId: row.city_id,
-      barangayId: row.barangay_id,
       address: row.address,
       branchName: row.branch_name,
-      cityName: row.city_name,
-      barangayName: row.barangay_name,
-      createdAt: row.created_at
+      createdAt: row.created_at,
+      updatedAt: row.updated_at
     };
     
     res.json({
       success: true,
-      message: 'User retrieved successfully',
-      data: user
+      message: 'Employee retrieved successfully',
+      data: employee
     });
     
   } catch (error) {
-    console.error('❌ Error fetching user:', error);
+    console.error('❌ Error fetching employee:', error);
     res.status(500).json({
       success: false,
-      message: 'Error fetching user'
+      message: 'Error fetching employee'
     });
   }
 });
 
-// Create new user (Admin only)
+// Create new employee (Admin only)
 router.post('/', requireAdmin, async (req, res) => {
   const client = await pool.connect();
   
@@ -155,13 +143,12 @@ router.post('/', requireAdmin, async (req, res) => {
       password,
       position,
       contactNumber,
-      cityId,
-      barangayId,
       address,
+      branchId = 1, // Default to branch 1
       isActive = true
     } = req.body;
     
-    console.log(`➕ [${new Date().toISOString()}] Admin creating user: ${username} - Admin: ${req.user.username}`);
+    console.log(`➕ [${new Date().toISOString()}] Admin creating employee: ${username} - Admin: ${req.user.username}`);
     
     // Validate required fields
     if (!username || !email || !firstName || !lastName || !role || !password) {
@@ -183,12 +170,12 @@ router.post('/', requireAdmin, async (req, res) => {
     await client.query('BEGIN');
     
     // Check if username or email already exists
-    const existingUser = await client.query(
-      'SELECT id FROM users WHERE username = $1 OR email = $2',
+    const existingEmployee = await client.query(
+      'SELECT id FROM employees WHERE username = $1 OR email = $2',
       [username, email]
     );
     
-    if (existingUser.rows.length > 0) {
+    if (existingEmployee.rows.length > 0) {
       await client.query('ROLLBACK');
       return res.status(400).json({
         success: false,
@@ -200,63 +187,55 @@ router.post('/', requireAdmin, async (req, res) => {
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(password, saltRounds);
     
-    // Create user
-    const userResult = await client.query(`
-      INSERT INTO users (username, email, first_name, last_name, role, password_hash, is_active)
-      VALUES ($1, $2, $3, $4, $5, $6, $7)
-      RETURNING id, username, email, first_name, last_name, role, is_active, created_at
-    `, [username, email, firstName, lastName, role, hashedPassword, isActive]);
+    // Create employee (single table approach)
+    const employeeResult = await client.query(`
+      INSERT INTO employees (username, email, first_name, last_name, role, password_hash, position, contact_number, address, branch_id, is_active)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      RETURNING id, user_id, username, email, first_name, last_name, role, position, contact_number, address, branch_id, is_active, created_at
+    `, [username, email, firstName, lastName, role, hashedPassword, position, contactNumber, address, branchId, isActive]);
     
-    const newUser = userResult.rows[0];
-    
-    // Create employee record if additional info provided
-    if (position || contactNumber || address || cityId || barangayId) {
-      await client.query(`
-        INSERT INTO employees (user_id, position, contact_number, city_id, barangay_id, address)
-        VALUES ($1, $2, $3, $4, $5, $6)
-      `, [newUser.id, position, contactNumber, cityId, barangayId, address]);
-    }
+    const newEmployee = employeeResult.rows[0];
     
     await client.query('COMMIT');
     
-    // Return user data (without password)
-    const userData = {
-      id: newUser.id,
-      username: newUser.username,
-      email: newUser.email,
-      firstName: newUser.first_name,
-      lastName: newUser.last_name,
-      role: newUser.role,
-      isActive: newUser.is_active,
-      position: position,
-      contactNumber: contactNumber,
-      cityId: cityId,
-      barangayId: barangayId,
-      address: address,
-      createdAt: newUser.created_at
+    // Return employee data (without password)
+    const employeeData = {
+      id: newEmployee.id,
+      userId: newEmployee.user_id,
+      username: newEmployee.username,
+      email: newEmployee.email,
+      firstName: newEmployee.first_name,
+      lastName: newEmployee.last_name,
+      role: newEmployee.role,
+      isActive: newEmployee.is_active,
+      position: newEmployee.position,
+      contactNumber: newEmployee.contact_number,
+      address: newEmployee.address,
+      branchId: newEmployee.branch_id,
+      createdAt: newEmployee.created_at
     };
     
-    console.log(`✅ User created successfully: ${username} (ID: ${newUser.id})`);
+    console.log(`✅ Employee created successfully: ${username} (ID: ${newEmployee.id})`);
     
     res.status(201).json({
       success: true,
-      message: 'User created successfully',
-      data: userData
+      message: 'Employee created successfully',
+      data: employeeData
     });
     
   } catch (error) {
     await client.query('ROLLBACK');
-    console.error('❌ Error creating user:', error);
+    console.error('❌ Error creating employee:', error);
     res.status(500).json({
       success: false,
-      message: 'Error creating user'
+      message: 'Error creating employee'
     });
   } finally {
     client.release();
   }
 });
 
-// Update user (Admin only)
+// Update employee (Admin only)
 router.put('/:id', requireAdmin, async (req, res) => {
   const client = await pool.connect();
   
@@ -270,30 +249,29 @@ router.put('/:id', requireAdmin, async (req, res) => {
       role,
       position,
       contactNumber,
-      cityId,
-      barangayId,
       address,
+      branchId,
       isActive
     } = req.body;
     
-    console.log(`📝 [${new Date().toISOString()}] Admin updating user ${id} - Admin: ${req.user.username}`);
+    console.log(`📝 [${new Date().toISOString()}] Admin updating employee ${id} - Admin: ${req.user.username}`);
     
     await client.query('BEGIN');
     
-    // Check if user exists
-    const existingUser = await client.query('SELECT id FROM users WHERE id = $1', [id]);
-    if (existingUser.rows.length === 0) {
+    // Check if employee exists
+    const existingEmployee = await client.query('SELECT id FROM employees WHERE id = $1', [id]);
+    if (existingEmployee.rows.length === 0) {
       await client.query('ROLLBACK');
       return res.status(404).json({
         success: false,
-        message: 'User not found'
+        message: 'Employee not found'
       });
     }
     
-    // Check for username/email conflicts (excluding current user)
+    // Check for username/email conflicts (excluding current employee)
     if (username || email) {
       const conflicts = await client.query(
-        'SELECT id FROM users WHERE (username = $1 OR email = $2) AND id != $3',
+        'SELECT id FROM employees WHERE (username = $1 OR email = $2) AND id != $3',
         [username, email, id]
       );
       
@@ -306,124 +284,95 @@ router.put('/:id', requireAdmin, async (req, res) => {
       }
     }
     
-    // Build dynamic update query for users table
-    const userFields = [];
-    const userValues = [];
+    // Build dynamic update query for employees table
+    const employeeFields = [];
+    const employeeValues = [];
     let paramCount = 1;
     
     if (username !== undefined) {
-      userFields.push(`username = $${paramCount++}`);
-      userValues.push(username);
+      employeeFields.push(`username = $${paramCount++}`);
+      employeeValues.push(username);
     }
     if (email !== undefined) {
-      userFields.push(`email = $${paramCount++}`);
-      userValues.push(email);
+      employeeFields.push(`email = $${paramCount++}`);
+      employeeValues.push(email);
     }
     if (firstName !== undefined) {
-      userFields.push(`first_name = $${paramCount++}`);
-      userValues.push(firstName);
+      employeeFields.push(`first_name = $${paramCount++}`);
+      employeeValues.push(firstName);
     }
     if (lastName !== undefined) {
-      userFields.push(`last_name = $${paramCount++}`);
-      userValues.push(lastName);
+      employeeFields.push(`last_name = $${paramCount++}`);
+      employeeValues.push(lastName);
     }
     if (role !== undefined) {
-      userFields.push(`role = $${paramCount++}`);
-      userValues.push(role);
+      employeeFields.push(`role = $${paramCount++}`);
+      employeeValues.push(role);
+    }
+    if (position !== undefined) {
+      employeeFields.push(`position = $${paramCount++}`);
+      employeeValues.push(position);
+    }
+    if (contactNumber !== undefined) {
+      employeeFields.push(`contact_number = $${paramCount++}`);
+      employeeValues.push(contactNumber);
+    }
+    if (address !== undefined) {
+      employeeFields.push(`address = $${paramCount++}`);
+      employeeValues.push(address);
+    }
+    if (branchId !== undefined) {
+      employeeFields.push(`branch_id = $${paramCount++}`);
+      employeeValues.push(branchId);
     }
     if (isActive !== undefined) {
-      userFields.push(`is_active = $${paramCount++}`);
-      userValues.push(isActive);
+      employeeFields.push(`is_active = $${paramCount++}`);
+      employeeValues.push(isActive);
     }
     
-    // Update users table if there are fields to update
-    if (userFields.length > 0) {
-      userValues.push(id);
-      const userQuery = `UPDATE users SET ${userFields.join(', ')} WHERE id = $${paramCount}`;
-      await client.query(userQuery, userValues);
-    }
-    
-    // Update or insert employee record
-    const employeeCheck = await client.query('SELECT user_id FROM employees WHERE user_id = $1', [id]);
-    
-    if (employeeCheck.rows.length > 0) {
-      // Update existing employee record
-      const empFields = [];
-      const empValues = [];
-      let empParamCount = 1;
-      
-      if (position !== undefined) {
-        empFields.push(`position = $${empParamCount++}`);
-        empValues.push(position);
-      }
-      if (contactNumber !== undefined) {
-        empFields.push(`contact_number = $${empParamCount++}`);
-        empValues.push(contactNumber);
-      }
-      if (cityId !== undefined) {
-        empFields.push(`city_id = $${empParamCount++}`);
-        empValues.push(cityId);
-      }
-      if (barangayId !== undefined) {
-        empFields.push(`barangay_id = $${empParamCount++}`);
-        empValues.push(barangayId);
-      }
-      if (address !== undefined) {
-        empFields.push(`address = $${empParamCount++}`);
-        empValues.push(address);
-      }
-      
-      if (empFields.length > 0) {
-        empValues.push(id);
-        const empQuery = `UPDATE employees SET ${empFields.join(', ')} WHERE user_id = $${empParamCount}`;
-        await client.query(empQuery, empValues);
-      }
-    } else {
-      // Create new employee record if any employee data provided
-      if (position || contactNumber || cityId || barangayId || address) {
-        await client.query(`
-          INSERT INTO employees (user_id, position, contact_number, city_id, barangay_id, address)
-          VALUES ($1, $2, $3, $4, $5, $6)
-        `, [id, position, contactNumber, cityId, barangayId, address]);
-      }
+    // Update employees table if there are fields to update
+    if (employeeFields.length > 0) {
+      employeeValues.push(id);
+      const employeeQuery = `UPDATE employees SET ${employeeFields.join(', ')} WHERE id = $${paramCount}`;
+      await client.query(employeeQuery, employeeValues);
     }
     
     await client.query('COMMIT');
     
-    console.log(`✅ User updated successfully: ${id}`);
+    console.log(`✅ Employee updated successfully: ${id}`);
     
     res.json({
       success: true,
-      message: 'User updated successfully'
+      message: 'Employee updated successfully'
     });
     
   } catch (error) {
     await client.query('ROLLBACK');
-    console.error('❌ Error updating user:', error);
+    console.error('❌ Error updating employee:', error);
     res.status(500).json({
       success: false,
-      message: 'Error updating user'
+      message: 'Error updating employee'
     });
   } finally {
     client.release();
   }
 });
 
-// Delete user (Admin only)
+// Delete employee (Admin only)
 router.delete('/:id', requireAdmin, async (req, res) => {
   const client = await pool.connect();
   
   try {
     const { id } = req.params;
     
-    console.log(`🗑️ [${new Date().toISOString()}] Admin deleting user ${id} - Admin: ${req.user.username}`);
+    console.log(`🗑️ [${new Date().toISOString()}] Admin deleting employee ${id} - Admin: ${req.user.username}`);
     
-    // Check if user exists
-    const existingUser = await client.query('SELECT username FROM users WHERE id = $1', [id]);
-    if (existingUser.rows.length === 0) {
+    // Check if employee exists
+    const existingEmployee = await client.query('SELECT username FROM employees WHERE id = $1', [id]);
+    if (existingEmployee.rows.length === 0) {
       return res.status(404).json({
         success: false,
-        message: 'User not found'
+        message: 'Employee not found'
       });
     }
     
@@ -437,60 +386,57 @@ router.delete('/:id', requireAdmin, async (req, res) => {
     
     await client.query('BEGIN');
     
-    // Delete employee record first (if exists)
-    await client.query('DELETE FROM employees WHERE user_id = $1', [id]);
-    
-    // Delete user
-    await client.query('DELETE FROM users WHERE id = $1', [id]);
+    // Delete employee
+    await client.query('DELETE FROM employees WHERE id = $1', [id]);
     
     await client.query('COMMIT');
     
-    console.log(`✅ User deleted successfully: ${existingUser.rows[0].username} (ID: ${id})`);
+    console.log(`✅ Employee deleted successfully: ${existingEmployee.rows[0].username} (ID: ${id})`);
     
     res.json({
       success: true,
-      message: 'User deleted successfully'
+      message: 'Employee deleted successfully'
     });
     
   } catch (error) {
     await client.query('ROLLBACK');
-    console.error('❌ Error deleting user:', error);
+    console.error('❌ Error deleting employee:', error);
     res.status(500).json({
       success: false,
-      message: 'Error deleting user'
+      message: 'Error deleting employee'
     });
   } finally {
     client.release();
   }
 });
 
-// Reset user password (Admin only)
+// Reset employee password (Admin only)
 router.post('/:id/reset-password', requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     
-    console.log(`🔑 [${new Date().toISOString()}] Admin resetting password for user ${id} - Admin: ${req.user.username}`);
+    console.log(`🔑 [${new Date().toISOString()}] Admin resetting password for employee ${id} - Admin: ${req.user.username}`);
     
-    // Check if user exists
-    const existingUser = await pool.query('SELECT username FROM users WHERE id = $1', [id]);
-    if (existingUser.rows.length === 0) {
+    // Check if employee exists
+    const existingEmployee = await pool.query('SELECT username FROM employees WHERE id = $1', [id]);
+    if (existingEmployee.rows.length === 0) {
       return res.status(404).json({
         success: false,
-        message: 'User not found'
+        message: 'Employee not found'
       });
     }
     
     // Generate new password (username + 123)
-    const newPassword = existingUser.rows[0].username + '123';
+    const newPassword = existingEmployee.rows[0].username + '123';
     
     // Hash the new password
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
     
     // Update password in database
-    await pool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [hashedPassword, id]);
+    await pool.query('UPDATE employees SET password_hash = $1 WHERE id = $2', [hashedPassword, id]);
     
-    console.log(`✅ Password reset for user: ${existingUser.rows[0].username}`);
+    console.log(`✅ Password reset for employee: ${existingEmployee.rows[0].username}`);
     
     res.json({
       success: true,
@@ -509,13 +455,13 @@ router.post('/:id/reset-password', requireAdmin, async (req, res) => {
   }
 });
 
-// Change user password (Users can change their own, Admins can change any)
+// Change employee password (Employees can change their own, Admins can change any)
 router.post('/:id/change-password', async (req, res) => {
   try {
     const { id } = req.params;
     const { oldPassword, newPassword } = req.body;
     
-    // Users can only change their own password unless they're admin
+    // Employees can only change their own password unless they're admin
     if (parseInt(id) !== req.user.id && req.user.role !== 'administrator') {
       return res.status(403).json({
         success: false,
@@ -523,20 +469,20 @@ router.post('/:id/change-password', async (req, res) => {
       });
     }
     
-    console.log(`🔐 [${new Date().toISOString()}] Password change request for user ${id} - User: ${req.user.username}`);
+    console.log(`🔐 [${new Date().toISOString()}] Password change request for employee ${id} - User: ${req.user.username}`);
     
     // Get current password hash
-    const userResult = await pool.query('SELECT password_hash FROM users WHERE id = $1', [id]);
-    if (userResult.rows.length === 0) {
+    const employeeResult = await pool.query('SELECT password_hash FROM employees WHERE id = $1', [id]);
+    if (employeeResult.rows.length === 0) {
       return res.status(404).json({
         success: false,
-        message: 'User not found'
+        message: 'Employee not found'
       });
     }
     
-    // Verify old password (skip for admins changing other users' passwords)
+    // Verify old password (skip for admins changing other employees' passwords)
     if (parseInt(id) === req.user.id) {
-      const isValidPassword = await bcrypt.compare(oldPassword, userResult.rows[0].password_hash);
+      const isValidPassword = await bcrypt.compare(oldPassword, employeeResult.rows[0].password_hash);
       if (!isValidPassword) {
         return res.status(400).json({
           success: false,
@@ -550,9 +496,9 @@ router.post('/:id/change-password', async (req, res) => {
     const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
     
     // Update password
-    await pool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [hashedPassword, id]);
+    await pool.query('UPDATE employees SET password_hash = $1 WHERE id = $2', [hashedPassword, id]);
     
-    console.log(`✅ Password changed successfully for user ${id}`);
+    console.log(`✅ Password changed successfully for employee ${id}`);
     
     res.json({
       success: true,

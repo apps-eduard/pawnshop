@@ -27,7 +27,7 @@
       <!-- System Configuration Tab -->
       <div *ngIf="isActiveTab('system-config')" class="p-4">
         <div class="max-w-4xl mx-auto">
-          
+
           <!-- Current Branch Information -->
           <div *ngIf="branchConfig?.currentBranch" class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6 mb-6">
             <div class="flex items-start">
@@ -89,18 +89,7 @@
                 </div>
               </div>
 
-              <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div class="flex items-center">
-                  <input
-                    type="checkbox"
-                    formControlName="branchCodePrefix"
-                    id="branch_code_prefix"
-                    class="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded">
-                  <label for="branch_code_prefix" class="ml-2 block text-sm text-gray-700 dark:text-gray-300">
-                    Include Branch Code
-                  </label>
-                </div>
-
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div class="flex items-center">
                   <input
                     type="checkbox"
@@ -151,25 +140,6 @@
                 </p>
               </div>
 
-              <!-- Current Branch Code Display -->
-              <div *ngIf="branchConfig?.currentBranch?.code" class="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                <div class="flex items-center">
-                  <div class="flex-shrink-0">
-                    <svg class="h-5 w-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
-                    </svg>
-                  </div>
-                  <div class="ml-3">
-                    <p class="text-sm font-medium text-blue-900 dark:text-blue-100">
-                      Current Branch Code: <span class="font-mono">{{ branchConfig?.currentBranch?.code }}</span>
-                    </p>
-                    <p class="text-xs text-blue-700 dark:text-blue-300">
-                      This code will be used in transaction numbers when "Include Branch Code" is enabled
-                    </p>
-                  </div>
-                </div>
-              </div>
-
               <!-- Preview Section -->
               <div class="p-4 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg">
                 <h4 class="text-sm font-medium text-gray-900 dark:text-white mb-2">
@@ -195,7 +165,7 @@
           </div>
 
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            
+
             <!-- Branch Configuration Form -->
             <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
               <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">
@@ -288,8 +258,8 @@
                 <div class="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700">
                   <span class="text-sm text-gray-600 dark:text-gray-400">Last Sync:</span>
                   <span class="text-sm text-gray-900 dark:text-white">
-                    {{ branchConfig?.config?.last_sync_timestamp === '1970-01-01 00:00:00' 
-                       ? 'Never synced' 
+                    {{ branchConfig?.config?.last_sync_timestamp === '1970-01-01 00:00:00'
+                       ? 'Never synced'
                        : formatDate(branchConfig?.config?.last_sync_timestamp || '') }}
                   </span>
                 </div>
