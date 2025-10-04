@@ -1,5 +1,17 @@
 # 🔐 PAWNSHOP LOGIN CREDENTIALS
 
+## 🛠️ **PASSWORD RESET TOOL**
+
+If you ever need to reset user passwords to match the frontend demo accounts:
+
+**Run:** `reset_user_password.bat`
+
+This tool will:
+- ✅ Update all user passwords to demo account passwords
+- ✅ Verify the passwords work correctly 
+- ✅ Show you the updated credentials table
+- ✅ Work even if some users don't exist
+
 ## ✅ **WORKING USER ACCOUNTS**
 
 | Username      | Password        | Role          | Purpose                    |

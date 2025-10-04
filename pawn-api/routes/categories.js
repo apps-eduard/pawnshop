@@ -63,11 +63,11 @@ router.get('/:categoryId/descriptions', authenticateToken, async (req, res) => {
     console.log(`📊 [Categories API] Getting descriptions for category ${categoryId}`);
     
     const result = await pool.query(`
-      SELECT cd.*, c.name as category_name
-      FROM category_descriptions cd
-      JOIN categories c ON cd.category_id = c.id
-      WHERE cd.category_id = $1 AND cd.is_active = true
-      ORDER BY cd.description
+      SELECT d.*, c.name as category_name
+      FROM descriptions d
+      JOIN categories c ON d.category_id = c.id
+      WHERE d.category_id = $1 AND d.is_active = true
+      ORDER BY d.name
     `, [categoryId]);
 
     res.json({
@@ -120,7 +120,7 @@ router.post('/:categoryId/descriptions', authenticateToken, async (req, res) => 
 
     // Check for duplicate description within the same category (case-insensitive)
     const duplicateCheck = await pool.query(
-      'SELECT id FROM category_descriptions WHERE LOWER(description) = LOWER($1) AND category_id = $2',
+      'SELECT id FROM descriptions WHERE LOWER(name) = LOWER($1) AND category_id = $2',
       [description.trim(), categoryId]
     );
     
@@ -131,10 +131,10 @@ router.post('/:categoryId/descriptions', authenticateToken, async (req, res) => 
       });
     }
 
-    // Insert new category description
+    // Insert new description
     const result = await pool.query(`
-      INSERT INTO category_descriptions (category_id, description)
-      VALUES ($1, $2)
+      INSERT INTO descriptions (category_id, name, notes, is_active)
+      VALUES ($1, $2, $2, true)
       RETURNING *
     `, [categoryId, description.trim()]);
 
@@ -150,7 +150,7 @@ router.post('/:categoryId/descriptions', authenticateToken, async (req, res) => 
     console.error('❌ [Categories API] Error creating category description:', error);
     
     // Handle database constraint errors as fallback
-    if (error.constraint === 'category_descriptions_category_id_description_key') {
+    if (error.constraint && error.constraint.includes('descriptions')) {
       return res.status(409).json({
         success: false,
         message: 'This description already exists for this category'
@@ -178,12 +178,12 @@ router.get('/with-descriptions', authenticateToken, async (req, res) => {
         c.notes,
         json_agg(
           json_build_object(
-            'id', cd.id,
-            'description', cd.description
-          ) ORDER BY cd.description
-        ) FILTER (WHERE cd.id IS NOT NULL) as descriptions
+            'id', d.id,
+            'description', d.name
+          ) ORDER BY d.name
+        ) FILTER (WHERE d.id IS NOT NULL) as descriptions
       FROM categories c
-      LEFT JOIN category_descriptions cd ON c.id = cd.category_id AND cd.is_active = true
+      LEFT JOIN descriptions d ON c.id = d.category_id AND d.is_active = true
       WHERE c.is_active = true
       GROUP BY c.id, c.name, c.interest_rate, c.notes
       ORDER BY c.name

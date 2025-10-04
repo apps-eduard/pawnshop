@@ -447,20 +447,35 @@ router.post('/new-loan', async (req, res) => {
       const ticket = ticketResult.rows[0];
       console.log(`✅ Created pawn ticket: ${ticketNumber}`);
       
-      // 6. Insert pawn items
+      // 6. Insert pawn items  
       for (const item of items) {
+        // Get category_id from category name
+        const categoryResult = await client.query('SELECT id FROM categories WHERE name = $1', [item.category]);
+        const categoryId = categoryResult.rows[0]?.id || 1; // Default to category 1 if not found
+        
+        // Get description_id from categoryDescription if it matches a description name
+        let descriptionId = null;
+        if (item.categoryDescription) {
+          const descResult = await client.query(
+            'SELECT id FROM descriptions WHERE name = $1 AND category_id = $2', 
+            [item.categoryDescription, categoryId]
+          );
+          descriptionId = descResult.rows[0]?.id || null;
+        }
+        
         await client.query(`
           INSERT INTO pawn_items (
-            ticket_id, item_type, category, category_description, description, appraisal_value, estimated_value
+            transaction_id, category_id, description_id, custom_description, 
+            appraised_value, loan_amount, status
           ) VALUES ($1, $2, $3, $4, $5, $6, $7)
         `, [
-          ticket.id,
-          item.category || 'General', // Use category as item_type
-          item.category,
-          item.categoryDescription,
-          item.description || '',
-          parseFloat(item.appraisalValue),
-          parseFloat(item.appraisalValue) // Use appraisal_value as estimated_value
+          ticket.id,                    // transaction_id (pawn ticket id)
+          categoryId,                   // category_id 
+          descriptionId,                // description_id (if found)
+          item.description || item.categoryDescription || '', // custom_description
+          parseFloat(item.appraisalValue), // appraised_value
+          parseFloat(item.appraisalValue), // loan_amount (same as appraised for now)
+          'pledged'                     // status
         ]);
       }
       console.log(`✅ Added ${items.length} items to ticket`);

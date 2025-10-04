@@ -1,0 +1,174 @@
+/* ================================================================= */
+/* 🎨 GLOBAL COMPACT SIZING SYSTEM - Goldwin Pawnshop               */
+/* ================================================================= */
+
+:root {
+  /* =========================
+     📏 COMPACT SIZE VARIABLES 
+     ========================= */
+  
+  /* Text Sizes - More Compact */
+  --text-compact-xs: 0.625rem;    /* 10px - smaller than text-xs (12px) */
+  --text-compact-sm: 0.6875rem;   /* 11px - smaller than text-sm (14px) */
+  --text-compact-base: 0.75rem;   /* 12px - smaller than text-base (16px) */
+  
+  /* Spacing - Tighter */
+  --spacing-compact-xs: 0.25rem;  /* 4px - tighter than default */
+  --spacing-compact-sm: 0.375rem; /* 6px - tighter than default */
+  --spacing-compact-md: 0.5rem;   /* 8px - tighter than default */
+  --spacing-compact-lg: 0.75rem;  /* 12px - tighter than default */
+  
+  /* Form Controls - Smaller */
+  --input-height-compact: 1.75rem;    /* 28px - smaller than default 40px */
+  --button-height-compact: 1.75rem;   /* 28px - smaller than default */
+  --select-height-compact: 1.75rem;   /* 28px - smaller than default */
+  
+  /* Container Padding - Tighter */
+  --container-padding-compact: 0.5rem;    /* 8px instead of 16px */
+  --card-padding-compact: 0.75rem;        /* 12px instead of 16px+ */
+  --section-gap-compact: 0.5rem;          /* 8px instead of 16px */
+}
+
+/* =========================
+   🎯 COMPACT UTILITY CLASSES 
+   ========================= */
+
+/* Text Compact Classes */
+.text-compact-xs { font-size: var(--text-compact-xs); }
+.text-compact-sm { font-size: var(--text-compact-sm); }
+.text-compact-base { font-size: var(--text-compact-base); }
+
+/* Spacing Compact Classes */
+.p-compact { padding: var(--spacing-compact-md); }
+.px-compact { padding-left: var(--spacing-compact-md); padding-right: var(--spacing-compact-md); }
+.py-compact { padding-top: var(--spacing-compact-sm); padding-bottom: var(--spacing-compact-sm); }
+
+.m-compact { margin: var(--spacing-compact-md); }
+.mx-compact { margin-left: var(--spacing-compact-md); margin-right: var(--spacing-compact-md); }
+.my-compact { margin-top: var(--spacing-compact-sm); margin-bottom: var(--spacing-compact-sm); }
+
+.gap-compact { gap: var(--spacing-compact-sm); }
+.space-y-compact > * + * { margin-top: var(--spacing-compact-sm); }
+
+/* Form Control Compact Classes */
+.input-compact {
+  height: var(--input-height-compact);
+  padding: var(--spacing-compact-xs) var(--spacing-compact-sm);
+  font-size: var(--text-compact-sm);
+  border-radius: 0.25rem;
+}
+
+.button-compact {
+  height: var(--button-height-compact);
+  padding: var(--spacing-compact-xs) var(--spacing-compact-md);
+  font-size: var(--text-compact-sm);
+  border-radius: 0.25rem;
+}
+
+.select-compact {
+  height: var(--select-height-compact);
+  padding: var(--spacing-compact-xs) var(--spacing-compact-sm);
+  font-size: var(--text-compact-sm);
+  border-radius: 0.25rem;
+}
+
+/* Container Compact Classes */
+.container-compact { padding: var(--container-padding-compact); }
+.card-compact { padding: var(--card-padding-compact); }
+
+/* =========================
+   📱 RESPONSIVE COMPACT CLASSES 
+   ========================= */
+
+/* Mobile - Even more compact */
+@media (max-width: 768px) {
+  :root {
+    --container-padding-compact: 0.25rem;  /* 4px on mobile */
+    --card-padding-compact: 0.5rem;        /* 8px on mobile */
+    --section-gap-compact: 0.25rem;        /* 4px on mobile */
+  }
+}
+
+/* =========================
+   🎨 COMPACT COMPONENT OVERRIDES 
+   ========================= */
+
+/* Global Compact Mode - Add this class to body or main container */
+.compact-mode {
+  /* Form elements become compact by default */
+  input, select, textarea {
+    @apply input-compact;
+  }
+  
+  button {
+    @apply button-compact;
+  }
+  
+  /* Cards and containers */
+  .card, .panel {
+    @apply card-compact;
+  }
+  
+  /* Text becomes more compact */
+  .text-sm { font-size: var(--text-compact-sm) !important; }
+  .text-xs { font-size: var(--text-compact-xs) !important; }
+  
+  /* Spacing becomes tighter */
+  .gap-2 { gap: var(--spacing-compact-xs) !important; }
+  .gap-3 { gap: var(--spacing-compact-sm) !important; }
+  .gap-4 { gap: var(--spacing-compact-md) !important; }
+  
+  .p-2 { padding: var(--spacing-compact-xs) !important; }
+  .p-3 { padding: var(--spacing-compact-sm) !important; }
+  .p-4 { padding: var(--spacing-compact-md) !important; }
+  
+  .px-2 { padding-left: var(--spacing-compact-xs) !important; padding-right: var(--spacing-compact-xs) !important; }
+  .px-3 { padding-left: var(--spacing-compact-sm) !important; padding-right: var(--spacing-compact-sm) !important; }
+  
+  .py-1\.5 { padding-top: var(--spacing-compact-xs) !important; padding-bottom: var(--spacing-compact-xs) !important; }
+  .py-2 { padding-top: var(--spacing-compact-xs) !important; padding-bottom: var(--spacing-compact-xs) !important; }
+  
+  .mb-2 { margin-bottom: var(--spacing-compact-xs) !important; }
+  .mb-3 { margin-bottom: var(--spacing-compact-sm) !important; }
+}
+
+/* =========================
+   🔧 COMPONENT-SPECIFIC COMPACT STYLES 
+   ========================= */
+
+/* New Loan Form Specific */
+.new-loan-compact {
+  .grid { gap: var(--spacing-compact-sm); }
+  
+  /* Headers more compact */
+  h2, h3, h4, h5 {
+    font-size: var(--text-compact-sm);
+    margin-bottom: var(--spacing-compact-xs);
+  }
+  
+  /* Form sections more compact */
+  .form-section {
+    padding: var(--spacing-compact-sm);
+    margin-bottom: var(--spacing-compact-sm);
+  }
+  
+  /* Labels more compact */
+  label {
+    font-size: var(--text-compact-xs);
+    margin-bottom: var(--spacing-compact-xs);
+  }
+}
+
+/* Dashboard Compact */
+.dashboard-compact {
+  .stat-card { padding: var(--spacing-compact-md); }
+  .widget { padding: var(--spacing-compact-sm); }
+}
+
+/* Table Compact */
+.table-compact {
+  td, th {
+    padding: var(--spacing-compact-xs) var(--spacing-compact-sm);
+    font-size: var(--text-compact-xs);
+  }
+}

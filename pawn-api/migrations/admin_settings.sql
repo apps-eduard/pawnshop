@@ -125,15 +125,15 @@ INSERT INTO branches (name, code, address, phone, email, manager_name) VALUES
     ('Branch 3', 'BR03', '789 Tertiary Road, Iloilo City, Philippines', '+63-33-555-1234', 'branch3@goldwin.ph', 'Pedro Garcia')
 ON CONFLICT (code) DO NOTHING;
 
--- Insert 6 default users with password = "password"
--- Note: In production, these should be changed immediately
+-- Insert 6 default users with demo passwords (admin123, manager123, etc.)
+-- Passwords match the frontend demo accounts for easy testing
 INSERT INTO employees (user_id, username, email, password_hash, first_name, last_name, role, branch_id, position, contact_number, address) VALUES
-    (1, 'admin', 'admin@pawnshop.com', '$2b$10$INgnGFt3y9jO2V4yr6IGIOL6gt4iNTW2SYV1z.vwsVuIl8r7fWjcq', 'System', 'Administrator', 'administrator', 1, 'System Administrator', '+1-555-1001', '1001 Admin St, Main Office'),
-    (2, 'cashier1', 'cashier1@pawnshop.com', '$2b$10$uY6K4vc3lqUBb.6wxArsmeLkhmh0Je5jWsdIHoJgld.8C7o8PUKEK', 'Maria', 'Cruz', 'cashier', 1, 'Cashier', '+1-555-1002', '1002 Cashier Ave, Branch Office'),
-    (3, 'manager1', 'manager1@pawnshop.com', '$2b$10$ihvUxBfqVM88nduds8CTGOKcQMZAu8Dsw5UvdG0pxsUunZ8i0.GSS', 'Juan', 'Dela Cruz', 'manager', 1, 'Branch Manager', '+1-555-1003', '1003 Manager Blvd, Main Branch'),
-    (4, 'auctioneer1', 'auctioneer1@pawnshop.com', '$2b$10$M/YL/z9kApcY5bYt6Ps8aObn/iNvU/TZyKoKZu0tz7WFwPDfoFblW', 'Pedro', 'Santos', 'auctioneer', 1, 'Auctioneer', '+1-555-1004', '1004 Auction St, Auction Center'),
-    (5, 'appraiser1', 'appraiser1@pawnshop.com', '$2b$10$EKh3SN6AYVuQS18Nns9XM.KWBAdxYoVy', 'Ana', 'Garcia', 'appraiser', 1, 'Item Appraiser', '+1-555-1005', '1005 Appraisal Ave, Assessment Office'),
-    (6, 'pawner1', 'pawner1@pawnshop.com', '$2b$10$uGfc6h4ZTwCK3GD4g9ONEuOnmKq.JdcoDmHAETyjM48chOgcWQIJ6', 'Customer', 'Sample', 'pawner', 1, 'Customer', '+1-555-1006', '1006 Customer St, City Center')
+    (1, 'admin', 'admin@pawnshop.com', '$2b$10$P08I7XkXBxGARC/Aw2xF..UCdwbL6mxbvIvWcPvB1onlgRffYgZn2', 'System', 'Administrator', 'administrator', 1, 'System Administrator', '+1-555-1001', '1001 Admin St, Main Office'),
+    (2, 'cashier1', 'cashier1@pawnshop.com', '$2b$10$oaQxGYqjppD4kuM5aj.CCupCVPTlZtwetP7NzjbAtWEhUb7h/3JGG', 'Maria', 'Cruz', 'cashier', 1, 'Cashier', '+1-555-1002', '1002 Cashier Ave, Branch Office'),
+    (3, 'manager1', 'manager1@pawnshop.com', '$2b$10$5mrA/OZvCz/AuL8EhOKruumGY/3dXlmeMKAGsgra5YeefOM8ei8aa', 'Juan', 'Dela Cruz', 'manager', 1, 'Branch Manager', '+1-555-1003', '1003 Manager Blvd, Main Branch'),
+    (4, 'auctioneer1', 'auctioneer1@pawnshop.com', '$2b$10$HC6VQyjN5uKTlyAXcXaS4OURphQ3O1Ovg3ZPZ4eTzlvI65XduUJfK', 'Pedro', 'Santos', 'auctioneer', 1, 'Auctioneer', '+1-555-1004', '1004 Auction St, Auction Center'),
+    (5, 'appraiser1', 'appraiser1@pawnshop.com', '$2b$10$Ldi5OIcbAZLGRFRSCJbJSOfkLoU5xU2zmYg4DzeeTTQOOAOckAtaW', 'Ana', 'Garcia', 'appraiser', 1, 'Item Appraiser', '+1-555-1005', '1005 Appraisal Ave, Assessment Office'),
+    (6, 'pawner1', 'pawner1@pawnshop.com', '$2b$10$efoSsMrQusmcPhMXIBZxSeK.9l7EuLzr.Qfs9FSmFMYQkJJJh/czK', 'Customer', 'Sample', 'pawner', 1, 'Customer', '+1-555-1006', '1006 Customer St, City Center')
 ON CONFLICT (username) DO NOTHING;
 
 -- Audit logs table for tracking system activities
