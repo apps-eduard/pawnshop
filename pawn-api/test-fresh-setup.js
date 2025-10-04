@@ -71,10 +71,11 @@ async function testFreshSetup() {
       if (missingTables.length > 0) {
         console.log('⚠️ Missing required tables:', missingTables.join(', '));
         
-        // Create missing tables
+        // Create missing tables - should not happen with comprehensive migration
         if (missingTables.includes('cities') || missingTables.includes('barangays')) {
-          console.log('🔧 Creating address tables...');
-          execSync('node create-address-tables.js', { stdio: 'inherit' });
+          console.log('⚠️ Missing tables detected - this should not happen with comprehensive migration');
+          console.log('🔄 Re-running comprehensive migration...');
+          execSync('node run-comprehensive-migration.js', { stdio: 'inherit' });
         }
       }
       
