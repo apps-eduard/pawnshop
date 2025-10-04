@@ -29,17 +29,17 @@ async function seedDatabase() {
     
     console.log(`✅ Created ${branchResult.rows.length} branches`);
 
-    // Insert users
-    console.log('👤 Creating users...');
+    // Insert employees (updated from users table)
+    console.log('👤 Creating employees...');
     const userResult = await pool.query(`
-      INSERT INTO users (username, email, password_hash, first_name, last_name, role, branch_id, position, contact_number, address) 
+      INSERT INTO employees (user_id, username, email, password_hash, first_name, last_name, role, branch_id, position, contact_number, address) 
       VALUES 
-        ('admin', 'admin@pawnshop.com', $1, 'John', 'Smith', 'administrator', $2, 'System Administrator', '+1-555-1001', '100 Admin Lane, Business District'),
-        ('manager1', 'manager@pawnshop.com', $3, 'Sarah', 'Johnson', 'manager', $4, 'Branch Manager', '+1-555-1002', '200 Manager St, Executive Area'),
-        ('cashier1', 'cashier@pawnshop.com', $5, 'Lisa', 'Wilson', 'cashier', $6, 'Senior Cashier', '+1-555-1004', '400 Cashier Rd, Residential'),
-        ('auctioneer1', 'auctioneer@pawnshop.com', $7, 'Tom', 'Brown', 'auctioneer', $8, 'Lead Auctioneer', '+1-555-1005', '500 Auctioneer Ct, Suburban Area'),
-        ('appraiser1', 'appraiser@pawnshop.com', $9, 'Mike', 'Davis', 'appraiser', $10, 'Senior Appraiser', '+1-555-1003', '300 Appraiser Ave, Mid-town')
-      RETURNING id, username, role
+        (1, 'admin', 'admin@pawnshop.com', $1, 'John', 'Smith', 'administrator', $2, 'System Administrator', '+1-555-1001', '100 Admin Lane, Business District'),
+        (2, 'manager1', 'manager@pawnshop.com', $3, 'Sarah', 'Johnson', 'manager', $4, 'Branch Manager', '+1-555-1002', '200 Manager St, Executive Area'),
+        (3, 'cashier1', 'cashier@pawnshop.com', $5, 'Lisa', 'Wilson', 'cashier', $6, 'Senior Cashier', '+1-555-1004', '400 Cashier Rd, Residential'),
+        (4, 'auctioneer1', 'auctioneer@pawnshop.com', $7, 'Tom', 'Brown', 'auctioneer', $8, 'Lead Auctioneer', '+1-555-1005', '500 Auctioneer Ct, Suburban Area'),
+        (5, 'appraiser1', 'appraiser@pawnshop.com', $9, 'Mike', 'Davis', 'appraiser', $10, 'Senior Appraiser', '+1-555-1003', '300 Appraiser Ave, Mid-town')
+      RETURNING user_id, username, role
     `, [
       adminPassword, mainBranchId,
       managerPassword, mainBranchId, 
@@ -48,14 +48,14 @@ async function seedDatabase() {
       appraiserPassword, northBranchId
     ]);
     
-    console.log(`✅ Created ${userResult.rows.length} users`);
+    console.log(`✅ Created ${userResult.rows.length} employees`);
 
-    // Get user IDs for references
-    const adminId = userResult.rows.find(u => u.username === 'admin').id;
-    const managerId = userResult.rows.find(u => u.username === 'manager1').id;
-    const cashierId = userResult.rows.find(u => u.username === 'cashier1').id;
-    const auctioneerId = userResult.rows.find(u => u.username === 'auctioneer1').id;
-    const appraiserId = userResult.rows.find(u => u.username === 'appraiser1').id;
+    // Get user IDs for references (using user_id from employees table)
+    const adminId = userResult.rows.find(u => u.username === 'admin').user_id;
+    const managerId = userResult.rows.find(u => u.username === 'manager1').user_id;
+    const cashierId = userResult.rows.find(u => u.username === 'cashier1').user_id;
+    const auctioneerId = userResult.rows.find(u => u.username === 'auctioneer1').user_id;
+    const appraiserId = userResult.rows.find(u => u.username === 'appraiser1').user_id;
 
     // Update branch managers
     console.log('👨‍💼 Assigning branch managers...');
@@ -150,7 +150,7 @@ async function seedDatabase() {
     console.log('\n🎉 Database seeding completed successfully!');
     console.log('\n📊 Summary:');
     console.log('- 3 branches created');
-    console.log('- 5 users created (admin, manager, cashier, auctioneer, appraiser)');
+    console.log('- 5 employees created (admin, manager, cashier, auctioneer, appraiser)');
     console.log('- 5 pawners created');
     console.log('- 5 pawn tickets created');
     console.log('- Multiple pawn items created');
