@@ -28,7 +28,7 @@ import { CategoryDescriptionModalConfig, ModalResult, CategoryDescriptionModalDa
             </svg>
           </button>
         </div>
-        
+
         <!-- Selected Category Display -->
         <div class="mb-2 p-2 bg-gradient-to-r from-emerald-50 to-green-50 dark:from-emerald-900/20 dark:to-green-900/20 rounded border border-emerald-200 dark:border-emerald-700">
           <div class="flex items-center">
@@ -41,17 +41,17 @@ import { CategoryDescriptionModalConfig, ModalResult, CategoryDescriptionModalDa
             </div>
           </div>
         </div>
-        
+
         <!-- Form -->
         <div class="mb-3">
           <label for="descriptionInput" class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
             Description
           </label>
-          <textarea 
+          <textarea
             #descriptionInput
-            id="descriptionInput" 
-            [(ngModel)]="description" 
-            [placeholder]="config?.placeholder || 'Enter description...'" 
+            id="descriptionInput"
+            [(ngModel)]="description"
+            [placeholder]="config?.placeholder || 'Enter description...'"
             rows="2"
             class="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-emerald-400 focus:border-emerald-500 dark:bg-gray-700 dark:text-white transition-all resize-none"
             [class.border-emerald-300]="description && description.trim()"
@@ -59,7 +59,7 @@ import { CategoryDescriptionModalConfig, ModalResult, CategoryDescriptionModalDa
             [class.dark:bg-emerald-900/10]="description && description.trim()">
           </textarea>
         </div>
-        
+
         <!-- Buttons -->
         <div class="flex justify-end gap-2">
           <button type="button" (click)="onCancel()"
@@ -83,7 +83,7 @@ import { CategoryDescriptionModalConfig, ModalResult, CategoryDescriptionModalDa
 })
 export class AddCategoryDescriptionModalComponent implements OnInit, OnDestroy, AfterViewInit {
   @ViewChild('descriptionInput') descriptionInput!: ElementRef<HTMLTextAreaElement>;
-  
+
   private modalService = inject(ModalService);
   private categoriesService = inject(CategoriesService);
   private toastService = inject(ToastService);
@@ -167,7 +167,7 @@ export class AddCategoryDescriptionModalComponent implements OnInit, OnDestroy, 
             },
             action: 'add'
           };
-          
+
           this.toastService.showSuccess('Success', `Description added to "${this.config!.selectedCategoryName}" successfully`);
           this.modalService.categoryDescriptionModalResult(result);
         } else {
@@ -177,9 +177,9 @@ export class AddCategoryDescriptionModalComponent implements OnInit, OnDestroy, 
       },
       error: (error: any) => {
         console.error('Error adding category description:', error);
-        
+
         let errorMessage = 'Failed to add category description';
-        
+
         if (error.status === 409) {
           errorMessage = 'This description already exists for this category';
         } else if (error.status === 403) {
@@ -187,7 +187,7 @@ export class AddCategoryDescriptionModalComponent implements OnInit, OnDestroy, 
         } else if (error.error?.message) {
           errorMessage = error.error.message;
         }
-        
+
         this.toastService.showError('Error', errorMessage);
         this.isLoading = false;
       }

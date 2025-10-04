@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { Location } from '@angular/common';
 import { Subject, takeUntil } from 'rxjs';
 import { ToastService } from '../../../core/services/toast.service';
@@ -66,7 +66,7 @@ interface LoanForm {
   selector: 'app-new-loan',
   standalone: true,
   imports: [
-    CommonModule, 
+    CommonModule,
     FormsModule,
     AddCityModalComponent,
     AddBarangayModalComponent,
@@ -159,6 +159,7 @@ export class NewLoan implements OnInit, OnDestroy {
 
   constructor(
     private router: Router,
+    private route: ActivatedRoute,
     private location: Location,
     private toastService: ToastService,
     private pawnerService: PawnerService,
@@ -170,24 +171,60 @@ export class NewLoan implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit() {
+    // Check if we're coming from a pending appraisal
+    console.log('🔍 New Loan ngOnInit - checking for appraisal data...');
+
+    // Try to get navigation state from router first
+    const navigation = this.router.getCurrentNavigation();
+    console.log('🔍 Navigation object:', navigation);
+
+    // Try to get state from history.state as backup
+    const historyState = window.history.state;
+    console.log('🔍 History state:', historyState);
+
+    let appraisalData = null;
+    let fromAppraisal = false;
+
+    // Check navigation state first
+    if (navigation?.extras.state?.['fromAppraisal']) {
+      fromAppraisal = true;
+      appraisalData = navigation.extras.state['appraisalData'];
+      console.log('✅ Found appraisal data in navigation state');
+    }
+    // Check history state as fallback
+    else if (historyState?.fromAppraisal) {
+      fromAppraisal = true;
+      appraisalData = historyState.appraisalData;
+      console.log('✅ Found appraisal data in history state');
+    }
+
+    if (fromAppraisal && appraisalData) {
+      console.log('🔄 Loading New Loan page with appraisal data:', appraisalData);
+      setTimeout(() => {
+        this.loadAppraisalDataForLoan(appraisalData);
+      }, 500); // Small delay to ensure categories are loaded first
+    } else {
+      console.log('⚠️ No appraisal data found in navigation or history state');
+    }
+
     // Load categories
     this.loadCategories();
-    
+
     // Load cities
     this.loadCities();
-    
+
     // Initialize loan dates
     this.loanForm.loanDate = new Date().toISOString().split('T')[0];
     this.loanForm.maturityDate = this.getDefaultMaturityDate();
 
-
-
-    // Set autofocus on search input after view initialization
-    setTimeout(() => {
-      if (this.searchInput) {
-        this.searchInput.nativeElement.focus();
-      }
-    }, 100);
+    // Set autofocus on search input after view initialization (unless we have appraisal data)
+    if (!navigation?.extras.state?.['fromAppraisal']) {
+      setTimeout(() => {
+        if (this.searchInput) {
+          this.searchInput.nativeElement.focus();
+        }
+      }, 100);
+    }
 
     // Subscribe to modal results
     this.setupModalSubscriptions();
@@ -197,12 +234,12 @@ export class NewLoan implements OnInit, OnDestroy {
     // Clean up all subscriptions to prevent memory leaks
     this.destroy$.next();
     this.destroy$.complete();
-    
+
     // Clear any pending timeouts
     if (this.searchInput) {
       this.searchInput.nativeElement.blur();
     }
-    
+
     // Clear arrays to free memory
     this.pawners = [];
     this.appraisalResults = [];
@@ -210,7 +247,88 @@ export class NewLoan implements OnInit, OnDestroy {
     this.categories = [];
     this.categoryDescriptions = [];
     this.cities = [];
+  }
+
+  // Load appraisal data to pre-populate the new loan form
+  loadAppraisalDataForLoan(appraisalData: any) {
+    console.log('📋 Loading appraisal data for new loan:', appraisalData);
+
+    // First, we need to get the full pawner details
+    if (appraisalData.pawnerId) {
+      this.pawnerService.getPawner(appraisalData.pawnerId).subscribe({
+        next: (response: any) => {
+          if (response.success) {
+            const pawnerData = response.data;
+            console.log('👤 Pawner data loaded:', pawnerData);
+
+            // Populate pawner information
+            this.selectedPawner = {
+              id: pawnerData.id,
+              firstName: pawnerData.first_name || pawnerData.firstName,
+              lastName: pawnerData.last_name || pawnerData.lastName,
+              contactNumber: pawnerData.mobile_number || pawnerData.contactNumber,
+              email: pawnerData.email,
+              cityId: pawnerData.city_id,
+              barangayId: pawnerData.barangay_id,
+              addressDetails: pawnerData.house_number && pawnerData.street ?
+                `${pawnerData.house_number} ${pawnerData.street}` : pawnerData.address_details,
+              cityName: pawnerData.city_name,
+              barangayName: pawnerData.barangay_name
+            };
+
+            console.log('✅ Pawner information populated');
+          }
+        },
+        error: (error: any) => {
+          console.error('❌ Error loading pawner data:', error);
+          this.toastService.showError('Error', 'Failed to load pawner information');
+        }
+      });
+    }
+
+    // Populate item information from appraisal
+    this.selectedItems = [{
+      category: appraisalData.category || '',
+      categoryDescription: '',
+      description: appraisalData.description || appraisalData.itemType || '',
+      estimatedValue: appraisalData.totalAppraisedValue || 0,
+      serialNumber: '',
+      notes: `From appraisal ID: ${appraisalData.id}`,
+      weight: 0,
+      karat: 0
+    }];
+
+    // Set loan form with suggested values
+    this.loanForm.principalAmount = appraisalData.totalAppraisedValue || 0;
+
+    // Calculate interest rate based on category if available
+    if (appraisalData.category) {
+      const category = this.categories.find(cat => cat.name === appraisalData.category);
+      if (category) {
+        this.loanForm.interestRate = Number(category.interest_rate) || 3.5;
+      }
+    }
+
+    console.log('✅ Appraisal data loaded successfully for new loan');
+    this.toastService.showSuccess('Success', 'Appraisal data loaded! Please review and complete the loan details.');
     this.barangays = [];
+  }
+
+  // Test method to manually load sample appraisal data (for debugging)
+  testLoadAppraisalData() {
+    console.log('🧪 Testing appraisal data loading...');
+    const sampleAppraisal = {
+      id: 1,
+      pawnerId: 1,
+      pawnerName: 'John Doe',
+      category: 'Jewelry',
+      itemType: 'Gold Ring',
+      description: 'Gold Ring - 18k',
+      totalAppraisedValue: 15000,
+      status: 'completed',
+      createdAt: new Date()
+    };
+    this.loadAppraisalDataForLoan(sampleAppraisal);
   }
 
   private setupModalSubscriptions() {
@@ -219,7 +337,7 @@ export class NewLoan implements OnInit, OnDestroy {
       if (result?.success && result.data) {
         // Refresh city list to get the new city
         this.loadCities();
-        
+
         // Auto-select the newly added city (will need to wait for list to load)
         setTimeout(() => {
           const newCity = this.cities.find(city => city.name === result.data!.name);
@@ -240,7 +358,7 @@ export class NewLoan implements OnInit, OnDestroy {
       if (result?.success && result.data) {
         // Refresh barangay list for the selected city
         this.onCityChange();
-        
+
         // Auto-select the newly added barangay (will need to wait for list to load)
         setTimeout(() => {
           const newBarangay = this.barangays.find(barangay => barangay.name === result.data!.name);
@@ -297,7 +415,7 @@ export class NewLoan implements OnInit, OnDestroy {
 
   searchPawners() {
     this.isSearching = true;
-    
+
     this.pawnerService.searchPawners(this.searchQuery).subscribe({
       next: (response) => {
         this.isSearching = false;
@@ -365,7 +483,7 @@ export class NewLoan implements OnInit, OnDestroy {
     console.log('🏙️ City changed to:', this.pawnerForm.cityId);
     this.pawnerForm.barangayId = ''; // Reset barangay selection
     this.barangays = [];
-    
+
     if (!this.pawnerForm.cityId) {
       console.log('⚠️ No city selected, skipping barangay load');
       return;
@@ -373,7 +491,7 @@ export class NewLoan implements OnInit, OnDestroy {
 
     const cityId = parseInt(this.pawnerForm.cityId);
     console.log('🔄 Loading barangays for city ID:', cityId);
-    
+
     this.addressService.getBarangaysByCity(cityId).subscribe({
       next: (response) => {
         console.log('🏘️ Barangays response:', response);
@@ -393,7 +511,7 @@ export class NewLoan implements OnInit, OnDestroy {
           message: error.message,
           url: error.url
         });
-        
+
         this.toastService.showError('Error', 'Failed to load barangays - check backend connection');
       }
     });
@@ -405,7 +523,7 @@ export class NewLoan implements OnInit, OnDestroy {
       this.toastService.showWarning('Search', 'Please enter at least 2 characters');
       return;
     }
-    
+
     this.appraisalService.searchAppraisals(this.appraisalSearchQuery).subscribe({
       next: (response: any) => {
         if (response.success) {
@@ -422,7 +540,7 @@ export class NewLoan implements OnInit, OnDestroy {
             karat: item.karat,
             status: item.status
           }));
-          
+
           if (this.appraisalResults.length === 0) {
             this.toastService.showInfo('Search', 'No appraisals found');
           }
@@ -446,28 +564,28 @@ export class NewLoan implements OnInit, OnDestroy {
     // Reset description
     this.itemForm.categoryDescription = '';
     this.categoryDescriptions = [];
-    
+
     if (!this.itemForm.category) {
       this.loanForm.interestRate = 0;
       return;
     }
-    
+
     // Find category ID based on selected category name
     const selectedCategory = this.categories.find(cat => cat.name === this.itemForm.category);
     if (!selectedCategory) {
       this.loanForm.interestRate = 0;
       return;
     }
-    
+
     // Set interest rate from selected category
     const interestRateValue = parseFloat(selectedCategory.interest_rate);
     this.loanForm.interestRate = interestRateValue;
-    
+
     console.log('🔍 Category selected:', selectedCategory.name);
     console.log('💾 Database interest_rate value:', selectedCategory.interest_rate);
     console.log('🔢 Parsed interest rate:', interestRateValue);
     console.log('📊 Final loanForm.interestRate:', this.loanForm.interestRate);
-    
+
     // Load descriptions for the selected category
     this.isLoadingDescriptions = true;
     this.categoriesService.getCategoryDescriptions(selectedCategory.id).subscribe({
@@ -495,10 +613,10 @@ export class NewLoan implements OnInit, OnDestroy {
       this.selectedItems.push({...this.selectedAppraisal});
       this.selectedAppraisal = null;
       this.appraisalSearchQuery = '';
-      
+
       // Update loan amount
       this.updateLoanAmount();
-      
+
       this.toastService.showSuccess('Success', 'Item added to loan');
     } else if (this.canAddItem()) {
       // Add from manual entry
@@ -509,17 +627,17 @@ export class NewLoan implements OnInit, OnDestroy {
         estimatedValue: this.itemForm.appraisalValue,
         appraisalValue: this.itemForm.appraisalValue
       };
-      
+
       this.selectedItems.push(newItem);
-      
+
       // Reset only description and appraisal value, keep category and categoryDescription
       this.itemForm.categoryDescription = '';
       this.itemForm.description = '';
       this.itemForm.appraisalValue = 0;
-      
+
       // Update loan amount
       this.updateLoanAmount();
-      
+
       // Reset appraisal value input field to show 0.00
       setTimeout(() => {
         if (this.appraisalValueDirective) {
@@ -529,7 +647,7 @@ export class NewLoan implements OnInit, OnDestroy {
           this.categoryDescriptionSelect.nativeElement.focus();
         }
       }, 100);
-      
+
       this.toastService.showSuccess('Success', 'Item added to loan');
     }
   }
@@ -537,10 +655,10 @@ export class NewLoan implements OnInit, OnDestroy {
   removeItem(index: number) {
     if (index >= 0 && index < this.selectedItems.length) {
       this.selectedItems.splice(index, 1);
-      
+
       // Update loan amount
       this.updateLoanAmount();
-      
+
       this.toastService.showInfo('Info', 'Item removed');
     }
   }
@@ -549,9 +667,9 @@ export class NewLoan implements OnInit, OnDestroy {
     if (this.selectedAppraisal) {
       return true;
     }
-    
+
     // Updated validation: category, categoryDescription, appraisalValue > 0 required (description removed)
-    return !!(this.itemForm.category && 
+    return !!(this.itemForm.category &&
               this.itemForm.categoryDescription &&
               this.itemForm.appraisalValue > 0);
   }
@@ -565,7 +683,7 @@ export class NewLoan implements OnInit, OnDestroy {
   // Check if item form field is invalid for validation display
   isItemFieldInvalid(fieldName: string): boolean {
     const fieldKey = fieldName as keyof typeof this.touchedFields.item;
-    
+
     // Only show validation if fields are required (no items added yet) AND field has been touched
     if (!this.areItemFieldsRequired() || !this.touchedFields.item[fieldKey]) {
       return false;
@@ -623,7 +741,7 @@ export class NewLoan implements OnInit, OnDestroy {
 
   getServiceCharge(): number {
     const principalLoan = this.loanForm.loanAmount;
-    
+
     if (principalLoan <= 0) return 0;
     if (principalLoan <= 100) return 1;
     if (principalLoan <= 200) return 2;
@@ -673,19 +791,19 @@ export class NewLoan implements OnInit, OnDestroy {
   canCreateLoan(): boolean {
     // Check if pawner is valid (either selected or new pawner form is complete)
     const pawnerValid = this.isPawnerValid();
-    
+
     // Check if we have added items
     const hasItems = this.selectedItems.length > 0;
-    
+
     // Check if principal loan is greater than 0
     const principalLoanValid = this.loanForm.loanAmount > 0;
-    
+
     // Check if net proceeds is greater than 0
     const netProceedsValid = this.getNetProceeds() > 0;
-    
+
     // Check if required dates are set
     const datesValid = !!(this.loanForm.loanDate && this.loanForm.maturityDate);
-    
+
     return pawnerValid && hasItems && principalLoanValid && netProceedsValid && datesValid;
   }
 
@@ -701,13 +819,13 @@ export class NewLoan implements OnInit, OnDestroy {
       expiryDate: this.getDefaultExpiryDate(),
       serviceCharge: 0
     };
-    
+
     // Reset all item-related data
     this.selectedItems = [];
     this.selectedAppraisal = null;
     this.appraisalResults = [];
     this.appraisalSearchQuery = '';
-    
+
     // Reset item form to pristine state
     this.itemForm = {
       category: '',
@@ -715,23 +833,23 @@ export class NewLoan implements OnInit, OnDestroy {
       description: '',
       appraisalValue: 0
     };
-    
+
     // Reset category descriptions
     this.categoryDescriptions = [];
     this.isLoadingDescriptions = false;
-    
+
     // Reset pawner selection and search
     this.selectedPawner = null;
     this.searchQuery = '';
     this.pawners = [];
     this.isSearching = false;
-    
+
     // Reset pawner form to pristine state
     this.resetPawnerForm();
-    
+
     // Reset barangays when city is cleared
     this.barangays = [];
-    
+
     // Reset all touched states to pristine
     this.touchedFields = {
       pawner: {
@@ -750,7 +868,7 @@ export class NewLoan implements OnInit, OnDestroy {
         appraisalValue: false
       }
     };
-    
+
     // Reset currency input fields to show 0.00 and clear validation states
     setTimeout(() => {
       if (this.principalLoanDirective) {
@@ -759,13 +877,13 @@ export class NewLoan implements OnInit, OnDestroy {
       if (this.appraisalValueDirective) {
         this.appraisalValueDirective.setValue(0);
       }
-      
+
       // Focus on search input for pawner after reset
       if (this.searchInput) {
         this.searchInput.nativeElement.focus();
       }
     }, 100);
-    
+
     this.toastService.showInfo('Reset', 'All form data has been reset to pristine state');
   }
 
@@ -778,7 +896,7 @@ export class NewLoan implements OnInit, OnDestroy {
       this.toastService.showWarning('Validation', 'Please complete all required fields');
       return;
     }
-    
+
     // Prepare loan data for API
     const loanData = {
       pawnerData: this.selectedPawner || {
@@ -809,9 +927,9 @@ export class NewLoan implements OnInit, OnDestroy {
       expiryDate: this.loanForm.expiryDate,
       notes: 'New loan created from frontend'
     };
-    
+
     console.log('🔄 Creating new loan with data:', loanData);
-    
+
     // Call API to create loan
     this.http.post('http://localhost:3000/api/transactions/new-loan', loanData).subscribe({
       next: (response: any) => {
@@ -832,8 +950,8 @@ export class NewLoan implements OnInit, OnDestroy {
 
   // Pawner form management
   canCreatePawner(): boolean {
-    return !!(this.pawnerForm.firstName.trim() && 
-              this.pawnerForm.lastName.trim() && 
+    return !!(this.pawnerForm.firstName.trim() &&
+              this.pawnerForm.lastName.trim() &&
               this.pawnerForm.contactNumber.trim() &&
               this.pawnerForm.cityId &&
               this.pawnerForm.barangayId);
@@ -844,10 +962,10 @@ export class NewLoan implements OnInit, OnDestroy {
     if (this.selectedPawner) {
       return true; // Selected pawner is always valid
     }
-    
+
     // For new pawner, check required fields: fname, lname, contact, city, barangay
-    return !!(this.pawnerForm.firstName.trim() && 
-              this.pawnerForm.lastName.trim() && 
+    return !!(this.pawnerForm.firstName.trim() &&
+              this.pawnerForm.lastName.trim() &&
               this.pawnerForm.contactNumber.trim() &&
               this.pawnerForm.cityId &&
               this.pawnerForm.barangayId);
@@ -857,7 +975,7 @@ export class NewLoan implements OnInit, OnDestroy {
   isPawnerFieldInvalid(fieldName: string): boolean {
     const field = this.pawnerForm[fieldName as keyof typeof this.pawnerForm];
     const fieldKey = fieldName as keyof typeof this.touchedFields.pawner;
-    
+
     // Only show validation if field has been touched and we're creating a new pawner
     if (!this.selectedPawner && this.touchedFields.pawner[fieldKey]) {
       switch (fieldName) {

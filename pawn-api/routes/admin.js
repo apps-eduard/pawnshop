@@ -385,22 +385,22 @@ router.get('/transactions', async (req, res) => {
     
     let query = `
       SELECT 
-        pt.id,
-        pt.ticket_number,
-        'pawn_ticket' as transaction_type,
-        pt.principal_amount,
-        pt.total_amount,
-        pt.principal_amount as balance_remaining,
-        pt.status,
-        pt.created_at as loan_date,
-        pt.maturity_date,
-        pt.created_at,
+        t.id,
+        t.transaction_number,
+        t.transaction_type,
+        t.principal_amount,
+        t.total_amount,
+        t.balance as balance_remaining,
+        t.status,
+        t.transaction_date as loan_date,
+        t.maturity_date,
+        t.created_at,
         p.first_name,
         p.last_name,
         b.name as branch_name
-      FROM pawn_tickets pt
-      LEFT JOIN pawners p ON pt.pawner_id = p.id
-      LEFT JOIN branches b ON pt.branch_id = b.id
+      FROM transactions t
+      LEFT JOIN pawners p ON t.pawner_id = p.id
+      LEFT JOIN branches b ON t.branch_id = b.id
       WHERE 1=1
     `;
     
@@ -409,37 +409,37 @@ router.get('/transactions', async (req, res) => {
     
     if (search) {
       paramCount++;
-      query += ` AND (pt.ticket_number ILIKE $${paramCount} OR p.first_name ILIKE $${paramCount} OR p.last_name ILIKE $${paramCount})`;
+      query += ` AND (t.transaction_number ILIKE $${paramCount} OR p.first_name ILIKE $${paramCount} OR p.last_name ILIKE $${paramCount})`;
       params.push(`%${search}%`);
     }
     
     if (type) {
       paramCount++;
-      query += ` AND 'pawn_ticket' = $${paramCount}`;
+      query += ` AND t.transaction_type = $${paramCount}`;
       params.push(type);
     }
     
     if (status) {
       paramCount++;
-      query += ` AND pt.status = $${paramCount}`;
+      query += ` AND t.status = $${paramCount}`;
       params.push(status);
     }
     
     if (dateFrom) {
       paramCount++;
-      query += ` AND pt.created_at >= $${paramCount}`;
+      query += ` AND t.created_at >= $${paramCount}`;
       params.push(dateFrom);
     }
     
     if (dateTo) {
       paramCount++;
-      query += ` AND pt.created_at <= $${paramCount}`;
+      query += ` AND t.created_at <= $${paramCount}`;
       params.push(dateTo);
     }
     
     if (branchId) {
       paramCount++;
-      query += ` AND pt.branch_id = $${paramCount}`;
+      query += ` AND t.branch_id = $${paramCount}`;
       params.push(branchId);
     }
     
@@ -450,7 +450,7 @@ router.get('/transactions', async (req, res) => {
     
     // Add pagination
     paramCount++;
-    query += ` ORDER BY pt.created_at DESC LIMIT $${paramCount}`;
+    query += ` ORDER BY t.created_at DESC LIMIT $${paramCount}`;
     params.push(limit);
     
     paramCount++;

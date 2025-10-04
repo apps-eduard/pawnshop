@@ -14,32 +14,27 @@ router.get('/today', async (req, res) => {
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
     
-    // Query appraisals created today with pawner information
+    // Query item appraisals created today with pawner information
     const result = await pool.query(`
-      SELECT a.id, a.pawner_id, a.appraiser_id, a.item_category, a.item_category_description,
-             a.item_type, a.description, a.serial_number, a.weight, a.karat,
-             a.estimated_value, a.condition_notes, a.status, a.created_at,
-             p.first_name, p.last_name, p.contact_number,
-             u.first_name as appraiser_first_name, u.last_name as appraiser_last_name
-      FROM appraisals a
-      JOIN pawners p ON a.pawner_id = p.id
-      LEFT JOIN users u ON a.appraiser_id = u.id
-      WHERE a.created_at >= $1 AND a.created_at < $2
-      ORDER BY a.created_at DESC
+      SELECT ia.id, ia.pawner_id, ia.appraiser_id, ia.category, ia.description,
+             ia.notes, ia.estimated_value, ia.status, ia.created_at,
+             p.first_name, p.last_name, p.mobile_number as contact_number,
+             e.first_name as appraiser_first_name, e.last_name as appraiser_last_name
+      FROM item_appraisals ia
+      JOIN pawners p ON ia.pawner_id = p.id
+      LEFT JOIN employees e ON ia.appraiser_id = e.id
+      WHERE ia.created_at >= $1 AND ia.created_at < $2
+      ORDER BY ia.created_at DESC
     `, [today, tomorrow]);
     
     const mappedData = result.rows.map(row => ({
       id: row.id,
       pawnerId: row.pawner_id,
       appraiserId: row.appraiser_id,
-      category: row.item_category,
-      categoryDescription: row.item_category_description,
+      category: row.category,
       description: row.description,
-      serialNumber: row.serial_number,
-      weight: row.weight,
-      karat: row.karat,
+      notes: row.notes,
       estimatedValue: parseFloat(row.estimated_value),
-      notes: row.condition_notes,
       status: row.status,
       createdAt: row.created_at,
       pawnerName: `${row.first_name} ${row.last_name}`,
@@ -70,23 +65,18 @@ router.get('/pending-ready', async (req, res) => {
     // Minimal logging for performance
     
     const result = await pool.query(`
-      SELECT a.id, a.pawner_id, a.item_category, a.item_type, a.description, a.estimated_value,
-             a.status, a.created_at,
+      SELECT ia.id, ia.pawner_id, ia.category, ia.description, ia.estimated_value,
+             ia.status, ia.created_at,
              p.first_name, p.last_name
-      FROM appraisals a
-      JOIN pawners p ON a.pawner_id = p.id
-      WHERE a.status = 'pending'
-      AND a.id NOT IN (
-        SELECT DISTINCT appraisal_id 
-        FROM transactions 
-        WHERE appraisal_id IS NOT NULL
-      )
-      ORDER BY a.created_at DESC
+      FROM item_appraisals ia
+      JOIN pawners p ON ia.pawner_id = p.id
+      WHERE ia.status = 'completed'
+      ORDER BY ia.created_at DESC
     `);
     
     const mappedData = result.rows.map(row => {
       const pawnerName = `${row.first_name} ${row.last_name}`;
-      const itemType = row.item_type || row.description;
+      const itemType = row.description; // Use description as item type
       
       // Simple value processing without excessive logging
       let totalValue = 0;
@@ -104,7 +94,7 @@ router.get('/pending-ready', async (req, res) => {
         totalAppraisedValue: totalValue,
         // Metadata for click handling
         pawnerId: row.pawner_id,
-        category: row.item_category,
+        category: row.category,
         status: row.status,
         createdAt: row.created_at
       };
@@ -133,49 +123,30 @@ router.get('/pending-ready', async (req, res) => {
 router.get('/status/:status', async (req, res) => {
   try {
     const { status } = req.params;
-    
-    // Map frontend status to database status
-    let dbStatus;
-    switch (status) {
-      case 'pending':
-        dbStatus = 'completed'; // Frontend 'pending' maps to database 'completed'
-        break;
-      case 'completed':
-        dbStatus = 'completed';
-        break;
-      case 'approved':
-        dbStatus = 'approved';
-        break;
-      default:
-        dbStatus = status;
-    }
-    
+    console.log(`🔍 [API] Getting item appraisals with status: ${status} for user: ${req.user?.username || 'unknown'}`);
+
+    // Query the simplified item_appraisals table
     const result = await pool.query(`
-      SELECT a.id, a.pawner_id, a.appraiser_id, a.item_category, a.item_category_description,
-             a.item_type, a.description, a.serial_number, a.weight, a.karat,
-             a.estimated_value, a.condition_notes, a.status, a.created_at,
-             p.first_name, p.last_name, p.contact_number,
-             u.first_name as appraiser_first_name, u.last_name as appraiser_last_name
-      FROM appraisals a
-      JOIN pawners p ON a.pawner_id = p.id
-      LEFT JOIN users u ON a.appraiser_id = u.id
-      WHERE a.status = $1
-      ORDER BY a.created_at DESC
-    `, [dbStatus]);
+      SELECT ia.id, ia.pawner_id, ia.appraiser_id, ia.category, ia.description,
+             ia.notes, ia.estimated_value, ia.status, ia.created_at,
+             p.first_name, p.last_name, p.mobile_number as contact_number,
+             e.first_name as appraiser_first_name, e.last_name as appraiser_last_name
+      FROM item_appraisals ia
+      JOIN pawners p ON ia.pawner_id = p.id
+      LEFT JOIN employees e ON ia.appraiser_id = e.id
+      WHERE ia.status = $1
+      ORDER BY ia.created_at DESC
+    `, [status]);
     
     const mappedData = result.rows.map(row => ({
       id: row.id,
       pawnerId: row.pawner_id,
       appraiserId: row.appraiser_id,
-      category: row.item_category,
-      categoryDescription: row.item_category_description,
+      category: row.category,
       description: row.description,
-      serialNumber: row.serial_number,
-      weight: row.weight,
-      karat: row.karat,
+      notes: row.notes,
       estimatedValue: parseFloat(row.estimated_value),
-      appraisedValue: parseFloat(row.estimated_value), // Add this field for compatibility
-      notes: row.condition_notes,
+      totalAppraisedValue: parseFloat(row.estimated_value), // For dashboard compatibility
       status: row.status,
       createdAt: row.created_at,
       pawnerName: `${row.first_name} ${row.last_name}`,
@@ -187,7 +158,7 @@ router.get('/status/:status', async (req, res) => {
     
     // Log only summary info, not individual items
     if (process.env.NODE_ENV === 'development') {
-      console.log(`📊 [API] Status: ${status} -> ${mappedData.length} items | User: ${req.user.username}`);
+      console.log(`📊 [API] Status: ${status} -> ${mappedData.length} items | User: ${req.user?.username || 'unknown'}`);
     }
     
     res.json({
@@ -213,17 +184,36 @@ router.get('/', async (req, res) => {
     console.log('📊 [Appraisals API] Getting all appraisals');
     
     const result = await pool.query(`
-      SELECT a.*, p.first_name, p.last_name, p.contact_number,
-             u.username as appraiser_name
-      FROM appraisals a
-      LEFT JOIN pawners p ON a.pawner_id = p.id
-      LEFT JOIN users u ON a.appraiser_id = u.id
-      ORDER BY a.created_at DESC
+      SELECT ia.id, ia.pawner_id, ia.appraiser_id, ia.category, ia.description,
+             ia.notes, ia.estimated_value, ia.status, ia.created_at,
+             p.first_name, p.last_name, p.mobile_number as contact_number,
+             e.first_name as appraiser_first_name, e.last_name as appraiser_last_name
+      FROM item_appraisals ia
+      LEFT JOIN pawners p ON ia.pawner_id = p.id
+      LEFT JOIN employees e ON ia.appraiser_id = e.id
+      ORDER BY ia.created_at DESC
     `);
+
+    const mappedData = result.rows.map(row => ({
+      id: row.id,
+      pawnerId: row.pawner_id,
+      appraiserId: row.appraiser_id,
+      category: row.category,
+      description: row.description,
+      notes: row.notes,
+      estimatedValue: parseFloat(row.estimated_value),
+      status: row.status,
+      createdAt: row.created_at,
+      pawnerName: `${row.first_name} ${row.last_name}`,
+      pawnerContact: row.contact_number,
+      appraiserName: row.appraiser_first_name && row.appraiser_last_name 
+        ? `${row.appraiser_first_name} ${row.appraiser_last_name}` 
+        : 'Unknown'
+    }));
 
     res.json({
       success: true,
-      data: result.rows
+      data: mappedData
     });
 
   } catch (error) {
@@ -242,19 +232,14 @@ router.post('/', async (req, res) => {
     const {
       pawnerId,
       category,
-      categoryDescription,
       description,
-      serialNumber,
-      weight,
-      karat,
       estimatedValue,
-      interestRate,
       notes
     } = req.body;
 
     // Minimal logging for performance
 
-    // Validation
+    // Validation - simplified to only required fields
     if (!pawnerId || !category || !description || !estimatedValue) {
       console.log('❌ [APPRAISAL VALIDATION] Missing required fields');
       return res.status(400).json({
@@ -281,31 +266,24 @@ router.post('/', async (req, res) => {
     `);
     const currentBranchId = branchResult.rows.length > 0 ? parseInt(branchResult.rows[0].branch_id) : 1;
 
-    // Insert new appraisal with 'pending' status
+    // Insert new appraisal with 'pending' status into simplified table
     const insertQuery = `
-      INSERT INTO appraisals (
-        pawner_id, appraiser_id, item_category, item_category_description, 
-        item_type, description, serial_number, weight, karat, 
-        estimated_value, condition_notes, branch_id, status, created_at, updated_at
+      INSERT INTO item_appraisals (
+        pawner_id, appraiser_id, category, description, notes, 
+        estimated_value, status, created_at, updated_at
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'pending', 
+        $1, $2, $3, $4, $5, $6, 'pending', 
         CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
       ) RETURNING *
     `;
 
     const values = [
       pawnerId,
-      req.user.id, // appraiser_id from authenticated user
+      req.user?.id || 1, // appraiser_id from authenticated user (fallback to 1 for testing)
       category,
-      categoryDescription || null,
-      description, // Using description as item_type for compatibility
-      description, // description field
-      serialNumber || null,
-      weight || null,
-      karat || null,
-      parseFloat(estimatedValue),
+      description,
       notes || null,
-      currentBranchId
+      parseFloat(estimatedValue)
     ];
 
     const result = await pool.query(insertQuery, values);
@@ -318,14 +296,10 @@ router.post('/', async (req, res) => {
       id: newAppraisal.id,
       pawnerId: newAppraisal.pawner_id,
       appraiserId: newAppraisal.appraiser_id,
-      category: newAppraisal.item_category,
-      categoryDescription: newAppraisal.item_category_description,
+      category: newAppraisal.category,
       description: newAppraisal.description,
-      serialNumber: newAppraisal.serial_number,
-      weight: newAppraisal.weight,
-      karat: newAppraisal.karat,
+      notes: newAppraisal.notes,
       estimatedValue: parseFloat(newAppraisal.estimated_value),
-      notes: newAppraisal.condition_notes,
       status: newAppraisal.status,
       createdAt: newAppraisal.created_at,
       updatedAt: newAppraisal.updated_at

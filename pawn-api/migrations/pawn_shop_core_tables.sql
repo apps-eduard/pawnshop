@@ -245,6 +245,20 @@ CREATE TABLE IF NOT EXISTS appraisals (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Item appraisals table (simplified appraisals for appraiser-to-cashier workflow)
+CREATE TABLE IF NOT EXISTS item_appraisals (
+    id SERIAL PRIMARY KEY,
+    pawner_id INTEGER NOT NULL REFERENCES pawners(id),
+    appraiser_id INTEGER REFERENCES employees(id),
+    category VARCHAR(100) NOT NULL,
+    description TEXT NOT NULL,
+    notes TEXT,
+    estimated_value DECIMAL(15,2) NOT NULL,
+    status VARCHAR(20) DEFAULT 'pending',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Pawn payments table
 CREATE TABLE IF NOT EXISTS pawn_payments (
     id SERIAL PRIMARY KEY,
@@ -374,6 +388,10 @@ CREATE INDEX IF NOT EXISTS idx_pawn_items_status ON pawn_items(status);
 CREATE INDEX IF NOT EXISTS idx_appraisals_item ON appraisals(pawn_item_id);
 CREATE INDEX IF NOT EXISTS idx_appraisals_appraiser ON appraisals(appraiser_id);
 CREATE INDEX IF NOT EXISTS idx_appraisals_status ON appraisals(status);
+
+CREATE INDEX IF NOT EXISTS idx_item_appraisals_pawner ON item_appraisals(pawner_id);
+CREATE INDEX IF NOT EXISTS idx_item_appraisals_appraiser ON item_appraisals(appraiser_id);
+CREATE INDEX IF NOT EXISTS idx_item_appraisals_status ON item_appraisals(status);
 
 CREATE INDEX IF NOT EXISTS idx_payments_transaction ON pawn_payments(transaction_id);
 CREATE INDEX IF NOT EXISTS idx_payments_number ON pawn_payments(payment_number);

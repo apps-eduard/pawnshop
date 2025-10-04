@@ -43,6 +43,23 @@ router.post('/login', [
     
     if (result.rows.length === 0) {
       console.log(`❌ User not found: ${username}`);
+      
+      // Log failed login attempt (user not found)
+      try {
+        await pool.query(`
+          INSERT INTO audit_logs (username, action, ip_address, user_agent, created_at)
+          VALUES ($1, $2, $3, $4, NOW())
+        `, [
+          username,
+          'LOGIN_FAILED_USER_NOT_FOUND',
+          req.ip || req.connection.remoteAddress || null,
+          req.headers['user-agent'] || null
+        ]);
+        console.log(`📝 Failed login attempt logged to audit_logs (user not found): ${username}`);
+      } catch (auditError) {
+        console.error('❌ Failed to log failed login to audit_logs:', auditError);
+      }
+      
       return res.status(401).json({
         success: false,
         message: 'Invalid credentials'
@@ -59,6 +76,24 @@ router.post('/login', [
     
     if (!isValidPassword) {
       console.log(`❌ Invalid password for user: ${username}`);
+      
+      // Log failed login attempt (invalid password)
+      try {
+        await pool.query(`
+          INSERT INTO audit_logs (user_id, username, action, ip_address, user_agent, created_at)
+          VALUES ($1, $2, $3, $4, $5, NOW())
+        `, [
+          user.user_id,
+          user.username,
+          'LOGIN_FAILED_INVALID_PASSWORD',
+          req.ip || req.connection.remoteAddress || null,
+          req.headers['user-agent'] || null
+        ]);
+        console.log(`📝 Failed login attempt logged to audit_logs (invalid password): ${username}`);
+      } catch (auditError) {
+        console.error('❌ Failed to log failed login to audit_logs:', auditError);
+      }
+      
       return res.status(401).json({
         success: false,
         message: 'Invalid credentials'
@@ -93,6 +128,24 @@ router.post('/login', [
       'UPDATE employees SET updated_at = NOW() WHERE id = $1',
       [user.id]
     );
+
+    // Log successful login to audit_logs
+    try {
+      await pool.query(`
+        INSERT INTO audit_logs (user_id, username, action, ip_address, user_agent, created_at)
+        VALUES ($1, $2, $3, $4, $5, NOW())
+      `, [
+        user.user_id,
+        user.username,
+        'LOGIN_SUCCESS',
+        req.ip || req.connection.remoteAddress || null,
+        req.headers['user-agent'] || null
+      ]);
+      console.log(`📝 Login success logged to audit_logs for user: ${username}`);
+    } catch (auditError) {
+      console.error('❌ Failed to log login to audit_logs:', auditError);
+      // Don't fail the login if audit logging fails
+    }
 
     // Remove sensitive data
     delete user.password_hash;
@@ -207,7 +260,28 @@ router.post('/refresh', [
 });
 
 // Logout endpoint (optional - mainly for client-side token cleanup)
-router.post('/logout', authenticateToken, (req, res) => {
+router.post('/logout', authenticateToken, async (req, res) => {
+  console.log(`🚪 [${new Date().toISOString()}] Logout request from user: ${req.user.username}`);
+  
+  try {
+    // Log logout to audit_logs
+    await pool.query(`
+      INSERT INTO audit_logs (user_id, username, action, ip_address, user_agent, created_at)
+      VALUES ($1, $2, $3, $4, $5, NOW())
+    `, [
+      req.user.userId,
+      req.user.username,
+      'LOGOUT',
+      req.ip || req.connection.remoteAddress || null,
+      req.headers['user-agent'] || null
+    ]);
+    console.log(`📝 Logout logged to audit_logs for user: ${req.user.username}`);
+  } catch (auditError) {
+    console.error('❌ Failed to log logout to audit_logs:', auditError);
+    // Don't fail the logout if audit logging fails
+  }
+  
+  console.log(`✅ User logged out successfully: ${req.user.username}`);
   res.json({
     success: true,
     message: 'Logged out successfully'

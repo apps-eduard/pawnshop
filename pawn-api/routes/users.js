@@ -32,9 +32,17 @@ router.get('/', requireAdmin, async (req, res) => {
       SELECT e.id, e.user_id, e.username, e.email, e.first_name, e.last_name, e.role, 
              e.is_active, e.created_at, e.updated_at,
              e.position, e.contact_number, e.address,
-             b.name as branch_name
+             b.name as branch_name,
+             last_login.created_at as last_login_at,
+             last_login.ip_address as last_login_ip
       FROM employees e
       LEFT JOIN branches b ON e.branch_id = b.id
+      LEFT JOIN (
+        SELECT DISTINCT ON (user_id) user_id, created_at, ip_address
+        FROM audit_logs 
+        WHERE action = 'LOGIN_SUCCESS'
+        ORDER BY user_id, created_at DESC
+      ) last_login ON e.id = last_login.user_id
       ORDER BY e.created_at DESC
     `);
     
@@ -51,6 +59,8 @@ router.get('/', requireAdmin, async (req, res) => {
       contactNumber: row.contact_number,
       address: row.address,
       branchName: row.branch_name,
+      lastLogin: row.last_login_at,
+      lastLoginIp: row.last_login_ip,
       createdAt: row.created_at,
       updatedAt: row.updated_at
     }));

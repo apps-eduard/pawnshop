@@ -1,0 +1,28 @@
+Invoke-WebRequest -Uri "http://localhost:3000/api/health" -Method GET
+
+curl -H "Content-Type: application/json" http://localhost:3000/api/health
+
+taskkill /F /IM node.exe
+
+cd "X:\Programming 2025\pawnshop\pawn-web" ; ng serve --port 4200
+
+cd "X:\Programming 2025\pawnshop\pawn-api" ; node server.js
+
+🔍 Backend Server Health Check Commands:
+1. Quick Health Check:
+ curl http://localhost:3000/api/health
+
+ 2. Check if port 3000 is being used:
+ netstat -ano | findstr :3000
+
+ 3. Check Node.js processes:
+ tasklist | findstr node.exe
+
+4. Test a simple API endpoint:
+curl http://localhost:3000/api/auth/me
+
+5. PowerShell HTTP test:
+Invoke-WebRequest -Uri "http://localhost:3000/api/health" -Method GET
+
+
+taskkill /IM node.exe /F

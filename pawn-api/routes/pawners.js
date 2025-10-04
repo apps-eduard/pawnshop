@@ -40,15 +40,15 @@ router.get('/search', async (req, res) => {
     console.log(`🔍 [${new Date().toISOString()}] Searching pawners: "${q}" - User: ${req.user?.username || 'UNKNOWN'}`);
     
     const result = await pool.query(`
-      SELECT p.id, p.first_name, p.last_name, p.contact_number, p.email,
-             p.address, p.id_type, p.id_number, p.birth_date, p.is_active,
+      SELECT p.id, p.first_name, p.last_name, p.mobile_number as contact_number, p.email,
+             p.house_number as address, p.id_type, p.id_number, p.birth_date, p.is_active,
              p.created_at, p.updated_at
       FROM pawners p
       WHERE p.is_active = true
         AND (
           LOWER(p.first_name) LIKE LOWER($1) OR
           LOWER(p.last_name) LIKE LOWER($1) OR
-          p.contact_number LIKE $1 OR
+          p.mobile_number LIKE $1 OR
           LOWER(p.email) LIKE LOWER($1)
         )
       ORDER BY p.first_name ASC, p.last_name ASC
@@ -106,8 +106,8 @@ router.get('/', async (req, res) => {
     console.log(`👤 [${new Date().toISOString()}] Fetching pawners - User: ${req.user.username}`);
     
     const result = await pool.query(`
-      SELECT p.id, p.first_name, p.last_name, p.contact_number, p.email,
-             p.city_id, p.barangay_id, p.address_details, p.is_active,
+      SELECT p.id, p.first_name, p.last_name, p.mobile_number as contact_number, p.email,
+             p.city_id, p.barangay_id, p.house_number as address_details, p.is_active,
              p.created_at, p.updated_at,
              c.name as city_name, b.name as barangay_name
       FROM pawners p
@@ -154,8 +154,8 @@ router.get('/:id', async (req, res) => {
     console.log(`👤 [${new Date().toISOString()}] Fetching pawner ${id} - User: ${req.user.username}`);
     
     const result = await pool.query(`
-      SELECT p.id, p.first_name, p.last_name, p.contact_number, p.email,
-             p.city_id, p.barangay_id, p.address_details, p.is_active,
+      SELECT p.id, p.first_name, p.last_name, p.mobile_number as contact_number, p.email,
+             p.city_id, p.barangay_id, p.house_number as address_details, p.is_active,
              p.created_at, p.updated_at,
              c.name as city_name, b.name as barangay_name
       FROM pawners p
@@ -232,7 +232,7 @@ router.post('/', async (req, res) => {
     
     // Log if contact number already exists (but allow it)
     const existingPawner = await pool.query(
-      'SELECT id, first_name, last_name FROM pawners WHERE contact_number = $1',
+      'SELECT id, first_name, last_name FROM pawners WHERE mobile_number = $1',
       [contactNumber]
     );
     
@@ -251,9 +251,9 @@ router.post('/', async (req, res) => {
     const currentBranchId = branchResult.rows.length > 0 ? parseInt(branchResult.rows[0].branch_id) : 1;
 
     const result = await pool.query(`
-      INSERT INTO pawners (first_name, last_name, contact_number, email, city_id, barangay_id, address_details, branch_id, is_active)
+      INSERT INTO pawners (first_name, last_name, mobile_number, email, city_id, barangay_id, house_number, branch_id, is_active)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-      RETURNING id, first_name, last_name, contact_number, email, city_id, barangay_id, address_details, branch_id, is_active, created_at, updated_at
+      RETURNING id, first_name, last_name, mobile_number as contact_number, email, city_id, barangay_id, house_number as address_details, branch_id, is_active, created_at, updated_at
     `, [firstName, lastName, contactNumber, email, safeCityId, safeBarangayId, safeAddressDetails, currentBranchId, isActive]);
     
     const row = result.rows[0];
@@ -316,7 +316,7 @@ router.put('/:id', async (req, res) => {
     // Log if contact number already exists (but allow it)
     if (contactNumber) {
       const conflicts = await pool.query(
-        'SELECT id, first_name, last_name FROM pawners WHERE contact_number = $1 AND id != $2',
+        'SELECT id, first_name, last_name FROM pawners WHERE mobile_number = $1 AND id != $2',
         [contactNumber, id]
       );
       
@@ -341,7 +341,7 @@ router.put('/:id', async (req, res) => {
       values.push(lastName);
     }
     if (contactNumber !== undefined) {
-      fields.push(`contact_number = $${paramCount++}`);
+      fields.push(`mobile_number = $${paramCount++}`);
       values.push(contactNumber);
     }
     if (email !== undefined) {

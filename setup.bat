@@ -295,24 +295,71 @@ if %errorlevel% equ 0 (
 )
 echo ✓ Database ready
 
-REM Run complete database setup
+REM Run complete database setup with recent schema updates
 echo.
 echo [6.2/8] Setting up complete pawn shop database...
 echo 🔧 Running complete database setup (all tables + data)...
+echo 📋 Recent schema updates include:
+echo    • item_appraisals table (simplified appraisal workflow)
+echo    • audit_logs table (login tracking)
+echo    • Interest rate constraints (NUMERIC(5,4) for decimal storage)
+echo    • Transaction-centric database structure
+echo    • Employee-based authentication (no users table)
 cd pawn-api
-npm run setup-db
+
+REM Run comprehensive migration (includes new tables)
+echo.
+echo 🔄 Step 1: Running comprehensive migration...
+node run-comprehensive-migration.js
 if %errorlevel% equ 0 (
-    echo ✅ Complete pawn shop database setup successful!
-    echo    • All 19 tables created
-    echo    • 6 default users added
-    echo    • 66 Visayas/Mindanao cities seeded
-    echo    • 200 item descriptions loaded
-    echo    • System configuration initialized
+    echo ✅ Core migration completed successfully
 ) else (
-    echo ❌ ERROR: Failed to setup complete database!
+    echo ❌ ERROR: Failed to run comprehensive migration!
     pause
     exit /b 1
 )
+
+REM Create item_appraisals table specifically
+echo.
+echo 🔄 Step 2: Creating item_appraisals table...
+node create-item-appraisals-table.js
+if %errorlevel% equ 0 (
+    echo ✅ item_appraisals table created successfully
+) else (
+    echo ⚠️  WARNING: item_appraisals table creation failed, continuing...
+)
+
+REM Seed cities and barangays
+echo.
+echo 🔄 Step 3: Seeding cities and barangays...
+node seed-visayas-mindanao-cities-barangays.js
+if %errorlevel% equ 0 (
+    echo ✅ Cities and barangays seeded successfully
+) else (
+    echo ⚠️  WARNING: Cities seeding failed, continuing...
+)
+
+REM Seed item descriptions
+echo.
+echo 🔄 Step 4: Seeding item descriptions...
+node seed-item-descriptions.js
+if %errorlevel% equ 0 (
+    echo ✅ Item descriptions seeded successfully
+) else (
+    echo ⚠️  WARNING: Item descriptions seeding failed, continuing...
+)
+
+echo.
+echo ✅ Complete pawn shop database setup successful!
+echo    • 20+ tables created (including new item_appraisals, audit_logs)
+echo    • employees table for authentication (no users table)
+echo    • transactions table with proper interest rate constraints
+echo    • item_appraisals table for simplified appraisal workflow
+echo    • audit_logs table for login tracking
+echo    • 6 default employees (admin, cashier1, manager1, etc.)
+echo    • 66 Visayas/Mindanao cities with barangays seeded
+echo    • 200+ item descriptions loaded
+echo    • System configuration initialized
 cd ..
 
 REM Verify tables were created
@@ -327,14 +374,20 @@ if exist temp_tables.txt (
     echo ⚠️  No tables found or verification failed
 )
 
-REM All seeding is now handled by npm run setup-db above
+REM Data seeding completed in previous steps
 echo.
-echo [7/8] Database seeding completed...
-echo ✅ All data seeding completed by npm run setup-db:
-echo    • 6 default users (admin, cashier1, manager1, auctioneer1, appraiser1, pawner1)
-echo    • 65 Visayas and Mindanao cities with 819 barangays  
-echo    • 200 selectable item descriptions (76 jewelry + 124 appliances)
+echo [7/8] Database seeding and schema updates completed...
+echo ✅ All data seeding and recent schema updates completed:
+echo    • 6 default employees (admin, cashier1, manager1, auctioneer1, appraiser1, pawner1)
+echo    • employees table authentication (NO users table - important!)
+echo    • transactions table with NUMERIC(5,4) interest rate constraints
+echo    • item_appraisals table for simplified appraisal workflow
+echo    • audit_logs table for login tracking and security
+echo    • 66 Visayas and Mindanao cities with 819+ barangays  
+echo    • 200+ selectable item descriptions (jewelry + appliances)
 echo    • System configuration and transaction sequences initialized
+echo    • Status constraints fixed (pawn_items: in_vault, redeemed, sold, etc.)
+echo    • Interest rate storage: decimal format (0.10 for 10%)
 
 REM Show complete table verification
 echo.

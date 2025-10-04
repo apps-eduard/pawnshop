@@ -21,17 +21,17 @@ router.get('/search/:ticketNumber', async (req, res) => {
     
     const result = await pool.query(`
       SELECT pt.*, 
-             p.first_name, p.last_name, p.contact_number, p.email,
-             p.city_id, p.barangay_id, p.address_details,
+             p.first_name, p.last_name, p.mobile_number, p.email,
+             p.city_id, p.barangay_id, p.house_number, p.street,
              c.name as city_name, b.name as barangay_name,
-             u.first_name as cashier_first_name, u.last_name as cashier_last_name,
+             e.first_name as cashier_first_name, e.last_name as cashier_last_name,
              br.name as branch_name
       FROM pawn_tickets pt
       JOIN pawners p ON pt.pawner_id = p.id
       LEFT JOIN cities c ON p.city_id = c.id
       LEFT JOIN barangays b ON p.barangay_id = b.id
       LEFT JOIN branches br ON pt.branch_id = br.id
-      LEFT JOIN users u ON pt.created_by = u.id
+      LEFT JOIN employees e ON pt.created_by = e.id
       WHERE pt.ticket_number = $1 AND pt.status IN ('active', 'matured')
     `, [ticketNumber]);
     
@@ -69,7 +69,7 @@ router.get('/search/:ticketNumber', async (req, res) => {
         dateExpired: row.expiry_date,
         principalAmount: parseFloat(row.principal_amount || 0),
         principalLoan: parseFloat(row.principal_amount || 0),
-        interestRate: parseFloat(row.interest_rate || 0),
+        interestRate: parseFloat(row.interest_rate || 0) * 100, // Convert decimal to percentage for display
         interestAmount: parseFloat(row.interest_amount || 0),
         serviceCharge: parseFloat(row.service_charge || 0),
         netProceeds: parseFloat(row.net_proceeds || 0),
@@ -96,12 +96,12 @@ router.get('/search/:ticketNumber', async (req, res) => {
         pawnerName: `${row.first_name} ${row.last_name}`,
         firstName: row.first_name,
         lastName: row.last_name,
-        pawnerContact: row.contact_number,
-        contactNumber: row.contact_number,
+        pawnerContact: row.mobile_number,
+        contactNumber: row.mobile_number,
         pawnerEmail: row.email,
         cityName: row.city_name,
         barangayName: row.barangay_name,
-        completeAddress: row.address_details,
+        completeAddress: `${row.house_number || ''} ${row.street || ''}`.trim(),
         // Branch information
         branchName: row.branch_name,
         // Cashier information
@@ -129,25 +129,25 @@ router.get('/search/:ticketNumber', async (req, res) => {
   }
 });
 
-// Get all transactions - Updated to use pawn_tickets table
+// Get all transactions - Updated to use transactions table
 router.get('/', async (req, res) => {
   try {
     console.log(`💰 [${new Date().toISOString()}] Fetching transactions - User: ${req.user.username}`);
     
     const result = await pool.query(`
-      SELECT pt.*, 
-             p.first_name, p.last_name, p.contact_number, p.email,
-             p.city_id, p.barangay_id, p.address_details,
+      SELECT t.*, 
+             p.first_name, p.last_name, p.mobile_number, p.email,
+             p.city_id, p.barangay_id, p.house_number, p.street,
              c.name as city_name, b.name as barangay_name,
-             u.first_name as cashier_first_name, u.last_name as cashier_last_name,
-             b.name as branch_name
-      FROM pawn_tickets pt
-      JOIN pawners p ON pt.pawner_id = p.id
+             e.first_name as cashier_first_name, e.last_name as cashier_last_name,
+             br.name as branch_name
+      FROM transactions t
+      JOIN pawners p ON t.pawner_id = p.id
       LEFT JOIN cities c ON p.city_id = c.id
       LEFT JOIN barangays b ON p.barangay_id = b.id
-      LEFT JOIN branches br ON pt.branch_id = br.id
-      LEFT JOIN users u ON pt.created_by = u.id
-      ORDER BY pt.created_at DESC
+      LEFT JOIN branches br ON t.branch_id = br.id
+      LEFT JOIN employees e ON t.created_by = e.id
+      ORDER BY t.created_at DESC
     `);
     
     console.log(`✅ Found ${result.rows.length} transactions`);
@@ -172,7 +172,7 @@ router.get('/', async (req, res) => {
         dateExpired: row.expiry_date, // For compatibility
         principalAmount: parseFloat(row.principal_amount || 0),
         principalLoan: parseFloat(row.principal_amount || 0), // For compatibility
-        interestRate: parseFloat(row.interest_rate || 0),
+        interestRate: parseFloat(row.interest_rate || 0) * 100, // Convert decimal to percentage for display
         interestAmount: parseFloat(row.interest_amount || 0),
         serviceCharge: parseFloat(row.service_charge || 0),
         netProceeds: parseFloat(row.net_proceeds || 0),
@@ -198,12 +198,12 @@ router.get('/', async (req, res) => {
         updatedAt: row.updated_at,
         // Pawner information
         pawnerName: `${row.first_name} ${row.last_name}`,
-        pawnerContact: row.contact_number,
+        pawnerContact: row.mobile_number,
         pawnerEmail: row.email,
         pawnerAddress: {
           city: row.city_name,
           barangay: row.barangay_name,
-          details: row.address_details
+          details: `${row.house_number || ''} ${row.street || ''}`.trim()
         },
         // Cashier information
         cashierName: `${row.cashier_first_name} ${row.cashier_last_name}`,
@@ -220,7 +220,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Get transaction by ID - Updated to use pawn_tickets table
+// Get transaction by ID - Updated to use transactions table
 router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
@@ -228,19 +228,19 @@ router.get('/:id', async (req, res) => {
     console.log(`💰 [${new Date().toISOString()}] Fetching transaction ${id} - User: ${req.user.username}`);
     
     const result = await pool.query(`
-      SELECT pt.*, 
-             p.first_name, p.last_name, p.contact_number, p.email,
+      SELECT t.*, 
+             p.first_name, p.last_name, p.mobile_number, p.email,
              p.city_id, p.barangay_id, p.address_details,
              c.name as city_name, b.name as barangay_name,
              u.first_name as cashier_first_name, u.last_name as cashier_last_name,
              br.name as branch_name
-      FROM pawn_tickets pt
-      JOIN pawners p ON pt.pawner_id = p.id
+      FROM transactions t
+      JOIN pawners p ON t.pawner_id = p.id
       LEFT JOIN cities c ON p.city_id = c.id
       LEFT JOIN barangays b ON p.barangay_id = b.id
-      LEFT JOIN branches br ON pt.branch_id = br.id
-      LEFT JOIN users u ON pt.created_by = u.id
-      WHERE pt.id = $1
+      LEFT JOIN branches br ON t.branch_id = br.id
+      LEFT JOIN employees u ON t.created_by = u.id
+      WHERE t.id = $1
     `, [id]);
     
     if (result.rows.length === 0) {
@@ -277,7 +277,7 @@ router.get('/:id', async (req, res) => {
         dateExpired: row.expiry_date, // For compatibility
         principalAmount: parseFloat(row.principal_amount || 0),
         principalLoan: parseFloat(row.principal_amount || 0), // For compatibility
-        interestRate: parseFloat(row.interest_rate || 0),
+        interestRate: parseFloat(row.interest_rate || 0) * 100, // Convert decimal to percentage for display
         interestAmount: parseFloat(row.interest_amount || 0),
         serviceCharge: parseFloat(row.service_charge || 0),
         netProceeds: parseFloat(row.net_proceeds || 0),
@@ -303,12 +303,12 @@ router.get('/:id', async (req, res) => {
         updatedAt: row.updated_at,
         // Pawner information
         pawnerName: `${row.first_name} ${row.last_name}`,
-        pawnerContact: row.contact_number,
+        pawnerContact: row.mobile_number,
         pawnerEmail: row.email,
         pawnerAddress: {
           city: row.city_name,
           barangay: row.barangay_name,
-          details: row.address_details
+          details: `${row.house_number || ''} ${row.street || ''}`.trim()
         },
         // Cashier information
         cashierName: `${row.cashier_first_name} ${row.cashier_last_name}`,
@@ -371,8 +371,8 @@ router.post('/new-loan', async (req, res) => {
         // Create new pawner
         const pawnerResult = await client.query(`
           INSERT INTO pawners (
-            first_name, last_name, contact_number, email,
-            city_id, barangay_id, address_details
+            first_name, last_name, mobile_number, email,
+            city_id, barangay_id, house_number
           ) VALUES ($1, $2, $3, $4, $5, $6, $7)
           RETURNING id
         `, [
@@ -406,34 +406,46 @@ router.post('/new-loan', async (req, res) => {
       // 4. Calculate totals
       const totalAppraisal = items.reduce((sum, item) => sum + parseFloat(item.appraisalValue || 0), 0);
       const principalAmount = parseFloat(loanData.principalLoan);
-      const interestRate = parseFloat(loanData.interestRate || 3.0);
+      const interestRatePercent = parseFloat(loanData.interestRate || 3.0);
+      const interestRate = interestRatePercent / 100; // Convert percentage to decimal (10% -> 0.10)
       const interestAmount = parseFloat(loanData.interestAmount || 0);
       const serviceCharge = parseFloat(loanData.serviceCharge || 0);
       const netProceeds = parseFloat(loanData.netProceeds || 0);
       const totalAmount = principalAmount + interestAmount + serviceCharge;
       
-      // 5. Insert pawn ticket
-      const ticketResult = await client.query(`
-        INSERT INTO pawn_tickets (
-          ticket_number, pawner_id, branch_id, created_by,
-          transaction_type, transaction_date, loan_date, maturity_date, expiry_date,
-          status, principal_amount, interest_rate, interest_amount, service_charge, net_proceeds,
-          total_amount, due_amount, balance_remaining,
-          notes
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+      // 5. Insert transaction record
+      const transactionResult = await client.query(`
+        INSERT INTO transactions (
+          transaction_number, pawner_id, branch_id, transaction_type, status,
+          principal_amount, interest_rate, interest_amount, service_charge, 
+          total_amount, balance, transaction_date, maturity_date, expiry_date,
+          notes, created_by, created_at, updated_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
         RETURNING *
       `, [
-        ticketNumber, pawnerId, req.user.branch_id || 1, req.user.id,
-        'new_loan', txnDate, grantedDate, maturedDate, expiredDate,
-        'active', principalAmount, interestRate, interestAmount, serviceCharge, netProceeds,
-        totalAmount, totalAmount, totalAmount,
-        notes || ''
+        ticketNumber, pawnerId, req.user.branch_id || 1, 'new_loan', 'active',
+        principalAmount, interestRate, interestAmount, serviceCharge, 
+        totalAmount, totalAmount, txnDate, maturedDate, expiredDate,
+        notes || '', req.user.id, new Date(), new Date()
+      ]);
+      
+      const transaction = transactionResult.rows[0];
+      console.log(`✅ Created transaction: ${ticketNumber}`);
+      
+      // 6. Insert pawn ticket (for printing management)
+      const ticketResult = await client.query(`
+        INSERT INTO pawn_tickets (
+          transaction_id, ticket_number, status, created_at, updated_at
+        ) VALUES ($1, $2, $3, $4, $5)
+        RETURNING *
+      `, [
+        transaction.id, ticketNumber, 'active', new Date(), new Date()
       ]);
       
       const ticket = ticketResult.rows[0];
       console.log(`✅ Created pawn ticket: ${ticketNumber}`);
       
-      // 6. Insert pawn items  
+      // 7. Insert pawn items  
       for (const item of items) {
         // Get category_id from category name
         const categoryResult = await client.query('SELECT id FROM categories WHERE name = $1', [item.category]);
@@ -455,28 +467,28 @@ router.post('/new-loan', async (req, res) => {
             appraised_value, loan_amount, status
           ) VALUES ($1, $2, $3, $4, $5, $6, $7)
         `, [
-          ticket.id,                    // transaction_id (pawn ticket id)
+          transaction.id,               // transaction_id (use transaction id, not ticket id)
           categoryId,                   // category_id 
           descriptionId,                // description_id (if found)
           item.description || item.categoryDescription || '', // custom_description
           parseFloat(item.appraisalValue), // appraised_value
           parseFloat(item.appraisalValue), // loan_amount (same as appraised for now)
-          'pledged'                     // status
+          'in_vault'                    // status - must use constraint-allowed value
         ]);
       }
       console.log(`✅ Added ${items.length} items to ticket`);
       
-      // 7. Log audit trail
+      // 8. Log audit trail
       await client.query(`
         INSERT INTO audit_logs (
           table_name, record_id, action, user_id, new_values
         ) VALUES ($1, $2, $3, $4, $5)
       `, [
-        'pawn_tickets',
-        ticket.id,
+        'transactions',
+        transaction.id,
         'CREATE',
         req.user.id,
-        JSON.stringify(ticket)
+        JSON.stringify(transaction)
       ]);
       
       await client.query('COMMIT');
@@ -797,7 +809,10 @@ router.post('/additional-loan', async (req, res) => {
       
       // 1. Get original ticket details
       const ticketResult = await client.query(`
-        SELECT * FROM pawn_tickets WHERE id = $1 AND status = 'active'
+        SELECT pt.*, t.pawner_id, t.branch_id, t.principal_amount, t.interest_rate, t.total_amount
+        FROM pawn_tickets pt 
+        JOIN transactions t ON pt.transaction_id = t.id 
+        WHERE pt.id = $1 AND t.status = 'active'
       `, [originalTicketId]);
       
       if (ticketResult.rows.length === 0) {
@@ -818,9 +833,9 @@ router.post('/additional-loan', async (req, res) => {
       const addAmount = parseFloat(additionalAmount);
       const currentPrincipal = parseFloat(originalTicket.principal_amount);
       const newPrincipal = currentPrincipal + addAmount;
-      const interestRate = parseFloat(newInterestRate || originalTicket.interest_rate);
+      const interestRateDecimal = newInterestRate ? parseFloat(newInterestRate) / 100 : parseFloat(originalTicket.interest_rate);
       const serviceCharge = parseFloat(newServiceCharge || 0);
-      const interestAmount = (newPrincipal * interestRate) / 100;
+      const interestAmount = newPrincipal * interestRateDecimal;
       const totalAmount = newPrincipal + interestAmount + serviceCharge;
       const netProceeds = addAmount - serviceCharge;
       
@@ -836,22 +851,33 @@ router.post('/additional-loan', async (req, res) => {
         return date;
       })();
       
-      // 5. Create new ticket for additional loan
-      const newTicketResult = await client.query(`
-        INSERT INTO pawn_tickets (
-          ticket_number, pawner_id, branch_id, created_by,
-          transaction_type, transaction_date, loan_date, maturity_date, expiry_date,
-          status, principal_amount, interest_rate, interest_amount, service_charge, net_proceeds,
-          total_amount, due_amount, balance_remaining, additional_amount,
-          parent_ticket_id, notes
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
+      // 5. Create new transaction for additional loan
+      const newTransactionResult = await client.query(`
+        INSERT INTO transactions (
+          transaction_number, pawner_id, branch_id, transaction_type, status,
+          principal_amount, interest_rate, interest_amount, service_charge, 
+          total_amount, balance, transaction_date, maturity_date, expiry_date,
+          parent_transaction_id, notes, created_by, created_at, updated_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
         RETURNING *
       `, [
-        newTicketNumber, originalTicket.pawner_id, originalTicket.branch_id, req.user.id,
-        'additional_loan', new Date(), new Date(), maturityDate, expiryDate,
-        'active', newPrincipal, interestRate, interestAmount, serviceCharge, netProceeds,
-        totalAmount, totalAmount, totalAmount, addAmount,
-        originalTicketId, notes || `Additional loan of ${addAmount} on ticket ${originalTicket.ticket_number}`
+        newTicketNumber, originalTicket.pawner_id, originalTicket.branch_id, 'additional_loan', 'active',
+        newPrincipal, interestRateDecimal, interestAmount, serviceCharge,
+        totalAmount, totalAmount, new Date(), maturityDate, expiryDate,
+        originalTicket.transaction_id, notes || `Additional loan of ${addAmount} on ticket ${originalTicket.ticket_number}`,
+        req.user.id, new Date(), new Date()
+      ]);
+      
+      const newTransaction = newTransactionResult.rows[0];
+      
+      // 6. Create new pawn ticket (for printing)
+      const newTicketResult = await client.query(`
+        INSERT INTO pawn_tickets (
+          transaction_id, ticket_number, status, created_at, updated_at
+        ) VALUES ($1, $2, $3, $4, $5)
+        RETURNING *
+      `, [
+        newTransaction.id, newTicketNumber, 'active', new Date(), new Date()
       ]);
       
       const newTicket = newTicketResult.rows[0];
