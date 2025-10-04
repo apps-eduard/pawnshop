@@ -9,44 +9,141 @@ REM Check if PostgreSQL is installed and running
 echo [1/8] Checking PostgreSQL installation...
 pg_isready >nul 2>&1
 if %errorlevel% neq 0 (
-    echo ERROR: PostgreSQL is not running or not installed!
-    echo Please install PostgreSQL and make sure it's running.
-    echo Download from: https://www.postgresql.org/download/
+    echo.
+    echo ❌ ERROR: PostgreSQL is not running or not installed!
+    echo.
+    echo 🔍 This means:
+    echo    1. PostgreSQL is not installed on your system
+    echo    2. PostgreSQL service is not running
+    echo    3. PostgreSQL is not in your system PATH
+    echo    4. PostgreSQL is installed but not properly configured
+    echo.
+    echo 💡 Solutions:
+    echo    1. INSTALL PostgreSQL:
+    echo       - Download from: https://www.postgresql.org/download/windows/
+    echo       - Run installer as Administrator
+    echo       - Remember the password you set for 'postgres' user
+    echo       - Keep default port 5432
+    echo.
+    echo    2. START PostgreSQL service:
+    echo       - Open Services (Win+R, type services.msc)
+    echo       - Find PostgreSQL service (e.g., postgresql-x64-15)
+    echo       - Right-click and select Start
+    echo       - OR run: net start postgresql-x64-15
+    echo.
+    echo    3. CHECK PATH:
+    echo       - PostgreSQL bin folder should be in PATH
+    echo       - Usually: C:\Program Files\PostgreSQL\15\bin
+    echo       - Add to PATH if missing
+    echo.
+    echo    4. VERIFY installation:
+    echo       - After installing, run this command again
+    echo       - Test: psql --version
+    echo.
     pause
     exit /b 1
 )
-echo ✓ PostgreSQL is running
+echo ✅ PostgreSQL is running and accessible
 
 REM Check if Node.js is installed
 echo.
 echo [2/8] Checking Node.js installation...
 node --version >nul 2>&1
 if %errorlevel% neq 0 (
-    echo ERROR: Node.js is not installed!
-    echo Please install Node.js from: https://nodejs.org/
+    echo.
+    echo ❌ ERROR: Node.js is not installed!
+    echo.
+    echo 🔍 This means:
+    echo    1. Node.js is not installed on your system
+    echo    2. Node.js is not in your system PATH
+    echo    3. Node.js installation is corrupted
+    echo.
+    echo 💡 Solutions:
+    echo    1. INSTALL Node.js:
+    echo       - Download from: https://nodejs.org/
+    echo       - Choose LTS version (recommended)
+    echo       - Run installer as Administrator
+    echo       - Use default installation options
+    echo.
+    echo    2. VERIFY installation:
+    echo       - Open new Command Prompt after installation
+    echo       - Test: node --version
+    echo       - Test: npm --version
+    echo.
+    echo    3. RECOMMENDED versions:
+    echo       - Node.js 18.x or 20.x LTS
+    echo       - npm 9.x or 10.x (comes with Node.js)
+    echo.
+    echo    4. RESTART terminal:
+    echo       - Close this window after installing Node.js
+    echo       - Open new Command Prompt
+    echo       - Run setup.bat again
+    echo.
     pause
     exit /b 1
+) else (
+    for /f "tokens=*" %%i in ('node --version') do set NODE_VERSION=%%i
+    for /f "tokens=*" %%i in ('npm --version') do set NPM_VERSION=%%i
+    echo ✅ Node.js %NODE_VERSION% and npm %NPM_VERSION% installed
 )
-echo ✓ Node.js is installed
 
 REM Navigate to API directory
 echo.
 echo [3/8] Setting up API dependencies...
 cd /d "%~dp0pawn-api"
 if not exist package.json (
-    echo ERROR: package.json not found in pawn-api directory!
+    echo.
+    echo ❌ ERROR: package.json not found in pawn-api directory!
+    echo.
+    echo 🔍 This means:
+    echo    1. You're not in the correct directory
+    echo    2. The project files are incomplete
+    echo    3. The pawn-api folder is missing or corrupted
+    echo.
+    echo 💡 Solutions:
+    echo    1. Ensure you extracted the complete project
+    echo    2. Check current directory: %CD%
+    echo    3. Look for pawn-api folder in project root
+    echo    4. Re-download/extract the project if files are missing
+    echo.
+    echo 📁 Expected structure:
+    echo    pawnshop/
+    echo    ├── pawn-api/
+    echo    │   ├── package.json  ← This file is missing!
+    echo    │   ├── server.js
+    echo    │   └── ...
+    echo    └── pawn-web/
+    echo.
     pause
     exit /b 1
 )
 
 REM Install API dependencies
+echo 📦 Installing API dependencies (Node.js packages)...
 npm install
 if %errorlevel% neq 0 (
-    echo ERROR: Failed to install API dependencies!
+    echo.
+    echo ❌ ERROR: Failed to install API dependencies!
+    echo.
+    echo 🔍 Possible causes:
+    echo    1. No internet connection
+    echo    2. npm registry issues
+    echo    3. Insufficient disk space
+    echo    4. Permission issues
+    echo    5. Corrupted package.json
+    echo.
+    echo 💡 Troubleshooting steps:
+    echo    1. Check internet connection
+    echo    2. Clear npm cache: npm cache clean --force
+    echo    3. Delete node_modules: rmdir /s node_modules
+    echo    4. Try again: npm install
+    echo    5. Run as Administrator if permission issues
+    echo    6. Check disk space (need at least 500MB free)
+    echo.
     pause
     exit /b 1
 )
-echo ✓ API dependencies installed
+echo ✅ API dependencies installed successfully
 
 REM Setup database
 echo.
@@ -63,7 +160,28 @@ if "%DB_USER%"=="" set DB_USER=postgres
 
 set /p DB_PASSWORD="Database Password: "
 if "%DB_PASSWORD%"=="" (
-    echo ERROR: Database password is required!
+    echo.
+    echo ❌ ERROR: Database password is required!
+    echo.
+    echo 🔍 Why this is needed:
+    echo    1. PostgreSQL requires authentication
+    echo    2. Default 'postgres' user needs a password
+    echo    3. Password was set during PostgreSQL installation
+    echo.
+    echo 💡 How to find your PostgreSQL password:
+    echo    1. Check installation notes/documentation
+    echo    2. Try common passwords: admin, postgres, 123
+    echo    3. Password was set when you installed PostgreSQL
+    echo    4. If forgotten, you may need to reset it
+    echo.
+    echo 🔧 To reset PostgreSQL password:
+    echo    1. Edit pg_hba.conf file
+    echo    2. Change authentication to 'trust' temporarily
+    echo    3. Restart PostgreSQL service
+    echo    4. Connect and change password: ALTER USER postgres PASSWORD 'newpass';
+    echo    5. Change pg_hba.conf back to 'md5'
+    echo    6. Restart PostgreSQL service
+    echo.
     pause
     exit /b 1
 )
@@ -110,14 +228,51 @@ echo.
 echo [6/8] Creating database and tables...
 
 REM Test database connection first
-echo Testing database connection...
+echo 🔗 Testing database connection...
+echo    Host: %DB_HOST%
+echo    Port: %DB_PORT%
+echo    User: %DB_USER%
+echo    Database: postgres (for initial connection)
+
 set PGPASSWORD=%DB_PASSWORD%
 psql -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d postgres -c "SELECT 1;" >nul 2>&1
+
 if %errorlevel% neq 0 (
-    echo ERROR: Could not connect to PostgreSQL with provided credentials!
-    echo Please check your PostgreSQL installation and credentials.
+    echo.
+    echo ❌ ERROR: Could not connect to PostgreSQL!
+    echo.
+    echo 🔍 Possible causes:
+    echo    1. PostgreSQL service is not running
+    echo    2. Wrong username or password
+    echo    3. Wrong host or port
+    echo    4. User does not have connection privileges
+    echo.
+    echo 💡 Troubleshooting steps:
+    echo    1. Check if PostgreSQL is running:
+    echo       - Open Services (services.msc)
+    echo       - Look for PostgreSQL service
+    echo       - Start it if stopped
+    echo.
+    echo    2. Test connection manually:
+    echo       psql -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d postgres
+    echo.
+    echo    3. Common PostgreSQL service names:
+    echo       - postgresql-x64-15
+    echo       - postgresql-x64-14
+    echo       - PostgreSQL Database Server
+    echo.
+    echo    4. Start PostgreSQL service:
+    echo       net start postgresql-x64-15
+    echo.
+    echo    5. Check PostgreSQL installation:
+    echo       - Default port: 5432
+    echo       - Default user: postgres
+    echo       - Check installation directory
+    echo.
     pause
     exit /b 1
+) else (
+    echo ✅ Database connection successful!
 )
 
 REM Create database if it doesn't exist
@@ -264,26 +419,70 @@ echo.
 echo [8/8] Setting up frontend...
 cd /d "%~dp0pawn-web"
 if not exist package.json (
-    echo ERROR: package.json not found in pawn-web directory!
+    echo.
+    echo ❌ ERROR: package.json not found in pawn-web directory!
+    echo.
+    echo 🔍 This means:
+    echo    1. The Angular project files are missing
+    echo    2. The pawn-web folder is incomplete
+    echo    3. Project extraction failed
+    echo.
+    echo 💡 Solutions:
+    echo    1. Ensure you extracted the complete project
+    echo    2. Check current directory: %CD%
+    echo    3. Look for pawn-web folder in project root
+    echo    4. Re-download/extract the project if files are missing
+    echo.
+    echo 📁 Expected structure:
+    echo    pawnshop/
+    echo    ├── pawn-api/
+    echo    └── pawn-web/
+    echo        ├── package.json  ← This file is missing!
+    echo        ├── angular.json
+    echo        └── src/
+    echo.
     pause
     exit /b 1
 )
 
+echo 📦 Installing frontend dependencies (Angular packages)...
 npm install
 if %errorlevel% neq 0 (
-    echo ERROR: Failed to install frontend dependencies!
+    echo.
+    echo ❌ ERROR: Failed to install frontend dependencies!
+    echo.
+    echo 🔍 Possible causes:
+    echo    1. No internet connection
+    echo    2. npm registry issues
+    echo    3. Angular CLI compatibility issues
+    echo    4. Insufficient disk space
+    echo    5. Permission issues
+    echo.
+    echo 💡 Troubleshooting steps:
+    echo    1. Check internet connection
+    echo    2. Clear npm cache: npm cache clean --force
+    echo    3. Delete node_modules: rmdir /s node_modules
+    echo    4. Install Angular CLI globally: npm install -g @angular/cli
+    echo    5. Try again: npm install
+    echo    6. Run as Administrator if permission issues
+    echo    7. Check Node.js version (should be 16+ for Angular)
+    echo.
     pause
     exit /b 1
 )
-echo ✓ Frontend dependencies installed
+echo ✅ Frontend dependencies installed successfully
 
 REM Final success message
 echo.
-echo ========================================
-echo          Setup Complete! 🎉
-echo ========================================
+echo ████████████████████████████████████████████████████████████
+echo ████████████████████████████████████████████████████████████
+echo ███                                                      ███
+echo ███           🎉 SETUP COMPLETED SUCCESSFULLY! 🎉        ███
+echo ███                                                      ███
+echo ████████████████████████████████████████████████████████████
+echo ████████████████████████████████████████████████████████████
 echo.
-echo Your Pawnshop Management System is ready!
+echo 🏪 Your Pawnshop Management System is ready to use!
 echo.
 echo Default Login Credentials:
 echo ┌──────────────┬───────────────┬──────────────┐
@@ -300,11 +499,29 @@ echo.
 echo Sample Transaction Numbers for Testing:
 echo • PT-2024-001, PT-2024-002, PT-2024-003, PT-2024-004, PT-2024-005
 echo.
-echo To start the system:
-echo 1. Open two terminals
-echo 2. In first terminal:  cd pawn-api    ^&^& npm start
-echo 3. In second terminal: cd pawn-web    ^&^& npm start
-echo 4. Open browser to:    http://localhost:4200
+echo 🚀 NEXT STEPS - How to start your system:
+echo.
+echo    📝 EASY WAY (Recommended):
+echo       1. Double-click: start.bat
+echo       2. Wait for both servers to start
+echo       3. Open browser: http://localhost:4200
+echo.
+echo    📝 MANUAL WAY:
+echo       Terminal 1: cd pawn-api    ^&^& npm start
+echo       Terminal 2: cd pawn-web    ^&^& npm start
+echo       Browser:    http://localhost:4200
+echo.
+echo 🌐 SYSTEM URLS:
+echo    • Web Application: http://localhost:4200
+echo    • API Server:      http://localhost:3000
+echo    • Health Check:    http://localhost:3000/api/health
+echo.
+echo 💾 SYSTEM INFORMATION:
+echo    • Database: %DB_NAME% on %DB_HOST%:%DB_PORT%
+echo    • Environment: Development
+echo    • Setup Date: %DATE% %TIME%
+echo.
+echo 🎯 READY TO USE - Setup completed successfully!
 echo.
 echo Press any key to exit...
 pause >nul
