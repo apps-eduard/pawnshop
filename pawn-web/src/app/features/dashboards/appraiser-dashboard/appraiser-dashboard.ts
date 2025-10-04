@@ -756,47 +756,7 @@ export class AppraiserDashboard implements OnInit {
       },
       error: (error) => {
         console.error('Error creating pawner:', error);
-        let errorMsg = 'Error creating pawner';
-        let errorTitle = 'Create Error';
-        
-        if (error.error && error.error.message) {
-          errorMsg = error.error.message;
-          console.error('Error details:', error.error.message);
-          
-          // Special handling for existing contact number
-          if (errorMsg.includes('Contact number already exists')) {
-            errorTitle = 'Duplicate Contact';
-            errorMsg = 'A pawner with this contact number already exists. Please search for the existing pawner or use a different contact number.';
-            
-            // Try to find the existing pawner
-            if (error.error && error.error.existingPawnerId) {
-              // If we have the existing pawner ID, fetch that specific pawner
-              this.pawnerService.getPawner(error.error.existingPawnerId).subscribe({
-                next: (response) => {
-                  if (response.success && response.data) {
-                    this.selectPawner(response.data);
-                    this.toastService.showInfo('Existing Pawner Selected', 'Using existing pawner with the same contact number.');
-                  } else {
-                    // Fallback to search if we can't get the specific pawner
-                    this.searchQuery = this.newPawner.contactNumber;
-                    this.searchPawners();
-                  }
-                },
-                error: () => {
-                  // Fallback to search if the API call fails
-                  this.searchQuery = this.newPawner.contactNumber;
-                  this.searchPawners();
-                }
-              });
-            } else {
-              // Fallback to searching by contact number
-              this.searchQuery = this.newPawner.contactNumber;
-              this.searchPawners();
-            }
-          }
-        }
-        
-        this.toastService.showError(errorTitle, errorMsg);
+        this.toastService.showError('Create Error', 'Error creating pawner');
       }
     });
   }
@@ -847,15 +807,13 @@ export class AppraiserDashboard implements OnInit {
     }, 100);
   }
 
-  // Load Today's Appraisals
+  // Load Recent Appraisals
   loadRecentAppraisals() {
-    console.log('Loading today\'s appraisals');
-    this.appraisalService.getTodaysAppraisals().subscribe({
+    this.appraisalService.getAppraisals().subscribe({
       next: (response) => {
         if (response.success) {
-          console.log(`Found ${response.data.length} appraisals for today`);
-          // Get the latest appraisals from today
-          this.recentAppraisals = response.data.map(appraisal => ({
+          // Get only the latest 10 appraisals
+          this.recentAppraisals = response.data.slice(0, 10).map(appraisal => ({
             id: appraisal.id,
             pawnerId: appraisal.pawnerId,
             category: appraisal.category || 'Jewelry', // fallback for existing data
@@ -871,14 +829,10 @@ export class AppraiserDashboard implements OnInit {
             pawnerContact: appraisal.pawnerContact || 'No contact',
             createdAt: appraisal.createdAt || new Date()
           }));
-        } else {
-          console.error('API returned error:', response.message);
-          this.recentAppraisals = []; // Clear the list if there was an error
         }
       },
       error: (error) => {
-        console.error('Error loading today\'s appraisals:', error);
-        this.recentAppraisals = []; // Clear the list if there was an error
+        console.error('Error loading recent appraisals:', error);
       }
     });
   }
@@ -1796,4 +1750,3 @@ export class AppraiserDashboard implements OnInit {
     return category ? category.interestRate : 0;
   }
 }
-

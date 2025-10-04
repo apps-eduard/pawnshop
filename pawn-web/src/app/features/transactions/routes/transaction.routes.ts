@@ -9,7 +9,7 @@ import { Redeem } from '../redeem/redeem';
 import { Renew } from '../renew/renew';
 
 // Admin Transaction Management
-import { TransactionManagement } from '../../../pages/transaction-management/transaction-management';
+import { TransactionManagement } from '../../management/transaction-management/transaction-management';
 
 export const transactionRoutes: Routes = [
   // Admin Transaction Management

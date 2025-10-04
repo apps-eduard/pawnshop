@@ -103,18 +103,38 @@ export class LoginComponent implements OnInit {
         password: this.loginForm.value.password
       };
 
-      this.authService.login(credentials).subscribe({
-        next: (response) => {
+      // First check if API is accessible by making a request to the health endpoint
+      fetch('http://localhost:3000/api/health')
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('API server not responding. Please check if the server is running.');
+          }
+          return response.json();
+        })
+        .then(() => {
+          // If health check passes, proceed with login
+          this.authService.login(credentials).subscribe({
+            next: (response) => {
+              this.isLoading = false;
+              // Navigate to appropriate dashboard based on user role
+              this.router.navigate([this.authService.getDashboardRoute()]);
+            },
+            error: (error) => {
+              this.isLoading = false;
+              if (error.status === 0) {
+                this.errorMessage = 'Unable to connect to the server. Please check if the API server is running.';
+              } else {
+                this.errorMessage = error.error?.message || 'Login failed. Please check your credentials.';
+              }
+              console.error('Login error:', error);
+            }
+          });
+        })
+        .catch(error => {
           this.isLoading = false;
-          // Navigate to appropriate dashboard based on user role
-          this.router.navigate([this.authService.getDashboardRoute()]);
-        },
-        error: (error) => {
-          this.isLoading = false;
-          this.errorMessage = error.error?.message || 'Login failed. Please check your credentials.';
-          console.error('Login error:', error);
-        }
-      });
+          this.errorMessage = error.message || 'Cannot connect to the server';
+          console.error('API health check failed:', error);
+        });
     } else {
       // Mark all fields as touched to show validation errors
       Object.keys(this.loginForm.controls).forEach(key => {

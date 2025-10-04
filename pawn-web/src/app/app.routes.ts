@@ -5,15 +5,16 @@ import { transactionRoutes } from './features/transactions/routes/transaction.ro
 import { dashboardRoutes } from './features/dashboards/routes/dashboard.routes';
 import { managementRoutes } from './features/management/routes/management.routes';
 import { settingsRoutes } from './features/settings/routes/settings.routes';
-import { pageRoutes } from './features/pages/routes/page.routes';
+// Import auth component
+import { LoginComponent } from './auth/login/login';
 
 export const routes: Routes = [
   { path: '', redirectTo: '/login', pathMatch: 'full' },
 
-  // Page routes (login, error pages)
+  // Login route
   {
-    path: '',
-    children: pageRoutes
+    path: 'login',
+    component: LoginComponent
   },
 
   // Management routes
@@ -55,5 +56,10 @@ export const routes: Routes = [
     children: transactionRoutes
   },
 
-  { path: '**', redirectTo: '/404' }
+  // Error routes
+  { path: '404', component: LoginComponent, data: { error: '404' } },
+  { path: '403', component: LoginComponent, data: { error: '403' } },
+  { path: '500', component: LoginComponent, data: { error: '500' } },
+
+  { path: '**', redirectTo: '/login' }
 ];
