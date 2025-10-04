@@ -33,19 +33,19 @@ app.use(helmet({
   contentSecurityPolicy: false
 }));
 
-// Enhanced rate limiting for better performance
+// Rate limiting for development - More reasonable limits
 const limiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute window
-  max: 30, // Reduced from 100 to 30 requests per minute
+  max: 200, // Increased to 200 requests per minute for development
   message: 'Too many requests from this IP, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
 });
 
-// More restrictive rate limiting for dashboard endpoints
+// Dashboard rate limiting - More reasonable for development
 const dashboardLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute
-  max: 20, // Limit dashboard requests
+  max: 100, // Increased to 100 dashboard requests per minute
   message: 'Dashboard requests limited, please slow down.'
 });
 

@@ -611,30 +611,77 @@ export class CashierDashboard implements OnInit {
     });
   }
 
+  isNavigating = false;
+  private lastClickTime = 0;
+
   onTransactionTypeSelect(transactionType: any) {
+    // Prevent rapid successive clicks (debounce with 1 second interval)
+    const now = Date.now();
+    if (now - this.lastClickTime < 1000) {
+      console.log('Navigation request ignored - too fast clicking');
+      return;
+    }
+    this.lastClickTime = now;
+
+    // Prevent multiple navigation attempts
+    if (this.isNavigating) {
+      console.log('Navigation in progress, ignoring click');
+      return;
+    }
+
+    this.isNavigating = true;
     console.log('Selected transaction type:', transactionType);
 
-    if (transactionType.id === 'create_appraisal') {
-      // Navigate to appraisal page
-      this.router.navigate(['/transactions/appraisal']);
-    } else if (transactionType.id === 'new_loan') {
-      // Navigate to new loan page
-      this.router.navigate(['/transactions/new-loan']);
-    } else if (transactionType.id === 'additional') {
-      // Navigate to additional loan page
-      this.router.navigate(['/transactions/additional-loan']);
-    } else if (transactionType.id === 'partial') {
-      // Navigate to partial payment page
-      this.router.navigate(['/transactions/partial-payment']);
-    } else if (transactionType.id === 'redeem') {
-      // Navigate to redeem page
-      this.router.navigate(['/transactions/redeem']);
-    } else if (transactionType.id === 'renew') {
-      // Navigate to renew page
-      this.router.navigate(['/transactions/renew']);
-    } else {
-      // Fallback for any unhandled transaction types
-      this.toastService.showInfo('Navigation', `Navigating to ${transactionType.title} page`);
+    try {
+      let navigationPromise: Promise<boolean>;
+
+      if (transactionType.id === 'create_appraisal') {
+        // Navigate to appraisal page
+        navigationPromise = this.router.navigate(['/transactions/appraisal']);
+      } else if (transactionType.id === 'new_loan') {
+        // Navigate to new loan page
+        navigationPromise = this.router.navigate(['/transactions/new-loan']);
+      } else if (transactionType.id === 'additional') {
+        // Navigate to additional loan page
+        navigationPromise = this.router.navigate(['/transactions/additional-loan']);
+      } else if (transactionType.id === 'partial') {
+        // Navigate to partial payment page
+        navigationPromise = this.router.navigate(['/transactions/partial-payment']);
+      } else if (transactionType.id === 'redeem') {
+        // Navigate to redeem page
+        navigationPromise = this.router.navigate(['/transactions/redeem']);
+      } else if (transactionType.id === 'renew') {
+        // Navigate to renew page
+        navigationPromise = this.router.navigate(['/transactions/renew']);
+      } else {
+        // Fallback for any unhandled transaction types
+        this.toastService.showInfo('Navigation', `Navigating to ${transactionType.title} page`);
+        this.isNavigating = false;
+        return;
+      }
+
+      // Handle navigation result
+      navigationPromise.then((success) => {
+        if (success) {
+          console.log(`Successfully navigated to ${transactionType.title}`);
+        } else {
+          console.warn(`Navigation to ${transactionType.title} failed`);
+          this.toastService.showWarning('Navigation', `Failed to navigate to ${transactionType.title}`);
+        }
+      }).catch((error) => {
+        console.error('Navigation error:', error);
+        this.toastService.showError('Navigation Error', 'Failed to navigate. Please try again.');
+      }).finally(() => {
+        // Reset navigation flag after a delay
+        setTimeout(() => {
+          this.isNavigating = false;
+        }, 500);
+      });
+
+    } catch (error) {
+      console.error('Error in onTransactionTypeSelect:', error);
+      this.isNavigating = false;
+      this.toastService.showError('Error', 'An unexpected error occurred during navigation');
     }
   }
 
@@ -664,23 +711,51 @@ export class CashierDashboard implements OnInit {
 
       console.log('🚨 Navigation extras:', JSON.stringify(navigationExtras, null, 2));
 
+      // Set navigation flag
+      this.isNavigating = true;
+
       // Navigate to the New Loan page with the appraisal data
       const navigationPromise = this.router.navigate(['/transactions/new-loan'], navigationExtras);
 
       navigationPromise.then((success) => {
         console.log('🚨 Navigation promise resolved:', success);
+        if (!success) {
+          this.toastService.showWarning('Navigation', 'Failed to navigate to New Loan page');
+        }
       }).catch((error) => {
         console.error('🚨 Navigation error:', error);
+        this.toastService.showError('Navigation Error', 'Failed to navigate to New Loan page. Please try again.');
+      }).finally(() => {
+        // Reset navigation flag after a delay
+        setTimeout(() => {
+          this.isNavigating = false;
+        }, 500);
       });
 
       console.log('✅ Navigation command executed');
     } catch (error) {
       console.error('🚨 Error in navigateToTransaction:', error);
+      this.isNavigating = false;
+      this.toastService.showError('Error', 'An unexpected error occurred during navigation');
     }
   }
 
   // Test method to verify click is working
   testClickHandler(appraisal: any) {
+    // Prevent rapid successive clicks on appraisals
+    const now = Date.now();
+    if (now - this.lastClickTime < 1000) {
+      console.log('Appraisal click ignored - too fast clicking');
+      return;
+    }
+    this.lastClickTime = now;
+
+    // Prevent multiple navigation attempts
+    if (this.isNavigating) {
+      console.log('Navigation in progress, ignoring appraisal click');
+      return;
+    }
+
     console.log('Test click handler called with:', appraisal);
 
     // Now call the real navigation method

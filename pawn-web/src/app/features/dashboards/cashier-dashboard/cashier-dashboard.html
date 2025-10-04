@@ -39,8 +39,11 @@
       <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-6">Transaction Types</h3>
 
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <button *ngFor="let type of transactionTypes" (click)="onTransactionTypeSelect(type)"
-          class="flex items-center space-x-3 p-4 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-left hover:shadow-md group">
+        <button *ngFor="let type of transactionTypes"
+          (click)="onTransactionTypeSelect(type)"
+          [disabled]="isNavigating"
+          [class]="'flex items-center space-x-3 p-4 rounded-lg border border-gray-200 dark:border-gray-700 transition-colors text-left group ' +
+                   (isNavigating ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50 dark:hover:bg-gray-700 hover:shadow-md')">
 
           <div [class]="'p-3 rounded-lg transition-colors ' + type.bgColor">
             <!-- New Loan Icon -->
@@ -129,8 +132,10 @@
         </div>
 
         <div *ngIf="pendingAppraisals.length > 0" class="space-y-4">
-          <div *ngFor="let appraisal of pendingAppraisals" (click)="testClickHandler(appraisal)"
-            class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition-all cursor-pointer hover:border-primary-300 dark:hover:border-primary-600 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+          <div *ngFor="let appraisal of pendingAppraisals"
+            (click)="testClickHandler(appraisal)"
+            [class]="'border border-gray-200 dark:border-gray-700 rounded-lg p-4 transition-all ' +
+                     (isNavigating ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:shadow-md hover:border-primary-300 dark:hover:border-primary-600 hover:bg-gray-50 dark:hover:bg-gray-700/50')">
 
             <div class="flex items-start justify-between mb-3">
               <div class="flex-1">
