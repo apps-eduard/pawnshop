@@ -121,45 +121,104 @@ if %errorlevel% neq 0 (
 )
 
 REM Create database if it doesn't exist
-echo Creating database if it doesn't exist...
-psql -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d postgres -c "CREATE DATABASE %DB_NAME%;" 2>nul
+echo.
+echo [6.1/8] Checking if database exists...
+set PGPASSWORD=%DB_PASSWORD%
+psql -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d postgres -c "SELECT 1 FROM pg_database WHERE datname='%DB_NAME%';" -t -A | findstr /C:"1" >nul
+if %errorlevel% equ 0 (
+    echo ℹ️  Database '%DB_NAME%' already exists
+) else (
+    echo ⚠️  Database '%DB_NAME%' does not exist - creating now...
+    psql -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d postgres -c "CREATE DATABASE %DB_NAME%;"
+    if %errorlevel% equ 0 (
+        echo ✅ Database '%DB_NAME%' created successfully
+    ) else (
+        echo ❌ ERROR: Failed to create database '%DB_NAME%'
+        pause
+        exit /b 1
+    )
+)
 echo ✓ Database ready
 
 REM Run database setup script
-echo Setting up database schema...
+echo.
+echo [6.2/8] Setting up database schema and tables...
 if exist database\setup.js (
+    echo 🔧 Running database setup script...
     node database/setup.js
+    if %errorlevel% equ 0 (
+        echo ✅ Database schema and tables created successfully
+    ) else (
+        echo ❌ ERROR: Failed to setup database schema!
+        pause
+        exit /b 1
+    )
 ) else (
-    echo Creating database tables...
+    echo 🔧 Running migration script...
     node run-migration.js
+    if %errorlevel% equ 0 (
+        echo ✅ Database tables created via migration
+    ) else (
+        echo ❌ ERROR: Failed to create database tables!
+        pause
+        exit /b 1
+    )
 )
-if %errorlevel% neq 0 (
-    echo ERROR: Failed to setup database schema!
-    pause
-    exit /b 1
+
+REM Verify tables were created
+echo.
+echo [6.3/8] Verifying created tables...
+psql -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d %DB_NAME% -c "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name;" -t -A | findstr /V "^$" > temp_tables.txt
+if exist temp_tables.txt (
+    echo ✅ Tables created successfully:
+    for /f %%i in (temp_tables.txt) do echo    📋 %%i
+    del temp_tables.txt
+) else (
+    echo ⚠️  No tables found or verification failed
 )
-echo ✓ Database schema created
 
 REM Seed initial data
 echo.
 echo [7/8] Seeding initial data...
 
 REM Add cities and barangays if script exists
+echo.
+echo [7.1/8] Seeding cities and barangays...
 if exist create-cities-barangays.js (
-    echo Adding cities and barangays...
+    echo 🏙️  Adding Philippine cities and barangays...
     node create-cities-barangays.js
-    if %errorlevel% neq 0 (
-        echo WARNING: Failed to add cities and barangays, continuing...
+    if %errorlevel% equ 0 (
+        echo ✅ Cities and barangays added successfully
+        REM Count cities and barangays
+        psql -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d %DB_NAME% -c "SELECT COUNT(*) FROM cities;" -t -A > temp_city_count.txt
+        psql -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d %DB_NAME% -c "SELECT COUNT(*) FROM barangays;" -t -A > temp_barangay_count.txt
+        set /p CITY_COUNT=<temp_city_count.txt
+        set /p BARANGAY_COUNT=<temp_barangay_count.txt
+        echo    📊 %CITY_COUNT% cities and %BARANGAY_COUNT% barangays added
+        del temp_city_count.txt temp_barangay_count.txt 2>nul
+    ) else (
+        echo ⚠️  WARNING: Failed to add cities and barangays, continuing...
     )
 ) else (
-    echo Skipping cities and barangays - script not found
+    echo ⚠️  Skipping cities and barangays - script not found
 )
 
 REM Add sample users and pawners
-echo Adding sample users and pawners...
+echo.
+echo [7.2/8] Seeding sample users and pawners...
+echo 👥 Adding 6 user accounts and sample pawners...
 node add-sample-data.js
-if %errorlevel% neq 0 (
-    echo ERROR: Failed to add sample data!
+if %errorlevel% equ 0 (
+    echo ✅ Sample users and pawners added successfully
+    REM Count employees and pawners
+    psql -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d %DB_NAME% -c "SELECT COUNT(*) FROM employees;" -t -A > temp_employee_count.txt
+    psql -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d %DB_NAME% -c "SELECT COUNT(*) FROM pawners;" -t -A > temp_pawner_count.txt
+    set /p EMPLOYEE_COUNT=<temp_employee_count.txt
+    set /p PAWNER_COUNT=<temp_pawner_count.txt
+    echo    📊 %EMPLOYEE_COUNT% employees and %PAWNER_COUNT% pawners added
+    del temp_employee_count.txt temp_pawner_count.txt 2>nul
+) else (
+    echo ❌ ERROR: Failed to add sample data!
     pause
     exit /b 1
 )
@@ -186,7 +245,19 @@ if exist fix-address-data.js (
     echo Skipping address data fix - script not found
 )
 
-echo ✓ Initial data seeded
+echo ✅ Initial data seeded successfully
+
+REM Show database summary
+echo.
+echo [7.3/8] Database setup summary...
+echo 📊 Database Setup Summary:
+echo ┌─────────────────────────────────────────┐
+psql -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d %DB_NAME% -c "SELECT 'Tables: ' || COUNT(*) FROM information_schema.tables WHERE table_schema = 'public';" -t -A | findstr /V "^$"
+psql -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d %DB_NAME% -c "SELECT 'Cities: ' || COUNT(*) FROM cities;" -t -A 2>nul | findstr /V "^$"
+psql -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d %DB_NAME% -c "SELECT 'Barangays: ' || COUNT(*) FROM barangays;" -t -A 2>nul | findstr /V "^$"
+psql -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d %DB_NAME% -c "SELECT 'Employees: ' || COUNT(*) FROM employees;" -t -A 2>nul | findstr /V "^$"
+psql -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d %DB_NAME% -c "SELECT 'Pawners: ' || COUNT(*) FROM pawners;" -t -A 2>nul | findstr /V "^$"
+echo └─────────────────────────────────────────┘
 
 REM Setup frontend
 echo.
