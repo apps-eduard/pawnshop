@@ -69,9 +69,9 @@ export class Appraisal implements OnInit, OnDestroy, AfterViewInit {
   // ViewChild references for auto-focus
   @ViewChild('searchInput') searchInput!: ElementRef<HTMLInputElement>;
   @ViewChild('categorySelect') categorySelect!: ElementRef<HTMLSelectElement>;
-  
+
   private destroy$ = new Subject<void>();
-  
+
   // Saving state
   isSaving: boolean = false;  // Search functionality
   searchQuery: string = '';
@@ -131,14 +131,14 @@ export class Appraisal implements OnInit, OnDestroy, AfterViewInit {
       console.log('Initial focus set on search input');
     }, 800);
   }
-  
+
   // Check if API server is accessible and we are authenticated
   private checkApiConnection() {
     // First check if we have a token
     const token = localStorage.getItem('token');
     if (!token) {
       console.error('No authentication token found');
-      this.toastService.showError('Authentication Error', 
+      this.toastService.showError('Authentication Error',
         'You are not authenticated. Please log in again.');
       // Redirect to login page
       this.router.navigate(['/login']);
@@ -154,12 +154,12 @@ export class Appraisal implements OnInit, OnDestroy, AfterViewInit {
         error: (error) => {
           console.error('API connection or authentication failed:', error);
           if (error.status === 401 || error.status === 403) {
-            this.toastService.showError('Authentication Error', 
+            this.toastService.showError('Authentication Error',
               'Your session has expired. Please log in again.');
             // Redirect to login page
             this.router.navigate(['/login']);
           } else {
-            this.toastService.showWarning('API Connection Issue', 
+            this.toastService.showWarning('API Connection Issue',
               'Cannot connect to the API server. Some features may not work correctly.');
           }
         }
@@ -170,7 +170,7 @@ export class Appraisal implements OnInit, OnDestroy, AfterViewInit {
     this.destroy$.next();
     this.destroy$.complete();
   }
-  
+
   ngAfterViewInit() {
     // Focus on search input when view is ready
     setTimeout(() => {
@@ -305,7 +305,7 @@ export class Appraisal implements OnInit, OnDestroy, AfterViewInit {
       barangayId: pawner.barangayId || '',
       address: pawner.addressDetails || ''
     };
-    
+
     // If we have a cityId, update the filtered barangays list
     if (pawner.cityId) {
       this.onCityChange();
@@ -333,11 +333,11 @@ export class Appraisal implements OnInit, OnDestroy, AfterViewInit {
   // City/Barangay filtering
   onCityChange() {
     console.log('City ID changed to:', this.pawnerForm.cityId);
-    
+
     if (this.pawnerForm.cityId) {
       const cityId = parseInt(this.pawnerForm.cityId);
       const selectedCity = this.cities.find(city => city.id === cityId);
-      
+
       if (selectedCity) {
         console.log('Selected city:', selectedCity.name, '(ID:', selectedCity.id, ')');
         this.filteredBarangays = this.barangays.filter(barangay => barangay.cityId === cityId);
@@ -511,11 +511,11 @@ export class Appraisal implements OnInit, OnDestroy, AfterViewInit {
     // Get cityId and barangayId directly from form
     const cityId = parseInt(this.pawnerForm.cityId);
     const barangayId = parseInt(this.pawnerForm.barangayId);
-    
+
     // Validate required fields
     if (!cityId || !barangayId || isNaN(cityId) || isNaN(barangayId)) {
-      console.log('Missing or invalid cityId or barangayId:', { 
-        cityId: this.pawnerForm.cityId, 
+      console.log('Missing or invalid cityId or barangayId:', {
+        cityId: this.pawnerForm.cityId,
         barangayId: this.pawnerForm.barangayId,
         parsedCityId: cityId,
         parsedBarangayId: barangayId
@@ -523,15 +523,15 @@ export class Appraisal implements OnInit, OnDestroy, AfterViewInit {
       this.toastService.showError('Error', 'Please select a valid city and barangay');
       return;
     }
-    
-    console.log('Creating pawner with:', { 
-      name: `${this.pawnerForm.first_name} ${this.pawnerForm.last_name}`, 
+
+    console.log('Creating pawner with:', {
+      name: `${this.pawnerForm.first_name} ${this.pawnerForm.last_name}`,
       contact: this.pawnerForm.phone,
-      cityId, 
-      barangayId, 
+      cityId,
+      barangayId,
       address: this.pawnerForm.address
     });
-    
+
     const pawnerRequest = {
       firstName: this.pawnerForm.first_name,
       lastName: this.pawnerForm.last_name,
@@ -548,7 +548,7 @@ export class Appraisal implements OnInit, OnDestroy, AfterViewInit {
         if (response.success) {
           this.selectedPawner = response.data;
           this.toastService.showSuccess('Success', 'Pawner created successfully');
-          
+
           // Now that we have the pawner, save the appraisal items
           this.saveAppraisalItems();
         } else {
@@ -558,13 +558,13 @@ export class Appraisal implements OnInit, OnDestroy, AfterViewInit {
       error: (error) => {
         console.error('Error creating pawner:', error);
         let errorMsg = 'Error creating pawner';
-        
+
         if (error.error && error.error.message) {
           errorMsg = error.error.message;
         } else if (error.status === 400) {
           errorMsg = 'Missing required pawner information';
         }
-        
+
         this.toastService.showError('Create Error', errorMsg);
       }
     });
@@ -576,7 +576,7 @@ export class Appraisal implements OnInit, OnDestroy, AfterViewInit {
       this.toastService.showError('Error', 'Please add at least one item to the appraisal');
       return;
     }
-    
+
     // Set saving state to true
     this.isSaving = true;
     this.toastService.showInfo('Processing', 'Saving appraisal items...');
@@ -600,7 +600,7 @@ export class Appraisal implements OnInit, OnDestroy, AfterViewInit {
       const interestRate = selectedCategory ? parseFloat(selectedCategory.interest_rate || '5') / 100 : 0.05; // Convert to decimal
 
       // Ensure estimated value is properly formatted as a number
-      const estimatedValue = typeof item.appraised_value === 'string' ? 
+      const estimatedValue = typeof item.appraised_value === 'string' ?
         parseFloat(item.appraised_value) : item.appraised_value;
 
       const appraisalRequest = {
@@ -626,7 +626,7 @@ export class Appraisal implements OnInit, OnDestroy, AfterViewInit {
           console.error(`Request timeout for item: ${item.description}`);
           reject(new Error(`Request timeout for item: ${item.description}`));
         }, 20000); // 20-second timeout (increased from 10 seconds)
-        
+
         // Check if we have a valid authentication token first
         const token = localStorage.getItem('token');
         if (!token) {
@@ -651,7 +651,7 @@ export class Appraisal implements OnInit, OnDestroy, AfterViewInit {
           error: (error) => {
             clearTimeout(timeoutId);
             console.error('Error saving appraisal item:', error);
-            
+
             if (error.status === 0) {
               reject(new Error(`Server connection failed. Please ensure the API server is running.`));
             } else if (error.status === 401 || error.status === 403) {
@@ -686,20 +686,20 @@ export class Appraisal implements OnInit, OnDestroy, AfterViewInit {
         // At least one item failed to save
         this.isSaving = false;
         console.error('Error during batch save:', error);
-        
+
         // Check for specific error conditions
         if (error.message.includes('connection failed')) {
-          this.toastService.showError('Connection Error', 
+          this.toastService.showError('Connection Error',
             'Cannot connect to the API server. Please make sure the server is running.');
         } else if (error.message.includes('Authentication error')) {
-          this.toastService.showError('Authentication Error', 
+          this.toastService.showError('Authentication Error',
             'Your session has expired. Please log in again.');
           this.router.navigate(['/login']);
         } else if (error.message.includes('Validation error')) {
-          this.toastService.showError('Validation Error', 
+          this.toastService.showError('Validation Error',
             error.message.replace('Validation error: ', ''));
         } else {
-          this.toastService.showError('Save Error', 
+          this.toastService.showError('Save Error',
             `Failed to save items. ${error.message || 'Please try again.'}`);
         }
       });
