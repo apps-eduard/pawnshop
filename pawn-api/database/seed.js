@@ -65,18 +65,55 @@ async function seedDatabase() {
       WHERE id = $2
     `, [managerId, mainBranchId]);
 
-    // Insert sample pawners
+    // First, we need to create some cities and barangays for pawners
+    console.log('🏙️ Creating sample cities and barangays...');
+    
+    // Insert sample cities
+    const cityResult = await pool.query(`
+      INSERT INTO cities (name, province, region) 
+      VALUES 
+        ('Manila', 'Metro Manila', 'NCR'),
+        ('Quezon City', 'Metro Manila', 'NCR'),
+        ('Makati', 'Metro Manila', 'NCR')
+      RETURNING id, name
+    `);
+    
+    const manilaId = cityResult.rows[0].id;
+    const quezoncityId = cityResult.rows[1].id;
+    const makatiId = cityResult.rows[2].id;
+    
+    // Insert sample barangays
+    const barangayResult = await pool.query(`
+      INSERT INTO barangays (name, city_id) 
+      VALUES 
+        ('Ermita', $1),
+        ('Malate', $1),
+        ('Diliman', $2),
+        ('Commonwealth', $2),
+        ('Poblacion', $3)
+      RETURNING id, name, city_id
+    `, [manilaId, quezoncityId, makatiId]);
+    
+    console.log(`✅ Created ${cityResult.rows.length} cities and ${barangayResult.rows.length} barangays`);
+
+    // Insert sample pawners using the new schema (city_id, barangay_id, address_details)
     console.log('🏪 Creating sample pawners...');
     const pawnerResult = await pool.query(`
-      INSERT INTO pawners (first_name, last_name, contact_number, email, address, id_type, id_number, birth_date) 
+      INSERT INTO pawners (first_name, last_name, contact_number, email, city_id, barangay_id, address_details, id_type, id_number, birth_date) 
       VALUES 
-        ('Maria', 'Garcia', '+1-555-2001', 'maria.garcia@email.com', '1001 Customer Lane, City Center', 'Drivers License', 'DL123456789', '1985-03-15'),
-        ('Robert', 'Martinez', '+1-555-2002', 'robert.martinez@email.com', '1002 Client St, Downtown', 'State ID', 'ID987654321', '1978-07-22'),
-        ('Anna', 'Rodriguez', '+1-555-2003', 'anna.rodriguez@email.com', '1003 Patron Ave, Midtown', 'Passport', 'PP456789123', '1992-11-08'),
-        ('David', 'Lopez', '+1-555-2004', 'david.lopez@email.com', '1004 Guest Blvd, Uptown', 'Drivers License', 'DL789123456', '1980-05-30'),
-        ('Carmen', 'Hernandez', '+1-555-2005', 'carmen.hernandez@email.com', '1005 Visitor Rd, Suburb', 'State ID', 'ID321654987', '1988-12-14')
+        ('Maria', 'Garcia', '+1-555-2001', 'maria.garcia@email.com', $1, $2, '1001 Customer Lane, Unit 4B', 'Drivers License', 'DL123456789', '1985-03-15'),
+        ('Robert', 'Martinez', '+1-555-2002', 'robert.martinez@email.com', $3, $4, '1002 Client St, House 12', 'State ID', 'ID987654321', '1978-07-22'),
+        ('Anna', 'Rodriguez', '+1-555-2003', 'anna.rodriguez@email.com', $5, $6, '1003 Patron Ave, Apartment 3A', 'Passport', 'PP456789123', '1992-11-08'),
+        ('David', 'Lopez', '+1-555-2004', 'david.lopez@email.com', $7, $8, '1004 Guest Blvd, Building 2', 'Drivers License', 'DL789123456', '1980-05-30'),
+        ('Carmen', 'Hernandez', '+1-555-2005', 'carmen.hernandez@email.com', $9, $10, '1005 Visitor Rd, Suburb', 'State ID', 'ID321654987', '1988-12-14')
       RETURNING id, first_name, last_name
-    `);
+    `, [
+      manilaId, barangayResult.rows[0].id,        // Maria in Manila, Ermita
+      quezoncityId, barangayResult.rows[2].id,   // Robert in Quezon City, Diliman  
+      makatiId, barangayResult.rows[4].id,       // Anna in Makati, Poblacion
+      manilaId, barangayResult.rows[1].id,       // David in Manila, Malate
+      quezoncityId, barangayResult.rows[3].id    // Carmen in Quezon City, Commonwealth
+    ]);
     
     console.log(`✅ Created ${pawnerResult.rows.length} pawners`);
 
