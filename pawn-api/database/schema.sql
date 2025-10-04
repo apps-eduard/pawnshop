@@ -5,6 +5,9 @@ DROP TABLE IF EXISTS pawn_items CASCADE;
 DROP TABLE IF EXISTS pawn_tickets CASCADE;
 DROP TABLE IF EXISTS pawners CASCADE;
 DROP TABLE IF EXISTS users CASCADE;
+DROP TABLE IF EXISTS employees CASCADE;
+DROP TABLE IF EXISTS barangays CASCADE;
+DROP TABLE IF EXISTS cities CASCADE;
 DROP TABLE IF EXISTS branches CASCADE;
 
 -- Create branches table
@@ -19,15 +22,36 @@ CREATE TABLE branches (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create users table
-CREATE TABLE users (
+-- Create cities table
+CREATE TABLE cities (
     id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    province VARCHAR(100),
+    region VARCHAR(100),
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create barangays table
+CREATE TABLE barangays (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    city_id INTEGER NOT NULL REFERENCES cities(id),
+    postal_code VARCHAR(10),
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create employees table (replaces users table)
+CREATE TABLE employees (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER UNIQUE NOT NULL,
     username VARCHAR(50) UNIQUE NOT NULL,
     email VARCHAR(100) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     first_name VARCHAR(50) NOT NULL,
     last_name VARCHAR(50) NOT NULL,
-    role VARCHAR(20) NOT NULL CHECK (role IN ('administrator', 'manager', 'cashier', 'auctioneer', 'appraiser')),
+    role VARCHAR(20) NOT NULL CHECK (role IN ('administrator', 'manager', 'cashier', 'auctioneer', 'appraiser', 'pawner')),
     branch_id INTEGER REFERENCES branches(id),
     position VARCHAR(50),
     contact_number VARCHAR(20),
@@ -37,14 +61,16 @@ CREATE TABLE users (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create pawners table
+-- Create pawners table (updated with city/barangay references)
 CREATE TABLE pawners (
     id SERIAL PRIMARY KEY,
     first_name VARCHAR(50) NOT NULL,
     last_name VARCHAR(50) NOT NULL,
     contact_number VARCHAR(20) NOT NULL,
     email VARCHAR(100),
-    address TEXT,
+    city_id INTEGER REFERENCES cities(id),
+    barangay_id INTEGER REFERENCES barangays(id),
+    address_details TEXT,
     id_type VARCHAR(50),
     id_number VARCHAR(50),
     birth_date DATE,
@@ -59,7 +85,7 @@ CREATE TABLE pawn_tickets (
     ticket_number VARCHAR(50) UNIQUE NOT NULL,
     pawner_id INTEGER NOT NULL REFERENCES pawners(id),
     branch_id INTEGER NOT NULL REFERENCES branches(id),
-    created_by INTEGER NOT NULL REFERENCES users(id),
+    created_by INTEGER NOT NULL REFERENCES employees(user_id),
     principal_amount DECIMAL(10,2) NOT NULL,
     interest_rate DECIMAL(5,2) DEFAULT 3.00,
     service_charge DECIMAL(8,2) DEFAULT 0,
@@ -93,7 +119,7 @@ CREATE TABLE pawn_payments (
     ticket_id INTEGER NOT NULL REFERENCES pawn_tickets(id),
     payment_type VARCHAR(20) NOT NULL CHECK (payment_type IN ('interest', 'partial_redemption', 'full_redemption', 'renewal')),
     amount DECIMAL(10,2) NOT NULL,
-    processed_by INTEGER NOT NULL REFERENCES users(id),
+    processed_by INTEGER NOT NULL REFERENCES employees(user_id),
     payment_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     notes TEXT
 );
@@ -101,7 +127,7 @@ CREATE TABLE pawn_payments (
 -- Create audit_logs table
 CREATE TABLE audit_logs (
     id SERIAL PRIMARY KEY,
-    user_id INTEGER REFERENCES users(id),
+    user_id INTEGER REFERENCES employees(user_id),
     action VARCHAR(100) NOT NULL,
     table_name VARCHAR(50) NOT NULL,
     record_id INTEGER,
@@ -114,12 +140,16 @@ CREATE TABLE audit_logs (
 
 -- Add foreign key constraint for manager_id in branches table
 ALTER TABLE branches ADD CONSTRAINT fk_branches_manager 
-    FOREIGN KEY (manager_id) REFERENCES users(id);
+    FOREIGN KEY (manager_id) REFERENCES employees(user_id);
 
 -- Create indexes for better performance
-CREATE INDEX idx_users_username ON users(username);
-CREATE INDEX idx_users_role ON users(role);
-CREATE INDEX idx_users_branch ON users(branch_id);
+CREATE INDEX idx_employees_username ON employees(username);
+CREATE INDEX idx_employees_role ON employees(role);
+CREATE INDEX idx_employees_branch ON employees(branch_id);
+CREATE INDEX idx_employees_user_id ON employees(user_id);
+CREATE INDEX idx_cities_name ON cities(name);
+CREATE INDEX idx_barangays_name ON barangays(name);
+CREATE INDEX idx_barangays_city ON barangays(city_id);
 CREATE INDEX idx_pawners_contact ON pawners(contact_number);
 CREATE INDEX idx_pawn_tickets_number ON pawn_tickets(ticket_number);
 CREATE INDEX idx_pawn_tickets_status ON pawn_tickets(status);
@@ -143,7 +173,7 @@ $$ language 'plpgsql';
 CREATE TRIGGER update_branches_updated_at BEFORE UPDATE ON branches
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
-CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users
+CREATE TRIGGER update_employees_updated_at BEFORE UPDATE ON employees
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TRIGGER update_pawners_updated_at BEFORE UPDATE ON pawners
