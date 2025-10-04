@@ -681,41 +681,10 @@ export class CashierDashboard implements OnInit {
 
   // Test method to verify click is working
   testClickHandler(appraisal: any) {
-    alert('CLICK TEST SUCCESS! Appraisal ID: ' + appraisal?.id + ' - Pawner: ' + appraisal?.pawnerName);
     console.log('Test click handler called with:', appraisal);
 
     // Now call the real navigation method
     this.navigateToTransaction(appraisal);
-  }
-
-  // Debug method to check why no appraisals are loading
-  debugLoadAppraisals() {
-    console.log('🔍 DEBUG: Manually triggering loadPendingAppraisals...');
-    console.log('🔍 DEBUG: Current pendingAppraisals array:', this.pendingAppraisals);
-    console.log('🔍 DEBUG: AppraisalService available?', !!this.appraisalService);
-
-    // Force reload pending appraisals
-    this.loadPendingAppraisals();
-
-    // Also add some test data temporarily
-    console.log('🔍 DEBUG: Adding test appraisal data...');
-    this.pendingAppraisals = [
-      {
-        id: 999,
-        pawnerId: 1,
-        pawnerName: 'Test Pawner',
-        category: 'Jewelry',
-        itemType: 'Gold Ring',
-        description: 'Test Gold Ring',
-        totalAppraisedValue: 15000,
-        estimatedValue: 15000,
-        status: 'completed',
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }
-    ];
-
-    console.log('🔍 DEBUG: Test data added. Length:', this.pendingAppraisals.length);
   }
 
   navigateToTransactionPage(transactionType: string) {
