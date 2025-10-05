@@ -20,6 +20,28 @@ async function runComprehensiveMigration() {
     await pool.query(coreSql);
     console.log('✅ Core pawn shop tables created');
     
+    // Step 3: Create penalty configuration tables
+    console.log('📋 Step 3: Creating penalty configuration tables...');
+    const penaltySqlPath = path.join(__dirname, 'create-penalty-config.sql');
+    if (fs.existsSync(penaltySqlPath)) {
+      const penaltySql = fs.readFileSync(penaltySqlPath, 'utf8');
+      await pool.query(penaltySql);
+      console.log('✅ Penalty configuration tables created');
+    } else {
+      console.log('⚠️  Warning: create-penalty-config.sql not found, skipping...');
+    }
+    
+    // Step 4: Create service charge configuration tables
+    console.log('📋 Step 4: Creating service charge configuration tables...');
+    const serviceSqlPath = path.join(__dirname, 'create-service-charge-config.sql');
+    if (fs.existsSync(serviceSqlPath)) {
+      const serviceSql = fs.readFileSync(serviceSqlPath, 'utf8');
+      await pool.query(serviceSql);
+      console.log('✅ Service charge configuration tables created');
+    } else {
+      console.log('⚠️  Warning: create-service-charge-config.sql not found, skipping...');
+    }
+    
     // Verify tables were created
     console.log('🔍 Verifying created tables...');
     const result = await pool.query(`

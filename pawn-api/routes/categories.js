@@ -67,7 +67,7 @@ router.get('/:categoryId/descriptions', authenticateToken, async (req, res) => {
       FROM descriptions d
       JOIN categories c ON d.category_id = c.id
       WHERE d.category_id = $1 AND d.is_active = true
-      ORDER BY d.description_name
+      ORDER BY d.name
     `, [categoryId]);
 
     res.json({
