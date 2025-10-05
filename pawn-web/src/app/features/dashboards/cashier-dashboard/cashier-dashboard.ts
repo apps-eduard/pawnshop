@@ -566,7 +566,7 @@ export class CashierDashboard implements OnInit {
         if (Array.isArray(response)) {
           // Direct array response
           this.recentTransactions = response.slice(0, 5).map((transaction: any) => ({
-            id: transaction.id || transaction.transaction_number,
+            id: String(transaction.id || transaction.transaction_number),
             transaction_number: transaction.transaction_number,
             type: 'new_loan', // Default type, could be enhanced based on transaction data
             customer_name: transaction.pawner_name || `${transaction.pawner_first_name || ''} ${transaction.pawner_last_name || ''}`.trim(),
@@ -582,7 +582,7 @@ export class CashierDashboard implements OnInit {
         } else if (response.success && Array.isArray(response.data)) {
           // Wrapped response
           this.recentTransactions = response.data.slice(0, 5).map((transaction: any) => ({
-            id: transaction.id || transaction.transaction_number,
+            id: String(transaction.id || transaction.transaction_number),
             transaction_number: transaction.transaction_number,
             type: 'new_loan',
             customer_name: transaction.pawner_name || `${transaction.pawner_first_name || ''} ${transaction.pawner_last_name || ''}`.trim(),

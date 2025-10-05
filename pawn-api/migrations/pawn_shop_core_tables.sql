@@ -202,49 +202,6 @@ CREATE TABLE IF NOT EXISTS pawn_items (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Appraisals table (detailed appraisal records)
-CREATE TABLE IF NOT EXISTS appraisals (
-    id SERIAL PRIMARY KEY,
-    pawn_item_id INTEGER REFERENCES pawn_items(id) NOT NULL,
-    
-    -- Appraisal Details
-    appraiser_id INTEGER REFERENCES employees(id) NOT NULL,
-    appraisal_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    
-    -- Market Values
-    market_value DECIMAL(15,2) NOT NULL,
-    estimated_resale_value DECIMAL(15,2),
-    quick_sale_value DECIMAL(15,2),
-    
-    -- Loan Calculation
-    loan_to_value_ratio DECIMAL(5,4) DEFAULT 0.70, -- 70% default
-    recommended_loan_amount DECIMAL(15,2) NOT NULL,
-    final_loan_amount DECIMAL(15,2) NOT NULL,
-    
-    -- Appraisal Methodology
-    appraisal_method VARCHAR(50), -- comparative, cost, income
-    reference_sources TEXT,
-    market_conditions TEXT,
-    
-    -- Quality Assessment
-    authenticity_verified BOOLEAN DEFAULT false,
-    quality_grade VARCHAR(20), -- A+, A, B+, B, C
-    
-    -- Detailed Notes
-    appraisal_notes TEXT NOT NULL,
-    condition_report TEXT,
-    photos TEXT[], -- Array of appraisal photo URLs
-    
-    -- Approval Workflow
-    status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected', 'revised')),
-    approved_by INTEGER REFERENCES employees(id),
-    approved_at TIMESTAMP,
-    rejection_reason TEXT,
-    
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
 -- Item appraisals table (simplified appraisals for appraiser-to-cashier workflow)
 CREATE TABLE IF NOT EXISTS item_appraisals (
     id SERIAL PRIMARY KEY,
@@ -384,10 +341,6 @@ CREATE INDEX IF NOT EXISTS idx_transactions_branch ON transactions(branch_id);
 CREATE INDEX IF NOT EXISTS idx_pawn_items_transaction ON pawn_items(transaction_id);
 CREATE INDEX IF NOT EXISTS idx_pawn_items_category ON pawn_items(category_id);
 CREATE INDEX IF NOT EXISTS idx_pawn_items_status ON pawn_items(status);
-
-CREATE INDEX IF NOT EXISTS idx_appraisals_item ON appraisals(pawn_item_id);
-CREATE INDEX IF NOT EXISTS idx_appraisals_appraiser ON appraisals(appraiser_id);
-CREATE INDEX IF NOT EXISTS idx_appraisals_status ON appraisals(status);
 
 CREATE INDEX IF NOT EXISTS idx_item_appraisals_pawner ON item_appraisals(pawner_id);
 CREATE INDEX IF NOT EXISTS idx_item_appraisals_appraiser ON item_appraisals(appraiser_id);

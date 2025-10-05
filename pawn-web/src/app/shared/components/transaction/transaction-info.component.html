@@ -106,19 +106,17 @@
         <thead class="bg-gray-50">
           <tr>
             <th class="px-compact py-compact text-left text-compact-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
-            <th class="px-compact py-compact text-left text-compact-xs font-medium text-gray-500 uppercase tracking-wider">Item Name</th>
             <th class="px-compact py-compact text-left text-compact-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
-            <th class="px-compact py-compact text-left text-compact-xs font-medium text-gray-500 uppercase tracking-wider">Appraised Value</th>
-            <th class="px-compact py-compact text-left text-compact-xs font-medium text-gray-500 uppercase tracking-wider">Loan Amount</th>
+            <th class="px-compact py-compact text-left text-compact-xs font-medium text-gray-500 uppercase tracking-wider">Notes</th>
+            <th class="px-compact py-compact text-left text-compact-xs font-medium text-gray-500 uppercase tracking-wider">Appraisal Value</th>
           </tr>
         </thead>
         <tbody class="bg-white divide-y divide-gray-200">
           <tr *ngFor="let item of pawnedItems">
-            <td class="px-compact py-compact whitespace-nowrap text-compact-xs text-gray-900">{{ item.categoryName }}</td>
-            <td class="px-compact py-compact whitespace-nowrap text-compact-xs text-gray-900">{{ item.itemName }}</td>
-            <td class="px-compact py-compact text-compact-xs text-gray-900">{{ item.description }}</td>
-            <td class="px-compact py-compact whitespace-nowrap text-compact-xs text-gray-900">₱{{ item.appraisedValue | number: '1.2-2' }}</td>
-            <td class="px-compact py-compact whitespace-nowrap text-compact-xs text-gray-900">₱{{ item.loanAmount | number: '1.2-2' }}</td>
+            <td class="px-compact py-compact whitespace-nowrap text-compact-xs text-gray-900">{{ item.categoryName || item.category }}</td>
+            <td class="px-compact py-compact text-compact-xs text-gray-900">{{ item.descriptionName || item.description || item.itemDescription }}</td>
+            <td class="px-compact py-compact text-compact-xs text-gray-900 max-w-xs">{{ item.appraisalNotes || 'No remarks' }}</td>
+            <td class="px-compact py-compact whitespace-nowrap text-compact-xs text-gray-900">₱{{ item.appraisalValue | number: '1.2-2' }}</td>
           </tr>
         </tbody>
       </table>

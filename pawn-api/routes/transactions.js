@@ -21,17 +21,22 @@ router.get('/search/:ticketNumber', async (req, res) => {
     
     const result = await pool.query(`
       SELECT pt.*, 
+             t.transaction_number, t.pawner_id, t.principal_amount, t.interest_rate,
+             t.interest_amount, t.penalty_amount, t.service_charge, t.total_amount,
+             t.maturity_date, t.expiry_date, t.transaction_date, t.status as transaction_status,
+             t.balance, t.amount_paid, t.days_overdue,
              p.first_name, p.last_name, p.mobile_number, p.email,
              p.city_id, p.barangay_id, p.house_number, p.street,
              c.name as city_name, b.name as barangay_name,
              e.first_name as cashier_first_name, e.last_name as cashier_last_name,
              br.name as branch_name
       FROM pawn_tickets pt
-      JOIN pawners p ON pt.pawner_id = p.id
+      JOIN transactions t ON pt.transaction_id = t.id
+      JOIN pawners p ON t.pawner_id = p.id
       LEFT JOIN cities c ON p.city_id = c.id
       LEFT JOIN barangays b ON p.barangay_id = b.id
-      LEFT JOIN branches br ON pt.branch_id = br.id
-      LEFT JOIN employees e ON pt.created_by = e.id
+      LEFT JOIN branches br ON t.branch_id = br.id
+      LEFT JOIN employees e ON t.created_by = e.id
       WHERE pt.ticket_number = $1 AND pt.status IN ('active', 'matured')
     `, [ticketNumber]);
     
@@ -42,14 +47,20 @@ router.get('/search/:ticketNumber', async (req, res) => {
       });
     }
     
-    // Get items for this ticket
+    // Get items for this ticket with category and description details
     const itemsResult = await pool.query(`
-      SELECT * FROM pawn_items WHERE ticket_id = $1 ORDER BY id
-    `, [result.rows[0].id]);
-    
-    const row = result.rows[0];
-    
-    res.json({
+      SELECT pi.*,
+             cat.name as category_name,
+             d.description_name,
+             COALESCE(d.description_name, 'No description') as item_description
+      FROM pawn_items pi
+      LEFT JOIN categories cat ON pi.category_id = cat.id
+      LEFT JOIN descriptions d ON pi.description_id = d.id
+      WHERE pi.transaction_id = $1 
+      ORDER BY pi.id
+    `, [result.rows[0].transaction_id]);
+
+    const row = result.rows[0];    res.json({
       success: true,
       message: 'Transaction found successfully',
       data: {
@@ -106,15 +117,25 @@ router.get('/search/:ticketNumber', async (req, res) => {
         branchName: row.branch_name,
         // Cashier information
         cashierName: `${row.cashier_first_name} ${row.cashier_last_name}`,
-        // Items
+        // Items - Updated for simplified schema
         items: itemsResult.rows.map(item => ({
           id: item.id,
-          category: item.category,
-          categoryDescription: item.category_description,
-          description: item.description,
-          itemsDescription: item.description,
-          appraisalValue: parseFloat(item.appraisal_value || 0),
-          estimatedValue: parseFloat(item.estimated_value || 0)
+          categoryId: item.category_id,
+          category: item.category_name,
+          categoryName: item.category_name,
+          descriptionId: item.description_id,
+          description: item.item_description,
+          itemDescription: item.item_description,
+          descriptionName: item.description_name,
+          appraisalValue: parseFloat(item.appraised_value || 0),
+          loanAmount: parseFloat(item.loan_amount || 0),
+          appraisalNotes: item.appraisal_notes,
+          notes: item.appraisal_notes,
+          status: item.status,
+          location: item.location,
+          appraisedBy: item.appraised_by,
+          createdAt: item.created_at,
+          updatedAt: item.updated_at
         }))
       }
     });

@@ -6,39 +6,17 @@ echo ========================================
 echo.
 
 REM Check if PostgreSQL is installed and running
-echo [1/8] Checking PostgreSQL installation...
+echo [1/7] Checking PostgreSQL installation...
 pg_isready >nul 2>&1
 if %errorlevel% neq 0 (
     echo.
     echo ❌ ERROR: PostgreSQL is not running or not installed!
     echo.
-    echo 🔍 This means:
-    echo    1. PostgreSQL is not installed on your system
-    echo    2. PostgreSQL service is not running
-    echo    3. PostgreSQL is not in your system PATH
-    echo    4. PostgreSQL is installed but not properly configured
-    echo.
-    echo 💡 Solutions:
-    echo    1. INSTALL PostgreSQL:
-    echo       - Download from: https://www.postgresql.org/download/windows/
-    echo       - Run installer as Administrator
-    echo       - Remember the password you set for 'postgres' user
-    echo       - Keep default port 5432
-    echo.
-    echo    2. START PostgreSQL service:
-    echo       - Open Services (Win+R, type services.msc)
-    echo       - Find PostgreSQL service (e.g., postgresql-x64-15)
-    echo       - Right-click and select Start
-    echo       - OR run: net start postgresql-x64-15
-    echo.
-    echo    3. CHECK PATH:
-    echo       - PostgreSQL bin folder should be in PATH
-    echo       - Usually: C:\Program Files\PostgreSQL\15\bin
-    echo       - Add to PATH if missing
-    echo.
-    echo    4. VERIFY installation:
-    echo       - After installing, run this command again
-    echo       - Test: psql --version
+    echo  Solutions:
+    echo    1. INSTALL PostgreSQL: https://www.postgresql.org/download/windows/
+    echo    2. START PostgreSQL service: services.msc
+    echo    3. CHECK PATH: Add PostgreSQL bin to PATH
+    echo    4. VERIFY: psql --version
     echo.
     pause
     exit /b 1
@@ -47,37 +25,16 @@ echo ✅ PostgreSQL is running and accessible
 
 REM Check if Node.js is installed
 echo.
-echo [2/8] Checking Node.js installation...
+echo [2/7] Checking Node.js installation...
 node --version >nul 2>&1
 if %errorlevel% neq 0 (
     echo.
     echo ❌ ERROR: Node.js is not installed!
     echo.
-    echo 🔍 This means:
-    echo    1. Node.js is not installed on your system
-    echo    2. Node.js is not in your system PATH
-    echo    3. Node.js installation is corrupted
-    echo.
-    echo 💡 Solutions:
-    echo    1. INSTALL Node.js:
-    echo       - Download from: https://nodejs.org/
-    echo       - Choose LTS version (recommended)
-    echo       - Run installer as Administrator
-    echo       - Use default installation options
-    echo.
-    echo    2. VERIFY installation:
-    echo       - Open new Command Prompt after installation
-    echo       - Test: node --version
-    echo       - Test: npm --version
-    echo.
-    echo    3. RECOMMENDED versions:
-    echo       - Node.js 18.x or 20.x LTS
-    echo       - npm 9.x or 10.x (comes with Node.js)
-    echo.
-    echo    4. RESTART terminal:
-    echo       - Close this window after installing Node.js
-    echo       - Open new Command Prompt
-    echo       - Run setup.bat again
+    echo  Solutions:
+    echo    1. INSTALL Node.js: https://nodejs.org/ (LTS version)
+    echo    2. RESTART terminal after installation
+    echo    3. VERIFY: node --version
     echo.
     pause
     exit /b 1
@@ -87,59 +44,20 @@ if %errorlevel% neq 0 (
     echo ✅ Node.js %NODE_VERSION% and npm %NPM_VERSION% installed
 )
 
-REM Navigate to API directory
+REM Setup API dependencies
 echo.
-echo [3/8] Setting up API dependencies...
+echo [3/7] Setting up API dependencies...
 cd /d "%~dp0pawn-api"
 if not exist package.json (
-    echo.
     echo ❌ ERROR: package.json not found in pawn-api directory!
-    echo.
-    echo 🔍 This means:
-    echo    1. You're not in the correct directory
-    echo    2. The project files are incomplete
-    echo    3. The pawn-api folder is missing or corrupted
-    echo.
-    echo 💡 Solutions:
-    echo    1. Ensure you extracted the complete project
-    echo    2. Check current directory: %CD%
-    echo    3. Look for pawn-api folder in project root
-    echo    4. Re-download/extract the project if files are missing
-    echo.
-    echo 📁 Expected structure:
-    echo    pawnshop/
-    echo    ├── pawn-api/
-    echo    │   ├── package.json  ← This file is missing!
-    echo    │   ├── server.js
-    echo    │   └── ...
-    echo    └── pawn-web/
-    echo.
     pause
     exit /b 1
 )
 
-REM Install API dependencies
-echo 📦 Installing API dependencies (Node.js packages)...
+echo 📦 Installing API dependencies...
 npm install
 if %errorlevel% neq 0 (
-    echo.
     echo ❌ ERROR: Failed to install API dependencies!
-    echo.
-    echo 🔍 Possible causes:
-    echo    1. No internet connection
-    echo    2. npm registry issues
-    echo    3. Insufficient disk space
-    echo    4. Permission issues
-    echo    5. Corrupted package.json
-    echo.
-    echo 💡 Troubleshooting steps:
-    echo    1. Check internet connection
-    echo    2. Clear npm cache: npm cache clean --force
-    echo    3. Delete node_modules: rmdir /s node_modules
-    echo    4. Try again: npm install
-    echo    5. Run as Administrator if permission issues
-    echo    6. Check disk space (need at least 500MB free)
-    echo.
     pause
     exit /b 1
 )
@@ -147,7 +65,7 @@ echo ✅ API dependencies installed successfully
 
 REM Setup database
 echo.
-echo [4/8] Setting up database...
+echo [4/7] Setting up database...
 echo Please enter your PostgreSQL credentials:
 set /p DB_HOST="Database Host (default: localhost): "
 if "%DB_HOST%"=="" set DB_HOST=localhost
@@ -160,38 +78,17 @@ if "%DB_USER%"=="" set DB_USER=postgres
 
 set /p DB_PASSWORD="Database Password: "
 if "%DB_PASSWORD%"=="" (
-    echo.
     echo ❌ ERROR: Database password is required!
-    echo.
-    echo 🔍 Why this is needed:
-    echo    1. PostgreSQL requires authentication
-    echo    2. Default 'postgres' user needs a password
-    echo    3. Password was set during PostgreSQL installation
-    echo.
-    echo 💡 How to find your PostgreSQL password:
-    echo    1. Check installation notes/documentation
-    echo    2. Try common passwords: admin, postgres, 123
-    echo    3. Password was set when you installed PostgreSQL
-    echo    4. If forgotten, you may need to reset it
-    echo.
-    echo 🔧 To reset PostgreSQL password:
-    echo    1. Edit pg_hba.conf file
-    echo    2. Change authentication to 'trust' temporarily
-    echo    3. Restart PostgreSQL service
-    echo    4. Connect and change password: ALTER USER postgres PASSWORD 'newpass';
-    echo    5. Change pg_hba.conf back to 'md5'
-    echo    6. Restart PostgreSQL service
-    echo.
     pause
     exit /b 1
 )
 
-set /p DB_NAME="Database Name (default: pawnshop_db): "
-if "%DB_NAME%"=="" set DB_NAME=pawnshop_db
+set /p DB_NAME="Database Name (default: pawnshop): "
+if "%DB_NAME%"=="" set DB_NAME=pawnshop
 
 REM Create .env file
 echo.
-echo [5/8] Creating configuration file...
+echo [4.1/6] Creating configuration file...
 (
 echo # Server Configuration
 echo NODE_ENV=development
@@ -221,54 +118,17 @@ echo # File Upload
 echo MAX_FILE_SIZE=10485760
 echo UPLOAD_PATH=./uploads
 ) > .env
-echo ✓ Configuration file created
+echo ✅ Configuration file created
 
-REM Create database and run migrations
+REM Test database connection
 echo.
-echo [6/8] Creating database and tables...
-
-REM Test database connection first
-echo 🔗 Testing database connection...
-echo    Host: %DB_HOST%
-echo    Port: %DB_PORT%
-echo    User: %DB_USER%
-echo    Database: postgres (for initial connection)
-
+echo [4.2/6] Testing database connection...
 set PGPASSWORD=%DB_PASSWORD%
 psql -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d postgres -c "SELECT 1;" >nul 2>&1
 
 if %errorlevel% neq 0 (
-    echo.
     echo ❌ ERROR: Could not connect to PostgreSQL!
-    echo.
-    echo 🔍 Possible causes:
-    echo    1. PostgreSQL service is not running
-    echo    2. Wrong username or password
-    echo    3. Wrong host or port
-    echo    4. User does not have connection privileges
-    echo.
-    echo 💡 Troubleshooting steps:
-    echo    1. Check if PostgreSQL is running:
-    echo       - Open Services (services.msc)
-    echo       - Look for PostgreSQL service
-    echo       - Start it if stopped
-    echo.
-    echo    2. Test connection manually:
-    echo       psql -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d postgres
-    echo.
-    echo    3. Common PostgreSQL service names:
-    echo       - postgresql-x64-15
-    echo       - postgresql-x64-14
-    echo       - PostgreSQL Database Server
-    echo.
-    echo    4. Start PostgreSQL service:
-    echo       net start postgresql-x64-15
-    echo.
-    echo    5. Check PostgreSQL installation:
-    echo       - Default port: 5432
-    echo       - Default user: postgres
-    echo       - Check installation directory
-    echo.
+    echo Check your credentials and PostgreSQL service status.
     pause
     exit /b 1
 ) else (
@@ -349,9 +209,35 @@ if %errorlevel% equ 0 (
     echo ⚠️  WARNING: Item descriptions seeding failed, continuing...
 )
 
+REM Clean up unused tables
+echo.
+echo 🔄 Step 5: Cleaning up unused tables...
+if exist remove-unused-appraisals.js (
+    node remove-unused-appraisals.js >nul 2>&1
+    if %errorlevel% equ 0 (
+        echo ✅ Unused tables cleaned up
+    ) else (
+        echo ℹ️  No unused tables to clean
+    )
+) else (
+    echo ℹ️  Cleanup script not found, skipping
+)
+
+REM Seed sample appraisals
+echo.
+echo 🔄 Step 6: Seeding sample appraisals...
+node seed-sample-appraisals.js
+if %errorlevel% equ 0 (
+    echo ✅ Sample appraisals seeded successfully
+    echo    • 2 closed appraisals (completed assessments)
+    echo    • 3 pending appraisals (awaiting processing)
+) else (
+    echo ⚠️  WARNING: Sample appraisals seeding failed, continuing...
+)
+
 echo.
 echo ✅ Complete pawn shop database setup successful!
-echo    • 20+ tables created (including new item_appraisals, audit_logs)
+echo    • 19+ tables created (including item_appraisals, audit_logs)
 echo    • employees table for authentication (no users table)
 echo    • transactions table with proper interest rate constraints
 echo    • item_appraisals table for simplified appraisal workflow
@@ -359,6 +245,7 @@ echo    • audit_logs table for login tracking
 echo    • 6 default employees (admin, cashier1, manager1, etc.)
 echo    • 66 Visayas/Mindanao cities with barangays seeded
 echo    • 200+ item descriptions loaded
+echo    • 5 sample appraisals (2 closed, 3 pending)
 echo    • System configuration initialized
 cd ..
 
@@ -376,7 +263,7 @@ if exist temp_tables.txt (
 
 REM Data seeding completed in previous steps
 echo.
-echo [7/8] Database seeding and schema updates completed...
+echo [4.7/7] Database seeding and schema updates completed...
 echo ✅ All data seeding and recent schema updates completed:
 echo    • 6 default employees (admin, cashier1, manager1, auctioneer1, appraiser1, pawner1)
 echo    • employees table authentication (NO users table - important!)
@@ -385,6 +272,7 @@ echo    • item_appraisals table for simplified appraisal workflow
 echo    • audit_logs table for login tracking and security
 echo    • 66 Visayas and Mindanao cities with 819+ barangays  
 echo    • 200+ selectable item descriptions (jewelry + appliances)
+echo    • 5 sample appraisals: 2 closed (₱60K total), 3 pending (₱213K total)
 echo    • System configuration and transaction sequences initialized
 echo    • Status constraints fixed (pawn_items: in_vault, redeemed, sold, etc.)
 echo    • Interest rate storage: decimal format (0.10 for 10%)
@@ -458,7 +346,7 @@ cd ..
 
 REM Setup frontend
 echo.
-echo [8/8] Setting up frontend...
+echo [7/7] Setting up frontend...
 cd /d "%~dp0pawn-web"
 if not exist package.json (
     echo.

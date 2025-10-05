@@ -20,11 +20,16 @@ export interface TransactionInfo {
 
 export interface PawnedItem {
   categoryName?: string;
+  category?: string;
   itemName?: string;
   description?: string;
+  itemDescription?: string;
+  descriptionName?: string; // Proper item description from descriptions table
+  customDescription?: string; // User notes/remarks
   appraisedValue?: number;
-  appraisalValue: number;
-  category?: string;
+  appraisalValue?: number;
+  notes?: string;
+  appraisalNotes?: string;
 }
 
 @Component({
@@ -43,7 +48,7 @@ export interface PawnedItem {
               </svg>
               Customer Information
             </h2>
-            
+
             <div class="relative max-w-xs">
               <input type="text" [(ngModel)]="searchTicketNumber" placeholder="Search Ticket Number"
                 (keydown.enter)="onSearch()"
@@ -66,37 +71,37 @@ export interface PawnedItem {
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
             <div>
               <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Contact Number</label>
-              <input type="text" [(ngModel)]="customerInfo.contactNumber" 
+              <input type="text" [(ngModel)]="customerInfo.contactNumber"
                 class="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                 readonly>
             </div>
             <div>
               <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">First Name</label>
-              <input type="text" [(ngModel)]="customerInfo.firstName" 
+              <input type="text" [(ngModel)]="customerInfo.firstName"
                 class="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                 readonly>
             </div>
             <div>
               <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Last Name</label>
-              <input type="text" [(ngModel)]="customerInfo.lastName" 
+              <input type="text" [(ngModel)]="customerInfo.lastName"
                 class="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                 readonly>
             </div>
             <div>
               <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">City</label>
-              <input type="text" [(ngModel)]="customerInfo.city" 
+              <input type="text" [(ngModel)]="customerInfo.city"
                 class="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                 readonly>
             </div>
             <div>
               <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Barangay</label>
-              <input type="text" [(ngModel)]="customerInfo.barangay" 
+              <input type="text" [(ngModel)]="customerInfo.barangay"
                 class="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                 readonly>
             </div>
             <div>
               <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Complete Address</label>
-              <input type="text" [(ngModel)]="customerInfo.completeAddress" 
+              <input type="text" [(ngModel)]="customerInfo.completeAddress"
                 class="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                 readonly>
             </div>
@@ -118,25 +123,25 @@ export interface PawnedItem {
           <div class="flex flex-wrap lg:flex-nowrap justify-between gap-3">
             <div class="flex-1 min-w-[140px]">
               <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Transaction Date</label>
-              <input type="date" [(ngModel)]="transactionInfo.transactionDate" 
+              <input type="date" [(ngModel)]="transactionInfo.transactionDate"
                 class="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                 readonly>
             </div>
             <div class="flex-1 min-w-[140px]">
               <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Granted Date</label>
-              <input type="date" [(ngModel)]="transactionInfo.grantedDate" 
+              <input type="date" [(ngModel)]="transactionInfo.grantedDate"
                 class="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                 readonly>
             </div>
             <div class="flex-1 min-w-[140px]">
               <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Matured Date</label>
-              <input type="date" [(ngModel)]="transactionInfo.maturedDate" 
+              <input type="date" [(ngModel)]="transactionInfo.maturedDate"
                 class="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                 readonly>
             </div>
             <div class="flex-1 min-w-[140px]">
               <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Expired Date</label>
-              <input type="date" [(ngModel)]="transactionInfo.expiredDate" 
+              <input type="date" [(ngModel)]="transactionInfo.expiredDate"
                 class="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                 readonly>
             </div>
@@ -151,7 +156,7 @@ export interface PawnedItem {
             <div class="flex-1 min-w-[180px]">
               <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Duration</label>
               <div class="flex items-center gap-1 h-[33px]" [ngClass]="getDurationAnimationClass()">
-                <div class="flex items-center bg-gradient-to-r text-white px-1.5 py-0.5 rounded-md shadow-sm" 
+                <div class="flex items-center bg-gradient-to-r text-white px-1.5 py-0.5 rounded-md shadow-sm"
                      [ngClass]="'bg-gradient-to-r ' + getDurationBadgeColors().years">
                   <span class="text-xs font-bold">{{ getYearsDifference() }}</span>
                   <span class="text-xs font-medium ml-0.5">Y</span>
@@ -187,26 +192,24 @@ export interface PawnedItem {
             <table class="w-full text-sm">
               <thead>
                 <tr class="border-b border-gray-200 dark:border-gray-700">
-                  <th class="text-left py-2 px-2 font-medium text-gray-700 dark:text-gray-300">#</th>
                   <th class="text-left py-2 px-2 font-medium text-gray-700 dark:text-gray-300">Category</th>
-                  <th class="text-left py-2 px-2 font-medium text-gray-700 dark:text-gray-300">Item</th>
                   <th class="text-left py-2 px-2 font-medium text-gray-700 dark:text-gray-300">Description</th>
+                  <th class="text-left py-2 px-2 font-medium text-gray-700 dark:text-gray-300">Notes or Remarks</th>
                   <th class="text-right py-2 px-2 font-medium text-gray-700 dark:text-gray-300">Appraisal Value</th>
                 </tr>
               </thead>
               <tbody>
-                <tr *ngFor="let item of pawnedItems; let i = index" 
+                <tr *ngFor="let item of pawnedItems; let i = index"
                     class="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                  <td class="py-2 px-2 text-gray-600 dark:text-gray-400">{{ i + 1 }}</td>
                   <td class="py-2 px-2 text-gray-900 dark:text-gray-100">{{ item.categoryName || item.category || '-' }}</td>
-                  <td class="py-2 px-2 text-gray-900 dark:text-gray-100">{{ item.itemName || '-' }}</td>
-                  <td class="py-2 px-2 text-gray-600 dark:text-gray-400">{{ item.description || '-' }}</td>
+                  <td class="py-2 px-2 text-gray-600 dark:text-gray-400">{{ item.descriptionName || item.description || item.itemDescription || '-' }}</td>
+                  <td class="py-2 px-2 text-gray-600 dark:text-gray-400 max-w-xs">{{ item.appraisalNotes || 'No remarks' }}</td>
                   <td class="py-2 px-2 text-right font-medium text-green-600 dark:text-green-400">
                     ₱{{ (item.appraisedValue || item.appraisalValue || 0) | number:'1.2-2' }}
                   </td>
                 </tr>
                 <tr *ngIf="pawnedItems.length === 0">
-                  <td colspan="5" class="py-4 text-center text-gray-500 dark:text-gray-400 italic">
+                  <td colspan="4" class="py-4 text-center text-gray-500 dark:text-gray-400 italic">
                     No items found
                   </td>
                 </tr>
@@ -227,26 +230,26 @@ export class TransactionInfoComponent {
     barangay: '',
     completeAddress: ''
   };
-  
+
   @Input() transactionInfo: TransactionInfo = {
     transactionDate: '',
     grantedDate: '',
     maturedDate: '',
     expiredDate: ''
   };
-  
+
   @Input() pawnedItems: PawnedItem[] = [];
   @Input() searchTicketNumber: string = '';
   @Input() isLoading: boolean = false;
-  
+
   @Output() search = new EventEmitter<string>();
   @Output() searchTicketNumberChange = new EventEmitter<string>();
-  
+
   onSearch(): void {
     console.log('Component onSearch called with:', this.searchTicketNumber);
     this.search.emit(this.searchTicketNumber);
   }
-  
+
   // Add methods that the template needs - these should call parent component methods
   getLoanStatus(): string {
     if (!this.transactionInfo.maturedDate || !this.transactionInfo.expiredDate) {
@@ -290,7 +293,7 @@ export class TransactionInfoComponent {
       case 'premature':
         return {
           years: 'from-blue-500 to-blue-600',
-          months: 'from-indigo-500 to-indigo-600', 
+          months: 'from-indigo-500 to-indigo-600',
           days: 'from-cyan-500 to-cyan-600'
         };
       case 'matured':
@@ -302,7 +305,7 @@ export class TransactionInfoComponent {
       case 'expired':
         return {
           years: 'from-red-500 to-red-600',
-          months: 'from-rose-500 to-rose-600', 
+          months: 'from-rose-500 to-rose-600',
           days: 'from-pink-500 to-pink-600'
         };
       default:
@@ -331,7 +334,7 @@ export class TransactionInfoComponent {
     if (!this.transactionInfo.transactionDate) return 0;
     const transactionDate = new Date(this.transactionInfo.transactionDate);
     const now = new Date();
-    
+
     const years = this.getYearsDifference();
     const totalMonths = Math.floor((now.getTime() - transactionDate.getTime()) / (1000 * 60 * 60 * 24 * 30.44));
     return totalMonths - (years * 12);
@@ -341,7 +344,7 @@ export class TransactionInfoComponent {
     if (!this.transactionInfo.transactionDate) return 0;
     const transactionDate = new Date(this.transactionInfo.transactionDate);
     const now = new Date();
-    
+
     const years = this.getYearsDifference();
     const months = this.getMonthsDifference();
     const totalDays = Math.floor((now.getTime() - transactionDate.getTime()) / (1000 * 60 * 60 * 24));
