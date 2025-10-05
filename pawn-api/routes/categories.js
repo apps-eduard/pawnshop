@@ -63,12 +63,22 @@ router.get('/:categoryId/descriptions', authenticateToken, async (req, res) => {
     console.log(`📊 [Categories API] Getting descriptions for category ${categoryId}`);
     
     const result = await pool.query(`
-      SELECT d.*, c.name as category_name
+      SELECT 
+        d.id,
+        d.category_id,
+        d.name as description_name,
+        d.notes as description,
+        d.is_active,
+        d.created_at,
+        d.updated_at,
+        c.name as category_name
       FROM descriptions d
       JOIN categories c ON d.category_id = c.id
       WHERE d.category_id = $1 AND d.is_active = true
       ORDER BY d.name
     `, [categoryId]);
+
+    console.log(`✅ [Categories API] Found ${result.rows.length} descriptions for category ${categoryId}`);
 
     res.json({
       success: true,

@@ -53,8 +53,8 @@ router.get('/search/:ticketNumber', async (req, res) => {
     const itemsResult = await pool.query(`
       SELECT pi.*,
              cat.name as category_name,
-             d.description_name,
-             COALESCE(d.description_name, 'No description') as item_description
+             d.name as description_name,
+             COALESCE(d.name, 'No description') as item_description
       FROM pawn_items pi
       LEFT JOIN categories cat ON pi.category_id = cat.id
       LEFT JOIN descriptions d ON pi.description_id = d.id
@@ -171,7 +171,7 @@ router.get('/', async (req, res) => {
                    'categoryId', pi.category_id,
                    'categoryName', cat.name,
                    'descriptionId', pi.description_id,
-                   'descriptionName', d.description_name,
+                   'descriptionName', d.name,
                    'appraisalNotes', pi.appraisal_notes,
                    'appraisedValue', pi.appraised_value,
                    'loanAmount', pi.loan_amount,
@@ -299,7 +299,7 @@ router.get('/:id', async (req, res) => {
     const itemsResult = await pool.query(`
       SELECT pi.*, 
              cat.name as category_name,
-             d.description_name
+             d.name as description_name
       FROM pawn_items pi
       LEFT JOIN categories cat ON pi.category_id = cat.id
       LEFT JOIN descriptions d ON pi.description_id = d.id
@@ -516,7 +516,7 @@ router.post('/new-loan', async (req, res) => {
         let descriptionId = null;
         if (item.categoryDescription) {
           const descResult = await client.query(
-            'SELECT id FROM descriptions WHERE description_name = $1 AND category_id = $2', 
+            'SELECT id FROM descriptions WHERE name = $1 AND category_id = $2', 
             [item.categoryDescription, categoryId]
           );
           descriptionId = descResult.rows[0]?.id || null;
