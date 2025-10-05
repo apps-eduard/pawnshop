@@ -13,6 +13,8 @@ import { ModalService } from '../../../shared/services/modal.service';
 import { AddCityModalComponent } from '../../../shared/modals/add-city-modal/add-city-modal.component';
 import { AddBarangayModalComponent } from '../../../shared/modals/add-barangay-modal/add-barangay-modal.component';
 import { AddCategoryDescriptionModalComponent } from '../../../shared/modals/add-category-description-modal/add-category-description-modal.component';
+import { InvoiceModalComponent } from '../../../shared/modals/invoice-modal/invoice-modal.component';
+import { LoanInvoiceData } from '../../../shared/components/loan-invoice/loan-invoice.component';
 import { CurrencyInputDirective } from '../../../shared/directives/currency-input.directive';
 import { HttpClient } from '@angular/common/http';
 
@@ -71,6 +73,7 @@ interface LoanForm {
     AddCityModalComponent,
     AddBarangayModalComponent,
     AddCategoryDescriptionModalComponent,
+    InvoiceModalComponent,
     CurrencyInputDirective
   ],
   templateUrl: './new-loan.html',
@@ -158,6 +161,10 @@ export class NewLoan implements OnInit, OnDestroy {
   // Dynamic service charge properties
   calculatedServiceCharge: number = 0;
   serviceChargeDetails: any = null;
+
+  // Invoice modal state
+  showInvoiceModal: boolean = false;
+  invoiceData: LoanInvoiceData | null = null;
 
   constructor(
     private router: Router,
@@ -980,8 +987,44 @@ export class NewLoan implements OnInit, OnDestroy {
       next: (response: any) => {
         if (response.success) {
           this.toastService.showSuccess('Success', `New loan created successfully! Ticket: ${response.data.ticketNumber}`);
-          this.resetForm();
-          this.goBack();
+
+          // Prepare invoice data
+          const user = JSON.parse(localStorage.getItem('user') || '{}');
+          const pawnerData = this.selectedPawner || {
+            firstName: this.pawnerForm.firstName,
+            lastName: this.pawnerForm.lastName,
+            contactNumber: this.pawnerForm.contactNumber
+          };
+
+          this.invoiceData = {
+            transactionType: 'new_loan',
+            transactionNumber: response.data.transactionId || 'N/A',
+            ticketNumber: response.data.ticketNumber,
+            transactionDate: new Date(this.loanForm.transactionDate),
+            pawnerName: `${pawnerData.firstName} ${pawnerData.lastName}`,
+            pawnerContact: pawnerData.contactNumber,
+            pawnerAddress: this.getFullAddress(),
+            items: this.selectedItems.map(item => ({
+              category: item.category,
+              description: item.description,
+              appraisedValue: item.appraisalValue || 0
+            })),
+            principalAmount: this.loanForm.loanAmount,
+            interestRate: this.loanForm.interestRate,
+            interestAmount: this.getInterestAmount(),
+            serviceCharge: this.getServiceCharge(),
+            netProceeds: this.getNetProceeds(),
+            totalAmount: this.loanForm.loanAmount + this.getInterestAmount() + this.getServiceCharge(),
+            loanDate: new Date(this.loanForm.loanDate),
+            maturityDate: new Date(this.loanForm.maturityDate),
+            expiryDate: new Date(this.loanForm.expiryDate),
+            branchName: user.branch_name || 'Main Branch',
+            cashierName: `${user.first_name || ''} ${user.last_name || ''}`.trim(),
+            notes: 'Thank you for your business!'
+          };
+
+          // Show invoice modal
+          this.showInvoiceModal = true;
         } else {
           this.toastService.showError('Error', response.message || 'Failed to create loan');
         }
@@ -991,6 +1034,33 @@ export class NewLoan implements OnInit, OnDestroy {
         this.toastService.showError('Error', error.error?.message || 'Failed to create loan');
       }
     });
+  }
+
+  // Helper method to get full address
+  getFullAddress(): string {
+    if (this.selectedPawner) {
+      const parts = [];
+      if (this.selectedPawner.addressDetails) parts.push(this.selectedPawner.addressDetails);
+      if (this.selectedPawner.barangayName) parts.push(this.selectedPawner.barangayName);
+      if (this.selectedPawner.cityName) parts.push(this.selectedPawner.cityName);
+      return parts.join(', ') || 'N/A';
+    } else {
+      const parts = [];
+      if (this.pawnerForm.addressDetails) parts.push(this.pawnerForm.addressDetails);
+      const selectedBarangay = this.barangays.find(b => b.id === parseInt(this.pawnerForm.barangayId as string));
+      const selectedCity = this.cities.find(c => c.id === parseInt(this.pawnerForm.cityId as string));
+      if (selectedBarangay) parts.push(selectedBarangay.name);
+      if (selectedCity) parts.push(selectedCity.name);
+      return parts.join(', ') || 'N/A';
+    }
+  }
+
+  // Close invoice modal and navigate back
+  closeInvoiceModal(): void {
+    this.showInvoiceModal = false;
+    this.invoiceData = null;
+    this.resetForm();
+    this.goBack();
   }
 
   // Pawner form management

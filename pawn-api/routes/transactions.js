@@ -155,7 +155,78 @@ router.get('/search/:ticketNumber', async (req, res) => {
 // Get all transactions - Updated to use transactions table
 router.get('/', async (req, res) => {
   try {
-    console.log(`💰 [${new Date().toISOString()}] Fetching transactions - User: ${req.user.username}`);
+    const { 
+      page = 1, 
+      limit = 50, 
+      search, 
+      type, 
+      status, 
+      dateFrom, 
+      dateTo 
+    } = req.query;
+    
+    console.log(`💰 [${new Date().toISOString()}] Fetching transactions - User: ${req.user.username} (${req.user.role})`);
+    console.log(`📋 Filters: page=${page}, limit=${limit}, search=${search}, type=${type}, status=${status}, dateFrom=${dateFrom}, dateTo=${dateTo}`);
+    
+    // Build WHERE conditions
+    let whereConditions = ['1=1'];
+    let params = [];
+    let paramIndex = 1;
+    
+    // Search by ticket number or pawner name
+    if (search) {
+      params.push(`%${search}%`);
+      whereConditions.push(`(t.transaction_number ILIKE $${paramIndex} OR p.first_name ILIKE $${paramIndex} OR p.last_name ILIKE $${paramIndex})`);
+      paramIndex++;
+    }
+    
+    // Filter by transaction type
+    if (type) {
+      params.push(type);
+      whereConditions.push(`t.transaction_type = $${paramIndex}`);
+      paramIndex++;
+    }
+    
+    // Filter by status
+    if (status) {
+      params.push(status);
+      whereConditions.push(`t.status = $${paramIndex}`);
+      paramIndex++;
+    }
+    
+    // Filter by date range
+    if (dateFrom) {
+      params.push(dateFrom);
+      whereConditions.push(`DATE(t.transaction_date) >= $${paramIndex}`);
+      paramIndex++;
+    }
+    
+    if (dateTo) {
+      params.push(dateTo);
+      whereConditions.push(`DATE(t.transaction_date) <= $${paramIndex}`);
+      paramIndex++;
+    }
+    
+    const whereClause = whereConditions.join(' AND ');
+    
+    // Get total count for pagination
+    const countResult = await pool.query(`
+      SELECT COUNT(*) as total
+      FROM transactions t
+      JOIN pawners p ON t.pawner_id = p.id
+      WHERE ${whereClause}
+    `, params);
+    
+    const total = parseInt(countResult.rows[0].total);
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+    
+    // Add pagination params
+    params.push(parseInt(limit));
+    const limitParam = paramIndex;
+    paramIndex++;
+    
+    params.push(offset);
+    const offsetParam = paramIndex;
     
     const result = await pool.query(`
       SELECT t.*, 
@@ -189,18 +260,33 @@ router.get('/', async (req, res) => {
       LEFT JOIN barangays b ON p.barangay_id = b.id
       LEFT JOIN branches br ON t.branch_id = br.id
       LEFT JOIN employees e ON t.created_by = e.id
+      WHERE ${whereClause}
       ORDER BY t.created_at DESC
-    `);
+      LIMIT $${limitParam} OFFSET $${offsetParam}
+    `, params);
     
-    console.log(`✅ Found ${result.rows.length} transactions`);
+    console.log(`✅ Found ${result.rows.length} transactions (Total: ${total})`);
     
     res.json({
       success: true,
       message: 'Transactions retrieved successfully',
       data: result.rows.map(row => ({
         id: row.id,
-        ticketNumber: row.transaction_number,  // Map transaction_number to ticketNumber
-        transactionNumber: row.transaction_number, // For compatibility
+        // Snake case for frontend compatibility
+        ticket_number: row.transaction_number,
+        transaction_type: row.transaction_type,
+        principal_amount: parseFloat(row.principal_amount || 0),
+        total_amount: parseFloat(row.total_amount || 0),
+        balance_remaining: parseFloat(row.balance || 0),
+        status: row.status,
+        loan_date: row.granted_date || row.transaction_date,
+        maturity_date: row.maturity_date,
+        first_name: row.first_name,
+        last_name: row.last_name,
+        branch_name: row.branch_name || 'N/A',
+        // Camel case for backward compatibility
+        ticketNumber: row.transaction_number,
+        transactionNumber: row.transaction_number,
         loanNumber: row.loan_number,
         pawnerId: row.pawner_id,
         branchId: row.branch_id,
@@ -208,18 +294,18 @@ router.get('/', async (req, res) => {
         transactionType: row.transaction_type,
         transactionDate: row.transaction_date,
         loanDate: row.granted_date || row.transaction_date,
-        dateGranted: row.granted_date || row.transaction_date, // For compatibility
+        dateGranted: row.granted_date || row.transaction_date,
         maturityDate: row.maturity_date,
-        dateMatured: row.maturity_date, // For compatibility
+        dateMatured: row.maturity_date,
         expiryDate: row.expiry_date,
-        dateExpired: row.expiry_date, // For compatibility
+        dateExpired: row.expiry_date,
         principalAmount: parseFloat(row.principal_amount || 0),
-        principalLoan: parseFloat(row.principal_amount || 0), // For compatibility
-        interestRate: parseFloat(row.interest_rate || 0) * 100, // Convert decimal to percentage for display
+        principalLoan: parseFloat(row.principal_amount || 0),
+        interestRate: parseFloat(row.interest_rate || 0) * 100,
         interestAmount: parseFloat(row.interest_amount || 0),
         serviceCharge: parseFloat(row.service_charge || 0),
         netProceeds: parseFloat(row.principal_amount || 0) - parseFloat(row.service_charge || 0),
-        netProceed: parseFloat(row.principal_amount || 0) - parseFloat(row.service_charge || 0), // For compatibility
+        netProceed: parseFloat(row.principal_amount || 0) - parseFloat(row.service_charge || 0),
         totalAmount: parseFloat(row.total_amount || 0),
         paymentAmount: parseFloat(row.amount_paid || 0),
         balanceRemaining: parseFloat(row.balance || 0),
@@ -227,9 +313,9 @@ router.get('/', async (req, res) => {
         additionalAmount: 0,
         renewalFee: 0,
         penaltyAmount: parseFloat(row.penalty_amount || 0),
-        penalty: parseFloat(row.penalty_amount || 0), // For compatibility
+        penalty: parseFloat(row.penalty_amount || 0),
         status: row.status,
-        loanStatus: row.status, // For compatibility
+        loanStatus: row.status,
         redeemedDate: null,
         renewedDate: null,
         defaultedDate: null,
@@ -249,12 +335,18 @@ router.get('/', async (req, res) => {
           details: `${row.house_number || ''} ${row.street || ''}`.trim()
         },
         // Cashier information
-        cashierName: `${row.cashier_first_name} ${row.cashier_last_name}`,
+        cashierName: `${row.cashier_first_name || ''} ${row.cashier_last_name || ''}`.trim(),
         // Branch information
-        branchName: row.branch_name,
+        branchName: row.branch_name || 'N/A',
         // Items information
         items: row.items || []
-      }))
+      })),
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total: total,
+        pages: Math.ceil(total / parseInt(limit))
+      }
     });
   } catch (error) {
     console.error('❌ Error fetching transactions:', error);

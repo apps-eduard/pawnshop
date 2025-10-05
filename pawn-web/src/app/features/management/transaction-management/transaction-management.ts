@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup } from '@angular/forms';
 import { HttpClient, HttpClientModule } from '@angular/common/http';
-import { RouterModule } from '@angular/router';
+import { RouterModule, ActivatedRoute } from '@angular/router';
 
 interface Transaction {
   id: number;
@@ -39,18 +39,18 @@ export class TransactionManagement implements OnInit {
   stats: TransactionStats | null = null;
   loading = false;
   searchForm: FormGroup;
-  
+
   // Pagination
   currentPage = 1;
   pageSize = 50;
   totalTransactions = 0;
-  
+
   // Filter options
   transactionTypes = [
     { value: '', label: 'All Types' },
     { value: 'pawn_ticket', label: 'Pawn Ticket' }
   ];
-  
+
   statusOptions = [
     { value: '', label: 'All Status' },
     { value: 'active', label: 'Active' },
@@ -62,12 +62,13 @@ export class TransactionManagement implements OnInit {
 
   constructor(
     private http: HttpClient,
-    private fb: FormBuilder
+    private fb: FormBuilder,
+    private route: ActivatedRoute
   ) {
     console.log('🎯 TransactionManagement constructor called!');
     console.log('🎯 HTTP Client available:', !!this.http);
     console.log('🎯 Form Builder available:', !!this.fb);
-    
+
     this.searchForm = this.fb.group({
       search: [''],
       type: [''],
@@ -75,7 +76,7 @@ export class TransactionManagement implements OnInit {
       dateFrom: [''],
       dateTo: ['']
     });
-    
+
     console.log('🎯 Search form created:', this.searchForm);
     console.log('🎯 TransactionManagement constructor completed!');
   }
@@ -83,16 +84,30 @@ export class TransactionManagement implements OnInit {
   ngOnInit(): void {
     console.log('🚀 TransactionManagement component initialized');
     console.log('📝 Form initial value:', this.searchForm.value);
-    
+
+    // Check for query parameters (e.g., date=today from cashier dashboard)
+    this.route.queryParams.subscribe(params => {
+      console.log('🔍 Query params received:', params);
+
+      if (params['date'] === 'today') {
+        const today = new Date().toISOString().split('T')[0];
+        console.log('📅 Setting today date filter:', today);
+        this.searchForm.patchValue({
+          dateFrom: today,
+          dateTo: today
+        });
+      }
+    });
+
     this.loadTransactions();
     this.loadStats();
-    
+
     // Auto-search on form changes with debounce
     this.searchForm.valueChanges.subscribe(() => {
       console.log('📋 Form changed, reloading transactions...');
       setTimeout(() => this.loadTransactions(), 300);
     });
-    
+
     console.log('✅ TransactionManagement ngOnInit completed');
   }
 
@@ -100,7 +115,7 @@ export class TransactionManagement implements OnInit {
     console.log('🔄 Starting loadTransactions...');
     this.loading = true;
     const formValue = this.searchForm.value;
-    
+
     const params = new URLSearchParams({
       page: this.currentPage.toString(),
       limit: this.pageSize.toString(),
@@ -114,7 +129,8 @@ export class TransactionManagement implements OnInit {
       }
     });
 
-    const url = `http://localhost:3000/api/admin/transactions?${params}`;
+    // Use /api/transactions instead of /api/admin/transactions for cashier access
+    const url = `http://localhost:3000/api/transactions?${params}`;
     console.log('🌐 Making request to:', url);
     console.log('📊 Current loading state:', this.loading);
 
@@ -137,7 +153,7 @@ export class TransactionManagement implements OnInit {
         console.error('❌ Error details:', error.message);
         console.error('❌ Error status:', error.status);
         this.loading = false;
-        
+
         // Set empty array for debugging
         this.transactions = [];
         this.totalTransactions = 0;
@@ -147,17 +163,10 @@ export class TransactionManagement implements OnInit {
   }
 
   loadStats(): void {
-    this.http.get<{success: boolean, data: TransactionStats}>('http://localhost:3000/api/admin/transactions/stats').subscribe({
-      next: (response) => {
-        console.log('📊 Stats loaded:', response);
-        if (response.success) {
-          this.stats = response.data;
-        }
-      },
-      error: (error) => {
-        console.error('❌ Error loading stats:', error);
-      }
-    });
+    // Stats endpoint is admin-only, so we'll skip it for now
+    // or implement a cashier-friendly stats endpoint later
+    console.log('📊 Skipping stats load for cashier users');
+    this.stats = null;
   }
 
   onPageChange(page: number): void {

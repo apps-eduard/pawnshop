@@ -454,3 +454,10 @@
 <app-add-city-modal></app-add-city-modal>
 <app-add-barangay-modal></app-add-barangay-modal>
 <app-add-category-description-modal></app-add-category-description-modal>
+
+<!-- Invoice Modal -->
+<app-invoice-modal
+  *ngIf="showInvoiceModal && invoiceData"
+  [invoiceData]="invoiceData"
+  (close)="closeInvoiceModal()">
+</app-invoice-modal>
