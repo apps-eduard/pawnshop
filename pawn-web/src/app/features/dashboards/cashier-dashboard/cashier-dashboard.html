@@ -205,10 +205,10 @@
                     {{ getTransactionTypeLabel(transaction.type) }}
                   </span>
                 </div>
-                
+
                 <!-- Customer Name -->
                 <p class="text-sm font-medium text-gray-900 dark:text-white mb-1">{{ transaction.customer_name }}</p>
-                
+
                 <!-- Items -->
                 <div *ngIf="transaction.items && transaction.items.length > 0" class="mb-1">
                   <div *ngFor="let item of transaction.items; let isLast = last" class="text-xs text-gray-600 dark:text-gray-400">
@@ -217,7 +217,7 @@
                     <span *ngIf="item.appraisalNotes" class="text-gray-500"> ({{ item.appraisalNotes }})</span>
                   </div>
                 </div>
-                
+
                 <!-- Time Ago -->
                 <p class="text-xs text-gray-500 dark:text-gray-400">{{ getTimeAgo(transaction.created_at) }}</p>
               </div>

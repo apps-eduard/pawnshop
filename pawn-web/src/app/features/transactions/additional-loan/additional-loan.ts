@@ -5,6 +5,7 @@ import { Router } from '@angular/router';
 import { Location } from '@angular/common';
 import { ToastService } from '../../../core/services/toast.service';
 import { TransactionInfoComponent } from '../../../shared/components/transaction/transaction-info.component';
+import { PenaltyCalculatorService } from '../../../core/services/penalty-calculator.service';
 
 // Interfaces
 interface CustomerInfo {
@@ -58,6 +59,7 @@ export class AdditionalLoan implements OnInit {
 
   searchTicketNumber: string = '';
   transactionNumber: string = '';
+  transactionId: number = 0;
   isLoading: boolean = false;
   transactionFound: boolean = false;
 
@@ -99,7 +101,8 @@ export class AdditionalLoan implements OnInit {
   constructor(
     private router: Router,
     private location: Location,
-    private toastService: ToastService
+    private toastService: ToastService,
+    private penaltyCalculatorService: PenaltyCalculatorService
   ) {}
 
   ngOnInit() {
@@ -112,36 +115,118 @@ export class AdditionalLoan implements OnInit {
   }
 
   calculateAdditionalLoan() {
+    console.log('Calculating additional loan...');
+
     // Update appraisal value from items
     this.additionalComputation.appraisalValue = this.getTotalAppraisalValue();
 
-    // Calculate available amount (example: 50% of appraisal value minus previous loan)
+    // Calculate interest on existing loan (from grant date to now)
+    if (this.transactionInfo.grantedDate) {
+      const loanDate = new Date(this.transactionInfo.grantedDate);
+      const currentDate = new Date();
+      const loanPeriodDays = Math.ceil((currentDate.getTime() - loanDate.getTime()) / (1000 * 3600 * 24));
+      const monthlyRate = this.additionalComputation.interestRate / 100;
+      const dailyRate = monthlyRate / 30;
+      this.additionalComputation.interest = this.additionalComputation.previousLoan * dailyRate * loanPeriodDays;
+    }
+
+    // Calculate penalty using PenaltyCalculatorService
+    if (this.transactionInfo.maturedDate) {
+      const maturityDate = new Date(this.transactionInfo.maturedDate);
+      const currentDate = new Date();
+      const penaltyDetails = this.penaltyCalculatorService.calculatePenalty(
+        this.additionalComputation.previousLoan,
+        maturityDate,
+        currentDate
+      );
+      this.additionalComputation.penalty = penaltyDetails.penaltyAmount;
+    }
+
+    // Calculate available amount (50% of appraisal value minus previous loan, interest, and penalty)
+    const totalObligation = this.additionalComputation.previousLoan +
+                           this.additionalComputation.interest +
+                           this.additionalComputation.penalty;
     this.additionalComputation.availableAmount =
-      (this.additionalComputation.appraisalValue * 0.5) - this.additionalComputation.previousLoan;
+      (this.additionalComputation.appraisalValue * 0.5) - totalObligation;
 
     // Calculate additional amount after discount
     this.additionalComputation.additionalAmount =
-      this.additionalComputation.availableAmount - this.additionalComputation.discount;
+      Math.max(0, this.additionalComputation.availableAmount - this.additionalComputation.discount);
 
     // Calculate new principal loan
     this.additionalComputation.newPrincipalLoan =
       this.additionalComputation.previousLoan + this.additionalComputation.additionalAmount;
 
-    // Calculate advance interest (example calculation)
+    // Calculate advance interest (1 month interest on new principal)
     this.additionalComputation.advanceInterest =
       (this.additionalComputation.newPrincipalLoan * this.additionalComputation.interestRate) / 100;
+
+    // Calculate advance service charge dynamically
+    this.calculateServiceCharge();
 
     // Calculate net proceed
     this.additionalComputation.netProceed =
       this.additionalComputation.additionalAmount -
       this.additionalComputation.advanceInterest -
-      this.additionalComputation.advServiceCharge;
+      this.additionalComputation.advServiceCharge -
+      this.additionalComputation.interest -
+      this.additionalComputation.penalty;
 
-    // Calculate redeem amount
+    // Calculate redeem amount (new principal + advance interest + service charge)
     this.additionalComputation.redeemAmount =
       this.additionalComputation.newPrincipalLoan +
-      this.additionalComputation.interest +
-      this.additionalComputation.penalty;
+      this.additionalComputation.advanceInterest +
+      this.additionalComputation.advServiceCharge;
+
+    console.log('Calculation result:', {
+      interest: this.additionalComputation.interest,
+      penalty: this.additionalComputation.penalty,
+      availableAmount: this.additionalComputation.availableAmount,
+      additionalAmount: this.additionalComputation.additionalAmount,
+      newPrincipal: this.additionalComputation.newPrincipalLoan,
+      advanceInterest: this.additionalComputation.advanceInterest,
+      serviceCharge: this.additionalComputation.advServiceCharge,
+      netProceed: this.additionalComputation.netProceed,
+      redeemAmount: this.additionalComputation.redeemAmount
+    });
+  }
+
+  async calculateServiceCharge() {
+    try {
+      const response = await fetch('http://localhost:3000/api/service-charge-config/calculate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          principalAmount: this.additionalComputation.newPrincipalLoan
+        })
+      });
+
+      const result = await response.json();
+      if (result.success && result.data) {
+        this.additionalComputation.advServiceCharge = result.data.serviceCharge || 0;
+        console.log('Service charge calculated:', this.additionalComputation.advServiceCharge);
+      } else {
+        // Fallback calculation if API fails
+        this.additionalComputation.advServiceCharge = this.calculateFallbackServiceCharge();
+      }
+    } catch (error) {
+      console.error('Error calculating service charge:', error);
+      // Fallback calculation
+      this.additionalComputation.advServiceCharge = this.calculateFallbackServiceCharge();
+    }
+  }
+
+  private calculateFallbackServiceCharge(): number {
+    const principal = this.additionalComputation.newPrincipalLoan;
+    if (principal <= 500) return 10;
+    if (principal <= 1000) return 15;
+    if (principal <= 5000) return 20;
+    if (principal <= 10000) return 30;
+    if (principal <= 20000) return 40;
+    return 50;
   }
 
   async searchTransaction() {
@@ -182,8 +267,9 @@ export class AdditionalLoan implements OnInit {
   }
 
   private populateForm(data: any) {
-    // Set transaction number
-    this.transactionNumber = data.ticketNumber;
+    // Set transaction number and ID
+    this.transactionNumber = data.ticketNumber || data.transactionNumber;
+    this.transactionId = data.id || 0;
 
     // Populate customer info
     this.customerInfo = {
@@ -230,6 +316,7 @@ export class AdditionalLoan implements OnInit {
 
   private clearForm() {
     this.transactionNumber = '';
+    this.transactionId = 0;
     this.transactionFound = false;
 
     this.customerInfo = {
@@ -334,15 +421,57 @@ export class AdditionalLoan implements OnInit {
     this.location.back();
   }
 
-  processAdditionalLoan() {
+  async processAdditionalLoan() {
     if (!this.canProcessAdditionalLoan()) {
       this.toastService.showError('Error', 'Cannot process additional loan');
       return;
     }
 
-    // TODO: Implement actual additional loan processing
-    this.toastService.showSuccess('Success', 'Additional loan processed successfully');
-    this.goBack();
+    if (!this.transactionId) {
+      this.toastService.showError('Error', 'Transaction ID is required');
+      return;
+    }
+
+    this.isLoading = true;
+
+    try {
+      const response = await fetch('http://localhost:3000/api/transactions/additional', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          transactionId: this.transactionId,
+          transactionNumber: this.transactionNumber,
+          additionalAmount: this.additionalComputation.additionalAmount,
+          interest: this.additionalComputation.interest,
+          penalty: this.additionalComputation.penalty,
+          newPrincipalLoan: this.additionalComputation.newPrincipalLoan,
+          advanceInterest: this.additionalComputation.advanceInterest,
+          serviceCharge: this.additionalComputation.advServiceCharge,
+          netProceed: this.additionalComputation.netProceed,
+          discount: this.additionalComputation.discount
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        this.toastService.showSuccess('Success', `Additional loan processed successfully! Net Proceed: ₱${this.additionalComputation.netProceed.toFixed(2)}`);
+        // Redirect to dashboard after successful processing
+        setTimeout(() => {
+          this.router.navigate(['/cashier-dashboard']);
+        }, 1500);
+      } else {
+        this.toastService.showError('Error', result.message || 'Failed to process additional loan');
+      }
+    } catch (error) {
+      console.error('Error processing additional loan:', error);
+      this.toastService.showError('Error', 'Failed to process additional loan');
+    } finally {
+      this.isLoading = false;
+    }
   }
 
   createAdditionalLoan() {

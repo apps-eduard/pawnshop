@@ -590,6 +590,7 @@ router.post('/redeem', async (req, res) => {
   try {
     const { 
       ticketId,
+      transactionNumber,
       redeemAmount,
       penaltyAmount,
       discountAmount,
@@ -598,7 +599,7 @@ router.post('/redeem', async (req, res) => {
     } = req.body;
     
     console.log(`🔄 [${new Date().toISOString()}] Processing redeem transaction - User: ${req.user.username}`);
-    console.log('📋 Redeem data:', { ticketId, redeemAmount, penaltyAmount, discountAmount, totalDue });
+    console.log('📋 Redeem data:', { ticketId, transactionNumber, redeemAmount, penaltyAmount, discountAmount, totalDue });
     
     // Validate required fields
     if (!ticketId || !redeemAmount) {
@@ -613,53 +614,58 @@ router.post('/redeem', async (req, res) => {
     try {
       await client.query('BEGIN');
       
-      // 1. Get current ticket details
-      const ticketResult = await client.query(`
-        SELECT * FROM pawn_tickets WHERE id = $1 AND status IN ('active', 'overdue')
+      // 1. Get current transaction details using transaction ID
+      const transactionResult = await client.query(`
+        SELECT t.*, pt.ticket_number 
+        FROM transactions t
+        LEFT JOIN pawn_tickets pt ON pt.transaction_id = t.id
+        WHERE t.id = $1 AND t.status IN ('active', 'matured')
       `, [ticketId]);
       
-      if (ticketResult.rows.length === 0) {
+      if (transactionResult.rows.length === 0) {
+        await client.query('ROLLBACK');
         return res.status(404).json({
           success: false,
-          message: 'Active pawn ticket not found'
+          message: 'Active transaction not found or not available for redemption'
         });
       }
       
-      const ticket = ticketResult.rows[0];
+      const transaction = transactionResult.rows[0];
       
-      // 2. Update ticket with redeem information
+      // 2. Update transaction with redeem information
       await client.query(`
-        UPDATE pawn_tickets SET
+        UPDATE transactions SET
           status = 'redeemed',
-          redeem_amount = $1,
+          amount_paid = $1,
           penalty_amount = $2,
-          discount_amount = $3,
-          payment_amount = $4,
-          balance_remaining = 0,
-          redeemed_date = CURRENT_TIMESTAMP,
-          notes = COALESCE(notes, '') || $5,
+          balance = 0,
           updated_at = CURRENT_TIMESTAMP
-        WHERE id = $6
+        WHERE id = $3
       `, [
         parseFloat(redeemAmount),
         parseFloat(penaltyAmount || 0),
-        parseFloat(discountAmount || 0),
-        parseFloat(redeemAmount),
-        notes ? `\nRedeemed: ${notes}` : '\nRedeemed',
         ticketId
       ]);
       
-      // 3. Log audit trail
+      // 3. Update pawn_tickets table if exists (only update status and timestamp)
+      await client.query(`
+        UPDATE pawn_tickets SET
+          status = 'redeemed',
+          updated_at = CURRENT_TIMESTAMP
+        WHERE transaction_id = $1
+      `, [ticketId]);
+      
+      // 4. Log audit trail
       await client.query(`
         INSERT INTO audit_logs (
           table_name, record_id, action, user_id, old_values, new_values
         ) VALUES ($1, $2, $3, $4, $5, $6)
       `, [
-        'pawn_tickets',
+        'transactions',
         ticketId,
-        'UPDATE',
+        'REDEEM',
         req.user.id,
-        JSON.stringify({ status: ticket.status }),
+        JSON.stringify({ status: transaction.status }),
         JSON.stringify({ 
           status: 'redeemed', 
           redeem_amount: redeemAmount,
@@ -670,14 +676,15 @@ router.post('/redeem', async (req, res) => {
       
       await client.query('COMMIT');
       
-      console.log(`✅ Redeem transaction completed for ticket: ${ticket.ticket_number}`);
+      console.log(`✅ Redeem transaction completed for transaction: ${transaction.transaction_number}`);
       
       res.json({
         success: true,
         message: 'Item redeemed successfully',
         data: {
-          ticketId,
-          ticketNumber: ticket.ticket_number,
+          transactionId: ticketId,
+          ticketNumber: transaction.ticket_number,
+          transactionNumber: transaction.transaction_number,
           redeemAmount: parseFloat(redeemAmount),
           penaltyAmount: parseFloat(penaltyAmount || 0),
           discountAmount: parseFloat(discountAmount || 0),

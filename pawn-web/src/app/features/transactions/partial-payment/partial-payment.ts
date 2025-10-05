@@ -5,6 +5,7 @@ import { Router } from '@angular/router';
 import { Location } from '@angular/common';
 import { ToastService } from '../../../core/services/toast.service';
 import { TransactionInfoComponent } from '../../../shared/components/transaction/transaction-info.component';
+import { PenaltyCalculatorService } from '../../../core/services/penalty-calculator.service';
 
 // Interfaces
 interface CustomerInfo {
@@ -32,7 +33,9 @@ interface PawnedItem {
   id: number;
   category: string;
   categoryDescription: string;
-  itemsDescription: string;
+  description: string;
+  descriptionName: string;
+  appraisalNotes: string;
   appraisalValue: number;
 }
 
@@ -64,6 +67,7 @@ export class PartialPayment implements OnInit {
 
   searchTicketNumber: string = '';
   transactionNumber: string = '';
+  transactionId: number = 0;
   isLoading: boolean = false;
   transactionFound: boolean = false;
 
@@ -110,7 +114,8 @@ export class PartialPayment implements OnInit {
   constructor(
     private router: Router,
     private location: Location,
-    private toastService: ToastService
+    private toastService: ToastService,
+    private penaltyCalculatorService: PenaltyCalculatorService
   ) {}
 
   ngOnInit() {
@@ -122,31 +127,151 @@ export class PartialPayment implements OnInit {
     return this.pawnedItems.reduce((total, item) => total + item.appraisalValue, 0);
   }
 
-  calculatePartialPayment() {
+  async calculatePartialPayment() {
     // Update appraisal value from items
     this.partialComputation.appraisalValue = this.getTotalAppraisalValue();
 
-    // Calculate interest (example calculation)
-    this.partialComputation.interest = (this.partialComputation.principalLoan * this.partialComputation.interestRate) / 100;
+    // Calculate interest from grant date to now
+    if (this.transactionInfo.grantedDate) {
+      const grantDate = new Date(this.transactionInfo.grantedDate);
+      const now = new Date();
+      const daysDiff = Math.floor((now.getTime() - grantDate.getTime()) / (1000 * 60 * 60 * 24));
 
-    // Calculate redeem amount
-    this.partialComputation.redeemAmount =
-      this.partialComputation.principalLoan +
-      this.partialComputation.interest +
-      this.partialComputation.penalty -
-      this.partialComputation.discount;
+      // Calculate daily interest rate and total interest
+      const monthlyRate = this.partialComputation.interestRate / 100;
+      const dailyRate = monthlyRate / 30;
+      this.partialComputation.interest = this.partialComputation.principalLoan * dailyRate * daysDiff;
+    } else {
+      this.partialComputation.interest = 0;
+    }
 
-    // Calculate net payment
-    this.partialComputation.netPayment =
-      this.partialComputation.partialPay +
-      this.partialComputation.advanceInterest +
-      this.partialComputation.advServiceCharge;
+    // Calculate penalty using PenaltyCalculatorService
+    if (this.transactionInfo.maturedDate) {
+      const maturityDate = new Date(this.transactionInfo.maturedDate);
+      const now = new Date();
 
-    // Calculate new principal loan
-    this.partialComputation.newPrincipalLoan =
-      this.partialComputation.principalLoan - this.partialComputation.partialPay;
+      const penaltyDetails = this.penaltyCalculatorService.calculatePenalty(
+        this.partialComputation.principalLoan,
+        maturityDate
+      );
+
+      this.partialComputation.penalty = penaltyDetails.penaltyAmount;
+    } else {
+      this.partialComputation.penalty = 0;
+    }
+
+    // Calculate total obligation (principal + interest + penalty - discount)
+    const totalObligation = this.partialComputation.principalLoan +
+                           this.partialComputation.interest +
+                           this.partialComputation.penalty -
+                           this.partialComputation.discount;
+
+    // Calculate redeem amount (what customer needs to pay to fully redeem)
+    this.partialComputation.redeemAmount = totalObligation;
+
+    // If partial payment is specified, calculate new principal and advance charges
+    if (this.partialComputation.partialPay > 0) {
+      // Calculate how payment is applied: penalties first, then interest, then principal
+      let remainingPayment = this.partialComputation.partialPay;
+      let penaltyPaid = Math.min(remainingPayment, this.partialComputation.penalty);
+      remainingPayment -= penaltyPaid;
+
+      let interestPaid = Math.min(remainingPayment, this.partialComputation.interest);
+      remainingPayment -= interestPaid;
+
+      let principalPaid = remainingPayment;
+
+      // Calculate new principal loan after partial payment
+      this.partialComputation.newPrincipalLoan = this.partialComputation.principalLoan - principalPaid;
+
+      // Calculate advance interest for 1 month on new principal
+      const monthlyRate = this.partialComputation.interestRate / 100;
+      this.partialComputation.advanceInterest = this.partialComputation.newPrincipalLoan * monthlyRate;
+
+      // Calculate service charge based on new principal
+      this.partialComputation.advServiceCharge = await this.calculateServiceCharge(this.partialComputation.newPrincipalLoan);
+
+      // Calculate net payment (partial payment + advance interest + service charge)
+      this.partialComputation.netPayment =
+        this.partialComputation.partialPay +
+        this.partialComputation.advanceInterest +
+        this.partialComputation.advServiceCharge;
+    } else {
+      // No partial payment specified
+      this.partialComputation.newPrincipalLoan = this.partialComputation.principalLoan;
+      this.partialComputation.advanceInterest = 0;
+      this.partialComputation.advServiceCharge = 0;
+      this.partialComputation.netPayment = 0;
+    }
 
     this.calculateChange();
+  }
+
+  async calculateServiceCharge(amount: number): Promise<number> {
+    try {
+      const response = await fetch('http://localhost:3000/api/service-charge-config/calculate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ amount })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        return result.data.serviceCharge;
+      } else {
+        console.warn('Service charge API returned error, using fallback:', result.message);
+        return this.calculateFallbackServiceCharge(amount);
+      }
+    } catch (error) {
+      console.error('Error calculating service charge, using fallback:', error);
+      return this.calculateFallbackServiceCharge(amount);
+    }
+  }
+
+  calculateFallbackServiceCharge(amount: number): number {
+    if (amount <= 500) return 10;
+    if (amount <= 1000) return 15;
+    if (amount <= 5000) return 20;
+    if (amount <= 10000) return 30;
+    if (amount <= 20000) return 40;
+    return 50;
+  }
+
+  getPenaltyInfo(): string {
+    if (this.partialComputation.penalty === 0) {
+      return 'No penalty (within grace period or not yet matured)';
+    }
+
+    if (this.transactionInfo.maturedDate) {
+      const maturityDate = new Date(this.transactionInfo.maturedDate);
+      const now = new Date();
+      const daysOverdue = Math.floor((now.getTime() - maturityDate.getTime()) / (1000 * 60 * 60 * 24));
+
+      if (daysOverdue <= 3) {
+        return `Daily penalty (${daysOverdue} day${daysOverdue > 1 ? 's' : ''} overdue)`;
+      } else {
+        return `Full month penalty (${daysOverdue} days overdue)`;
+      }
+    }
+
+    return 'Penalty calculated based on days overdue';
+  }
+
+  getInterestInfo(): string {
+    if (this.transactionInfo.grantedDate) {
+      const grantDate = new Date(this.transactionInfo.grantedDate);
+      const now = new Date();
+      const daysDiff = Math.floor((now.getTime() - grantDate.getTime()) / (1000 * 60 * 60 * 24));
+      const monthlyRate = this.partialComputation.interestRate;
+      const dailyRate = monthlyRate / 30;
+
+      return `Interest: ${monthlyRate}% monthly (${dailyRate.toFixed(4)}% daily) for ${daysDiff} day${daysDiff !== 1 ? 's' : ''}`;
+    }
+    return 'Interest calculation based on days from grant date';
   }
 
   calculateChange() {
@@ -205,8 +330,9 @@ export class PartialPayment implements OnInit {
   }
 
   private populateForm(data: any) {
-    // Set transaction number
+    // Set transaction number and ID
     this.transactionNumber = data.ticketNumber;
+    this.transactionId = data.transactionId || 0;
 
     // Populate customer info
     this.customerInfo = {
@@ -236,7 +362,9 @@ export class PartialPayment implements OnInit {
       id: index + 1,
       category: item.category || '',
       categoryDescription: item.categoryDescription || '',
-      itemsDescription: item.description || item.itemsDescription || '',
+      description: item.description || '',
+      descriptionName: item.descriptionName || item.description || '',
+      appraisalNotes: item.appraisalNotes || item.notes || '',
       appraisalValue: parseFloat(item.appraisalValue || 0)
     }));
 
@@ -264,6 +392,7 @@ export class PartialPayment implements OnInit {
 
   private clearForm() {
     this.transactionNumber = '';
+    this.transactionId = 0;
     this.transactionFound = false;
 
     this.customerInfo = {
@@ -334,15 +463,58 @@ export class PartialPayment implements OnInit {
     this.location.back();
   }
 
-  processPayment() {
+  async processPayment() {
     if (!this.canProcessPayment()) {
       this.toastService.showError('Error', 'Amount received is insufficient');
       return;
     }
 
-    // TODO: Implement actual partial payment processing
-    this.toastService.showSuccess('Success', 'Partial payment processed successfully');
-    this.goBack();
+    if (!this.transactionId) {
+      this.toastService.showError('Error', 'Transaction ID not found');
+      return;
+    }
+
+    this.isLoading = true;
+
+    try {
+      const paymentData = {
+        transactionId: this.transactionId,
+        partialPayment: this.partialComputation.partialPay,
+        interestPaid: this.partialComputation.interest,
+        penaltyPaid: this.partialComputation.penalty,
+        newPrincipal: this.partialComputation.newPrincipalLoan,
+        advanceInterest: this.partialComputation.advanceInterest,
+        serviceCharge: this.partialComputation.advServiceCharge,
+        amountReceived: this.partialComputation.amountReceived,
+        change: this.partialComputation.change,
+        totalPaid: this.partialComputation.netPayment
+      };
+
+      const response = await fetch('http://localhost:3000/api/transactions/partial', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify(paymentData)
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        this.toastService.showSuccess('Success', 'Partial payment processed successfully');
+        setTimeout(() => {
+          this.router.navigate(['/cashier-dashboard']);
+        }, 1500);
+      } else {
+        this.toastService.showError('Error', result.message || 'Failed to process partial payment');
+      }
+    } catch (error) {
+      console.error('Error processing partial payment:', error);
+      this.toastService.showError('Error', 'Failed to process partial payment');
+    } finally {
+      this.isLoading = false;
+    }
   }
 
   getLoanStatusClass(): string {
