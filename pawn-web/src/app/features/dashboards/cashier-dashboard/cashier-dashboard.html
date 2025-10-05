@@ -184,10 +184,23 @@
       <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
         <div class="flex items-center justify-between mb-6">
           <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Recent Transactions</h3>
-          <a routerLink="/transactions" class="text-primary-600 hover:text-primary-700 text-sm font-medium">View All</a>
+          <a (click)="viewAllTransactions()" class="text-primary-600 hover:text-primary-700 text-sm font-medium cursor-pointer">View All</a>
         </div>
 
-        <div class="space-y-4">
+        <!-- Empty State -->
+        <div *ngIf="recentTransactions.length === 0" class="text-center py-8">
+          <div class="text-gray-400 mb-2">
+            <svg class="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+              </path>
+            </svg>
+          </div>
+          <p class="text-gray-500 dark:text-gray-400">No recent transactions</p>
+          <p class="text-sm text-gray-400 dark:text-gray-500">Transactions will appear here</p>
+        </div>
+
+        <div *ngIf="recentTransactions.length > 0" class="space-y-4">
           <div *ngFor="let transaction of recentTransactions"
             class="flex items-start justify-between py-3 border-b border-gray-100 dark:border-gray-700 last:border-b-0">
             <div class="flex items-start space-x-3 flex-1">

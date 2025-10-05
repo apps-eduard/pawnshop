@@ -558,6 +558,17 @@ export class CashierDashboard implements OnInit {
     });
   }
 
+  // Navigate to transactions page with today's filter
+  viewAllTransactions() {
+    // Navigate to transactions page
+    // The transactions page should show today's transactions by default
+    this.router.navigate(['/transactions'], {
+      queryParams: {
+        date: 'today'
+      }
+    });
+  }
+
   loadRecentTransactions() {
     console.log('🔄 Loading recent transactions...');
     this.transactionService.getRecentTransactions().subscribe({
@@ -619,10 +630,13 @@ export class CashierDashboard implements OnInit {
       },
       error: (error: any) => {
         console.error('❌ Error loading recent transactions:', error);
-        // Fallback: set empty array instead of showing error
+        // Set empty array - don't show toast for empty state, only for real errors
         this.recentTransactions = [];
-        // Optionally show a toast notification
-        this.toastService.showError('Error', 'Unable to load recent transactions');
+
+        // Only show error toast if it's a real server error (not just empty data)
+        if (error.status && error.status !== 404) {
+          this.toastService.showError('Error', 'Failed to load transactions');
+        }
       }
     });
   }
