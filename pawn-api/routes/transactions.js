@@ -21,6 +21,32 @@ router.get('/search/:ticketNumber', async (req, res) => {
     
     console.log(`🔍 [${new Date().toISOString()}] Searching for ticket ${ticketNumber} - User: ${req.user.username}`);
     
+    // First, check if ticket exists and get its status
+    const statusCheck = await pool.query(`
+      SELECT pt.status, pt.ticket_number, t.transaction_number
+      FROM pawn_tickets pt
+      JOIN transactions t ON pt.transaction_id = t.id
+      WHERE pt.ticket_number = $1
+      LIMIT 1
+    `, [ticketNumber]);
+    
+    // If ticket doesn't exist at all
+    if (statusCheck.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Transaction not found'
+      });
+    }
+    
+    // If ticket exists but is closed/redeemed/expired
+    const ticketStatus = statusCheck.rows[0].status;
+    if (!['active', 'matured'].includes(ticketStatus)) {
+      return res.status(400).json({
+        success: false,
+        message: `Ticket ${ticketNumber} is ${ticketStatus} and cannot be processed`
+      });
+    }
+    
     const result = await pool.query(`
       SELECT pt.*, 
              t.transaction_number, t.pawner_id, t.principal_amount, t.interest_rate,
@@ -42,10 +68,11 @@ router.get('/search/:ticketNumber', async (req, res) => {
       WHERE pt.ticket_number = $1 AND pt.status IN ('active', 'matured')
     `, [ticketNumber]);
     
+    // This should not happen since we already checked, but just in case
     if (result.rows.length === 0) {
-      return res.status(404).json({
+      return res.status(500).json({
         success: false,
-        message: 'Transaction not found or not available for redemption'
+        message: 'Unexpected error: ticket status check passed but data retrieval failed'
       });
     }
     
@@ -62,11 +89,13 @@ router.get('/search/:ticketNumber', async (req, res) => {
       ORDER BY pi.id
     `, [result.rows[0].transaction_id]);
 
-    const row = result.rows[0];    res.json({
+    const row = result.rows[0];
+
+    res.json({
       success: true,
       message: 'Transaction found successfully',
       data: {
-        id: row.id,
+        id: row.transaction_id, // Use transaction_id from the JOIN, not pawn_tickets.id
         ticketNumber: row.ticket_number,
         transactionNumber: row.ticket_number,
         pawnerId: row.pawner_id,
@@ -173,6 +202,9 @@ router.get('/', async (req, res) => {
     let params = [];
     let paramIndex = 1;
     
+    // Only show parent transactions (new_loan, renewal) - hide child transactions (partial_payment, redemption)
+    whereConditions.push(`(t.parent_transaction_id IS NULL OR t.transaction_type IN ('new_loan', 'renewal'))`);
+    
     // Search by ticket number or pawner name
     if (search) {
       params.push(`%${search}%`);
@@ -253,7 +285,26 @@ router.get('/', async (req, res) => {
                LEFT JOIN categories cat ON pi.category_id = cat.id
                LEFT JOIN descriptions d ON pi.description_id = d.id
                WHERE pi.transaction_id = t.id
-             ) as items
+             ) as items,
+             (
+               SELECT json_agg(
+                 json_build_object(
+                   'id', ct.id,
+                   'transactionNumber', ct.transaction_number,
+                   'transactionType', ct.transaction_type,
+                   'transactionDate', ct.transaction_date,
+                   'principalAmount', ct.principal_amount,
+                   'amountPaid', ct.amount_paid,
+                   'balance', ct.balance,
+                   'status', ct.status,
+                   'notes', ct.notes,
+                   'createdBy', ct.created_by,
+                   'createdAt', ct.created_at
+                 ) ORDER BY ct.created_at ASC
+               )
+               FROM transactions ct
+               WHERE ct.parent_transaction_id = t.id
+             ) as transaction_history
       FROM transactions t
       JOIN pawners p ON t.pawner_id = p.id
       LEFT JOIN cities c ON p.city_id = c.id
@@ -266,6 +317,15 @@ router.get('/', async (req, res) => {
     `, params);
     
     console.log(`✅ Found ${result.rows.length} transactions (Total: ${total})`);
+    
+    // Debug: Check if transaction_history exists in first row
+    if (result.rows.length > 0) {
+      console.log('🔍 Debug - First transaction raw data:');
+      console.log('  - ID:', result.rows[0].id);
+      console.log('  - Transaction Number:', result.rows[0].transaction_number);
+      console.log('  - Has transaction_history?', !!result.rows[0].transaction_history);
+      console.log('  - transaction_history:', result.rows[0].transaction_history);
+    }
     
     res.json({
       success: true,
@@ -339,7 +399,9 @@ router.get('/', async (req, res) => {
         // Branch information
         branchName: row.branch_name || 'N/A',
         // Items information
-        items: row.items || []
+        items: row.items || [],
+        // Transaction history (partial payments, redemptions, etc.)
+        transactionHistory: row.transaction_history || []
       })),
       pagination: {
         page: parseInt(page),
@@ -708,7 +770,8 @@ router.post('/redeem', async (req, res) => {
       
       // 1. Get current transaction details using transaction ID
       const transactionResult = await client.query(`
-        SELECT t.*, pt.ticket_number 
+        SELECT t.*, pt.ticket_number, t.pawner_id, t.branch_id, t.interest_rate,
+               t.maturity_date, t.expiry_date
         FROM transactions t
         LEFT JOIN pawn_tickets pt ON pt.transaction_id = t.id
         WHERE t.id = $1 AND t.status IN ('active', 'matured')
@@ -724,22 +787,86 @@ router.post('/redeem', async (req, res) => {
       
       const transaction = transactionResult.rows[0];
       
-      // 2. Update transaction with redeem information
+      // 2. Create a new transaction record for the redemption
+      const newTransactionNumber = await generateTicketNumber('TXN');
+      
+      const newTransactionResult = await client.query(`
+        INSERT INTO transactions (
+          transaction_number,
+          pawner_id,
+          branch_id,
+          transaction_type,
+          status,
+          principal_amount,
+          interest_rate,
+          interest_amount,
+          penalty_amount,
+          service_charge,
+          total_amount,
+          amount_paid,
+          balance,
+          transaction_date,
+          maturity_date,
+          expiry_date,
+          parent_transaction_id,
+          notes,
+          created_by,
+          updated_by
+        ) VALUES (
+          $1, $2, $3, 'redemption', 'redeemed',
+          $4, $5, $6, $7, 0, $8, $9, 0,
+          CURRENT_TIMESTAMP, $10, $11, $12, $13, $14, $14
+        ) RETURNING id
+      `, [
+        newTransactionNumber,
+        transaction.pawner_id,
+        transaction.branch_id,
+        transaction.principal_amount,
+        transaction.interest_rate,
+        transaction.interest_amount,
+        parseFloat(penaltyAmount || 0),
+        parseFloat(totalDue || redeemAmount),
+        parseFloat(redeemAmount),
+        transaction.maturity_date,
+        transaction.expiry_date,
+        ticketId, // Link to original transaction
+        notes || `Redemption - Total Due: ${totalDue}, Paid: ${redeemAmount}`,
+        req.user.id
+      ]);
+      
+      const newTransactionId = newTransactionResult.rows[0].id;
+      
+      // 3. Update original transaction status to redeemed
       await client.query(`
         UPDATE transactions SET
           status = 'redeemed',
-          amount_paid = $1,
-          penalty_amount = $2,
+          amount_paid = COALESCE(amount_paid, 0) + $1,
           balance = 0,
-          updated_at = CURRENT_TIMESTAMP
+          updated_at = CURRENT_TIMESTAMP,
+          updated_by = $2
         WHERE id = $3
       `, [
         parseFloat(redeemAmount),
-        parseFloat(penaltyAmount || 0),
+        req.user.id,
         ticketId
       ]);
       
-      // 3. Update pawn_tickets table if exists (only update status and timestamp)
+      // 3. Update original transaction status to redeemed
+      await client.query(`
+        UPDATE transactions SET
+          status = 'redeemed',
+          amount_paid = COALESCE(amount_paid, 0) + $1,
+          balance = 0,
+          updated_at = CURRENT_TIMESTAMP,
+          updated_by = $2
+        WHERE id = $3
+      `, [
+        parseFloat(redeemAmount),
+        req.user.id,
+        ticketId
+      ]);
+      
+      // 4. Update pawn_tickets table if exists (only update status and timestamp)
       await client.query(`
         UPDATE pawn_tickets SET
           status = 'redeemed',
@@ -747,7 +874,7 @@ router.post('/redeem', async (req, res) => {
         WHERE transaction_id = $1
       `, [ticketId]);
       
-      // 4. Log audit trail
+      // 5. Log audit trail
       await client.query(`
         INSERT INTO audit_logs (
           table_name, record_id, action, user_id, old_values, new_values
@@ -755,20 +882,22 @@ router.post('/redeem', async (req, res) => {
       `, [
         'transactions',
         ticketId,
-        'REDEEM',
+        'REDEMPTION',
         req.user.id,
         JSON.stringify({ status: transaction.status }),
         JSON.stringify({ 
           status: 'redeemed', 
           redeem_amount: redeemAmount,
           penalty_amount: penaltyAmount,
-          discount_amount: discountAmount
+          discount_amount: discountAmount,
+          new_transaction_id: newTransactionId
         })
       ]);
       
       await client.query('COMMIT');
       
       console.log(`✅ Redeem transaction completed for transaction: ${transaction.transaction_number}`);
+      console.log(`📋 New redemption transaction created: ${newTransactionNumber} (ID: ${newTransactionId})`);
       
       res.json({
         success: true,
@@ -776,7 +905,8 @@ router.post('/redeem', async (req, res) => {
         data: {
           transactionId: ticketId,
           ticketNumber: transaction.ticket_number,
-          transactionNumber: transaction.transaction_number,
+          transactionNumber: newTransactionNumber,
+          redemptionTransactionId: newTransactionId,
           redeemAmount: parseFloat(redeemAmount),
           penaltyAmount: parseFloat(penaltyAmount || 0),
           discountAmount: parseFloat(discountAmount || 0),
@@ -830,9 +960,15 @@ router.post('/partial-payment', async (req, res) => {
     try {
       await client.query('BEGIN');
       
-      // 1. Get current ticket details
+      // 1. Get current ticket and transaction details
       const ticketResult = await client.query(`
-        SELECT * FROM pawn_tickets WHERE id = $1 AND status IN ('active', 'overdue')
+        SELECT pt.*, 
+               t.balance, t.principal_amount, t.total_amount,
+               t.pawner_id, t.branch_id, t.interest_rate,
+               t.maturity_date, t.expiry_date, t.status as transaction_status
+        FROM pawn_tickets pt
+        JOIN transactions t ON pt.transaction_id = t.id
+        WHERE t.id = $1 AND pt.status IN ('active', 'matured')
       `, [ticketId]);
       
       if (ticketResult.rows.length === 0) {
@@ -843,7 +979,7 @@ router.post('/partial-payment', async (req, res) => {
       }
       
       const ticket = ticketResult.rows[0];
-      const currentBalance = parseFloat(ticket.balance_remaining || ticket.total_amount);
+      const currentBalance = parseFloat(ticket.balance || ticket.total_amount);
       const paymentAmt = parseFloat(partialPayment);
       const newPrincipal = parseFloat(newPrincipalLoan);
       const discount = parseFloat(discountAmount || 0);
@@ -853,7 +989,7 @@ router.post('/partial-payment', async (req, res) => {
       // 2. Calculate new balance
       const newBalance = Math.max(0, currentBalance - paymentAmt);
       
-      // 3. Update ticket with partial payment information
+      // 3. Update pawn_tickets with partial payment tracking information
       await client.query(`
         UPDATE pawn_tickets SET
           partial_payment = COALESCE(partial_payment, 0) + $1,
@@ -862,11 +998,8 @@ router.post('/partial-payment', async (req, res) => {
           advance_interest = COALESCE(advance_interest, 0) + $4,
           net_payment = COALESCE(net_payment, 0) + $5,
           payment_amount = COALESCE(payment_amount, 0) + $6,
-          balance_remaining = $7,
-          principal_amount = $8,
-          notes = COALESCE(notes, '') || $9,
           updated_at = CURRENT_TIMESTAMP
-        WHERE id = $10
+        WHERE transaction_id = $7
       `, [
         paymentAmt,
         newPrincipal,
@@ -874,36 +1007,98 @@ router.post('/partial-payment', async (req, res) => {
         advance,
         netPay,
         paymentAmt,
-        newBalance,
-        newPrincipal,
-        notes ? `\nPartial payment: ${notes}` : `\nPartial payment of ${paymentAmt}`,
         ticketId
       ]);
       
-      // 4. Log audit trail
+      // 4. Create a new transaction record for the partial payment
+      const newTransactionNumber = await generateTicketNumber('TXN');
+      
+      const newTransactionResult = await client.query(`
+        INSERT INTO transactions (
+          transaction_number,
+          pawner_id,
+          branch_id,
+          transaction_type,
+          status,
+          principal_amount,
+          interest_rate,
+          interest_amount,
+          service_charge,
+          total_amount,
+          amount_paid,
+          balance,
+          transaction_date,
+          maturity_date,
+          expiry_date,
+          parent_transaction_id,
+          notes,
+          created_by,
+          updated_by
+        ) VALUES (
+          $1, $2, $3, 'partial_payment', $4,
+          $5, $6, 0, 0, $7, $8, $9,
+          CURRENT_TIMESTAMP, $10, $11, $12, $13, $14, $14
+        ) RETURNING id
+      `, [
+        newTransactionNumber,
+        ticket.pawner_id,
+        ticket.branch_id,
+        ticket.transaction_status,
+        newPrincipal,
+        ticket.interest_rate,
+        newBalance,
+        paymentAmt,
+        newBalance,
+        ticket.maturity_date,
+        ticket.expiry_date,
+        ticket.transaction_id, // Link to original transaction
+        notes ? `Partial payment: ${notes}` : `Partial payment of ${paymentAmt}`,
+        req.user.id
+      ]);
+      
+      const newTransactionId = newTransactionResult.rows[0].id;
+      
+      // 5. Update original transaction with new balance
+      await client.query(`
+        UPDATE transactions SET
+          balance = $1,
+          amount_paid = COALESCE(amount_paid, 0) + $2,
+          updated_at = CURRENT_TIMESTAMP,
+          updated_by = $3
+        WHERE id = $4
+      `, [
+        newBalance,
+        paymentAmt,
+        req.user.id,
+        ticket.transaction_id
+      ]);
+      
+      // 6. Log audit trail
       await client.query(`
         INSERT INTO audit_logs (
           table_name, record_id, action, user_id, old_values, new_values
         ) VALUES ($1, $2, $3, $4, $5, $6)
       `, [
-        'pawn_tickets',
-        ticketId,
-        'UPDATE',
+        'transactions',
+        ticket.transaction_id,
+        'PARTIAL_PAYMENT',
         req.user.id,
         JSON.stringify({ 
-          balance_remaining: currentBalance,
+          balance: currentBalance,
           principal_amount: ticket.principal_amount
         }),
         JSON.stringify({ 
           partial_payment: paymentAmt,
           new_principal_loan: newPrincipal,
-          balance_remaining: newBalance
+          balance: newBalance,
+          new_transaction_id: newTransactionId
         })
       ]);
       
       await client.query('COMMIT');
       
       console.log(`✅ Partial payment completed for ticket: ${ticket.ticket_number}`);
+      console.log(`📋 New transaction created: ${newTransactionNumber} (ID: ${newTransactionId})`);
       
       res.json({
         success: true,
@@ -911,6 +1106,8 @@ router.post('/partial-payment', async (req, res) => {
         data: {
           ticketId,
           ticketNumber: ticket.ticket_number,
+          transactionNumber: newTransactionNumber,
+          transactionId: newTransactionId,
           partialPayment: paymentAmt,
           newPrincipalLoan: newPrincipal,
           discountAmount: discount,

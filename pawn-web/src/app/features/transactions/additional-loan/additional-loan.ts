@@ -114,6 +114,52 @@ export class AdditionalLoan implements OnInit {
     return this.items.reduce((total, item) => total + item.appraisalValue, 0);
   }
 
+  // Handle manual additional amount input
+  onAdditionalAmountChange() {
+    console.log('Additional amount changed:', this.additionalComputation.additionalAmount);
+
+    // Ensure additional amount doesn't exceed available amount
+    if (this.additionalComputation.additionalAmount > this.additionalComputation.availableAmount) {
+      this.additionalComputation.additionalAmount = this.additionalComputation.availableAmount;
+    }
+
+    // Ensure it's not negative
+    if (this.additionalComputation.additionalAmount < 0) {
+      this.additionalComputation.additionalAmount = 0;
+    }
+
+    // Recalculate dependent values
+    this.recalculateDependentValues();
+  }
+
+  // Recalculate values that depend on additional amount
+  recalculateDependentValues() {
+    // Calculate new principal loan
+    this.additionalComputation.newPrincipalLoan =
+      this.additionalComputation.previousLoan + this.additionalComputation.additionalAmount;
+
+    // Calculate advance interest (1 month interest on new principal)
+    this.additionalComputation.advanceInterest =
+      (this.additionalComputation.newPrincipalLoan * this.additionalComputation.interestRate) / 100;
+
+    // Calculate advance service charge dynamically
+    this.calculateServiceCharge();
+
+    // Calculate net proceed
+    this.additionalComputation.netProceed =
+      this.additionalComputation.additionalAmount -
+      this.additionalComputation.advanceInterest -
+      this.additionalComputation.advServiceCharge -
+      this.additionalComputation.interest -
+      this.additionalComputation.penalty;
+
+    // Calculate redeem amount (new principal + advance interest + service charge)
+    this.additionalComputation.redeemAmount =
+      this.additionalComputation.newPrincipalLoan +
+      this.additionalComputation.advanceInterest +
+      this.additionalComputation.advServiceCharge;
+  }
+
   calculateAdditionalLoan() {
     console.log('Calculating additional loan...');
 
@@ -149,34 +195,14 @@ export class AdditionalLoan implements OnInit {
     this.additionalComputation.availableAmount =
       (this.additionalComputation.appraisalValue * 0.5) - totalObligation;
 
-    // Calculate additional amount after discount
-    this.additionalComputation.additionalAmount =
-      Math.max(0, this.additionalComputation.availableAmount - this.additionalComputation.discount);
+    // Keep additionalAmount at 0 or user-entered value (don't auto-calculate)
+    // User will manually enter the additional amount they want
+    if (!this.additionalComputation.additionalAmount) {
+      this.additionalComputation.additionalAmount = 0;
+    }
 
-    // Calculate new principal loan
-    this.additionalComputation.newPrincipalLoan =
-      this.additionalComputation.previousLoan + this.additionalComputation.additionalAmount;
-
-    // Calculate advance interest (1 month interest on new principal)
-    this.additionalComputation.advanceInterest =
-      (this.additionalComputation.newPrincipalLoan * this.additionalComputation.interestRate) / 100;
-
-    // Calculate advance service charge dynamically
-    this.calculateServiceCharge();
-
-    // Calculate net proceed
-    this.additionalComputation.netProceed =
-      this.additionalComputation.additionalAmount -
-      this.additionalComputation.advanceInterest -
-      this.additionalComputation.advServiceCharge -
-      this.additionalComputation.interest -
-      this.additionalComputation.penalty;
-
-    // Calculate redeem amount (new principal + advance interest + service charge)
-    this.additionalComputation.redeemAmount =
-      this.additionalComputation.newPrincipalLoan +
-      this.additionalComputation.advanceInterest +
-      this.additionalComputation.advServiceCharge;
+    // Recalculate dependent values based on current additional amount
+    this.recalculateDependentValues();
 
     console.log('Calculation result:', {
       interest: this.additionalComputation.interest,

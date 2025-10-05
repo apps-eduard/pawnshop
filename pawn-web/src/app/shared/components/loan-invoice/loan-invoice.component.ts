@@ -48,9 +48,9 @@ export interface LoanInvoiceData {
         </div>
         <div class="invoice-title">
           <h2>PAWN TICKET</h2>
-          <p class="ticket-number">{{ invoiceData?.ticketNumber || invoiceData?.transactionNumber }}</p>
-          <p *ngIf="invoiceData?.transactionNumber && invoiceData?.transactionNumber !== 'N/A'" style="font-size: 12px; color: #666; margin-top: 4px;">
-            Ref: {{ invoiceData?.transactionNumber }}
+          <p class="ticket-number">{{ invoiceData.ticketNumber || invoiceData.transactionNumber }}</p>
+          <p *ngIf="invoiceData.transactionNumber && invoiceData.transactionNumber !== 'N/A'" style="font-size: 12px; color: #666; margin-top: 4px;">
+            Ref: {{ invoiceData.transactionNumber }}
           </p>
         </div>
       </div>
@@ -62,11 +62,11 @@ export interface LoanInvoiceData {
         <div class="info-row">
           <div class="info-col">
             <span class="label">Date:</span>
-            <span class="value">{{ formatDate(invoiceData?.transactionDate) }}</span>
+            <span class="value">{{ formatDate(invoiceData.transactionDate) }}</span>
           </div>
           <div class="info-col">
             <span class="label">Branch:</span>
-            <span class="value">{{ invoiceData?.branchName || 'Main Branch' }}</span>
+            <span class="value">{{ invoiceData.branchName || 'Main Branch' }}</span>
           </div>
         </div>
       </div>
@@ -77,15 +77,15 @@ export interface LoanInvoiceData {
         <div class="pawner-info">
           <div class="info-row">
             <span class="label">Name:</span>
-            <span class="value">{{ invoiceData?.pawnerName }}</span>
+            <span class="value">{{ invoiceData.pawnerName }}</span>
           </div>
           <div class="info-row">
             <span class="label">Contact:</span>
-            <span class="value">{{ invoiceData?.pawnerContact }}</span>
+            <span class="value">{{ invoiceData.pawnerContact }}</span>
           </div>
           <div class="info-row">
             <span class="label">Address:</span>
-            <span class="value">{{ invoiceData?.pawnerAddress }}</span>
+            <span class="value">{{ invoiceData.pawnerAddress }}</span>
           </div>
         </div>
       </div>
@@ -103,7 +103,7 @@ export interface LoanInvoiceData {
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let item of invoiceData?.items; let i = index">
+            <tr *ngFor="let item of invoiceData.items; let i = index">
               <td>{{ i + 1 }}</td>
               <td>{{ item.category }}</td>
               <td>{{ item.description }}</td>
@@ -119,27 +119,27 @@ export interface LoanInvoiceData {
         <table class="details-table">
           <tr>
             <td class="label">Principal Amount:</td>
-            <td class="amount">{{ formatCurrency(invoiceData?.principalAmount) }}</td>
+            <td class="amount">{{ formatCurrency(invoiceData.principalAmount) }}</td>
           </tr>
           <tr>
             <td class="label">Interest Rate:</td>
-            <td class="amount">{{ invoiceData?.interestRate }}% monthly</td>
+            <td class="amount">{{ invoiceData.interestRate }}% monthly</td>
           </tr>
           <tr>
             <td class="label">Interest Amount:</td>
-            <td class="amount">{{ formatCurrency(invoiceData?.interestAmount) }}</td>
+            <td class="amount">{{ formatCurrency(invoiceData.interestAmount) }}</td>
           </tr>
           <tr>
             <td class="label">Service Charge:</td>
-            <td class="amount">{{ formatCurrency(invoiceData?.serviceCharge) }}</td>
+            <td class="amount">{{ formatCurrency(invoiceData.serviceCharge) }}</td>
           </tr>
           <tr class="total-row">
             <td class="label">Net Proceeds:</td>
-            <td class="amount">{{ formatCurrency(invoiceData?.netProceeds) }}</td>
+            <td class="amount">{{ formatCurrency(invoiceData.netProceeds) }}</td>
           </tr>
           <tr class="total-row highlight">
             <td class="label">Total Amount Due:</td>
-            <td class="amount">{{ formatCurrency(invoiceData?.totalAmount) }}</td>
+            <td class="amount">{{ formatCurrency(invoiceData.totalAmount) }}</td>
           </tr>
         </table>
       </div>
@@ -150,11 +150,11 @@ export interface LoanInvoiceData {
         <div class="dates-info">
           <div class="date-box">
             <span class="date-label">Maturity Date:</span>
-            <span class="date-value">{{ formatDate(invoiceData?.maturityDate) }}</span>
+            <span class="date-value">{{ formatDate(invoiceData.maturityDate) }}</span>
           </div>
           <div class="date-box">
             <span class="date-label">Expiry Date:</span>
-            <span class="date-value">{{ formatDate(invoiceData?.expiryDate) }}</span>
+            <span class="date-value">{{ formatDate(invoiceData.expiryDate) }}</span>
           </div>
         </div>
       </div>
@@ -180,7 +180,7 @@ export interface LoanInvoiceData {
           </div>
           <div class="signature-box">
             <div class="signature-line"></div>
-            <p class="signature-label">Cashier: {{ invoiceData?.cashierName }}</p>
+            <p class="signature-label">Cashier: {{ invoiceData.cashierName }}</p>
           </div>
         </div>
         <div class="footer-note">

@@ -6,6 +6,8 @@ import { Location } from '@angular/common';
 import { ToastService } from '../../../core/services/toast.service';
 import { TransactionInfoComponent, CustomerInfo, TransactionInfo, PawnedItem } from '../../../shared/components/transaction/transaction-info.component';
 import { PenaltyCalculatorService } from '../../../core/services/penalty-calculator.service';
+import { InvoiceModalComponent } from '../../../shared/modals/invoice-modal/invoice-modal.component';
+import { LoanInvoiceData } from '../../../shared/components/loan-invoice/loan-invoice.component';
 
 interface RedeemComputation {
   principalLoan: number;
@@ -22,7 +24,7 @@ interface RedeemComputation {
 @Component({
   selector: 'app-redeem',
   standalone: true,
-  imports: [CommonModule, FormsModule, TransactionInfoComponent],
+  imports: [CommonModule, FormsModule, TransactionInfoComponent, InvoiceModalComponent],
   templateUrl: './redeem.html',
   styleUrl: './redeem.css'
 })
@@ -63,6 +65,10 @@ export class Redeem implements OnInit {
     receivedAmount: 0,
     change: 0
   };
+
+  // Invoice modal state
+  showInvoiceModal: boolean = false;
+  invoiceData: LoanInvoiceData | null = null;
 
   constructor(
     private router: Router,
@@ -502,10 +508,41 @@ export class Redeem implements OnInit {
 
       if (result.success) {
         this.toastService.showSuccess('Success', `Item redeemed successfully! Change: ₱${this.redeemComputation.change.toFixed(2)}`);
-        // Redirect to dashboard after successful redemption
-        setTimeout(() => {
-          this.router.navigate(['/cashier-dashboard']);
-        }, 1500);
+
+        // Prepare invoice data
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+
+        this.invoiceData = {
+          transactionType: 'redemption',
+          transactionNumber: result.data?.transactionId || this.transactionNumber,
+          ticketNumber: this.searchTicketNumber,
+          transactionDate: new Date(),
+          pawnerName: `${this.customerInfo.firstName} ${this.customerInfo.lastName}`,
+          pawnerContact: this.customerInfo.contactNumber,
+          pawnerAddress: this.customerInfo.completeAddress || 'N/A',
+          items: this.items.map(item => ({
+            category: item.category || 'N/A',
+            description: item.description || 'N/A',
+            appraisedValue: item.appraisalValue || item.appraisedValue || 0
+          })),
+          principalAmount: this.redeemComputation.principalLoan,
+          interestRate: this.redeemComputation.interestRate,
+          interestAmount: this.redeemComputation.interest,
+          serviceCharge: this.redeemComputation.penalty,
+          paymentAmount: this.redeemComputation.receivedAmount,
+          totalAmount: this.redeemComputation.redeemAmount,
+          previousBalance: this.redeemComputation.dueAmount,
+          remainingBalance: -this.redeemComputation.change, // Negative means change given
+          loanDate: new Date(this.transactionInfo.grantedDate),
+          maturityDate: new Date(this.transactionInfo.maturedDate),
+          expiryDate: new Date(this.transactionInfo.expiredDate),
+          branchName: user.branch_name || 'Main Branch',
+          cashierName: `${user.first_name || ''} ${user.last_name || ''}`.trim(),
+          notes: `Redeemed - Change: ₱${this.redeemComputation.change.toFixed(2)}`
+        };
+
+        // Show invoice modal
+        this.showInvoiceModal = true;
       } else {
         this.toastService.showError('Error', result.message || 'Failed to process redeem transaction');
       }
@@ -515,6 +552,13 @@ export class Redeem implements OnInit {
     } finally {
       this.isProcessing = false;
     }
+  }
+
+  // Close invoice modal and navigate back
+  closeInvoiceModal(): void {
+    this.showInvoiceModal = false;
+    this.invoiceData = null;
+    this.router.navigate(['/cashier-dashboard']);
   }
 
   goBack() {

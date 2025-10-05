@@ -17,6 +17,19 @@ interface Transaction {
   first_name: string;
   last_name: string;
   branch_name: string;
+  transactionHistory?: Array<{
+    id: number;
+    transactionNumber: string;
+    transactionType: string;
+    transactionDate: Date;
+    principalAmount: number;
+    amountPaid: number;
+    balance: number;
+    status: string;
+    notes: string;
+    createdBy: number;
+    createdAt: Date;
+  }>;
 }
 
 interface TransactionStats {
@@ -39,6 +52,7 @@ export class TransactionManagement implements OnInit {
   stats: TransactionStats | null = null;
   loading = false;
   searchForm: FormGroup;
+  expandedTransactions = new Set<number>(); // Track which transactions are expanded
 
   // Pagination
   currentPage = 1;
@@ -134,14 +148,31 @@ export class TransactionManagement implements OnInit {
     console.log('🌐 Making request to:', url);
     console.log('📊 Current loading state:', this.loading);
 
-    this.http.get<{success: boolean, data: Transaction[], pagination: any}>(url).subscribe({
+    this.http.get<{success: boolean, data: any[], pagination: any}>(url).subscribe({
       next: (response) => {
         console.log('✅ API Response received:', response);
         if (response.success) {
-          this.transactions = response.data || [];
+          // Map the response data to ensure transactionHistory is included
+          this.transactions = (response.data || []).map((row: any) => ({
+            id: row.id,
+            ticket_number: row.ticket_number || row.transactionNumber,
+            transaction_type: row.transaction_type || row.transactionType,
+            principal_amount: parseFloat(row.principal_amount || row.principalAmount || 0),
+            total_amount: parseFloat(row.total_amount || row.totalAmount || 0),
+            balance_remaining: parseFloat(row.balance_remaining || row.balanceRemaining || row.balance || 0),
+            status: row.status,
+            loan_date: row.loan_date || row.loanDate,
+            maturity_date: row.maturity_date || row.maturityDate,
+            first_name: row.first_name || row.pawnerName?.split(' ')[0] || '',
+            last_name: row.last_name || row.pawnerName?.split(' ')[1] || '',
+            branch_name: row.branch_name || row.branchName || 'N/A',
+            transactionHistory: row.transactionHistory || []
+          }));
           this.totalTransactions = response.pagination?.total || 0;
           console.log('📋 Transactions set:', this.transactions.length, 'items');
           console.log('📈 Total transactions:', this.totalTransactions);
+          console.log('🔍 Sample transaction:', this.transactions[0]);
+          console.log('📜 Transaction history count:', this.transactions[0]?.transactionHistory?.length || 0);
         } else {
           console.warn('⚠️ API returned success=false:', response);
         }
@@ -211,8 +242,9 @@ export class TransactionManagement implements OnInit {
     }).format(amount);
   }
 
-  formatDate(dateString: string): string {
-    return new Date(dateString).toLocaleDateString('en-PH', {
+  formatDate(dateString: string | Date): string {
+    const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
+    return date.toLocaleDateString('en-PH', {
       year: 'numeric',
       month: 'short',
       day: 'numeric'
@@ -243,6 +275,56 @@ export class TransactionManagement implements OnInit {
 
   trackByTransactionId(index: number, transaction: Transaction): number {
     return transaction.id;
+  }
+
+  // Toggle transaction history visibility
+  toggleTransactionHistory(transactionId: number, event: Event) {
+    console.log('🔄 Toggle called for transaction ID:', transactionId);
+    console.log('📊 Current expanded state:', this.expandedTransactions.has(transactionId));
+    event.stopPropagation(); // Prevent other click handlers
+    if (this.expandedTransactions.has(transactionId)) {
+      this.expandedTransactions.delete(transactionId);
+      console.log('➖ Collapsed transaction:', transactionId);
+    } else {
+      this.expandedTransactions.add(transactionId);
+      console.log('➕ Expanded transaction:', transactionId);
+    }
+    console.log('📋 All expanded transactions:', Array.from(this.expandedTransactions));
+  }
+
+  // Check if transaction is expanded
+  isTransactionExpanded(transactionId: number): boolean {
+    return this.expandedTransactions.has(transactionId);
+  }
+
+  // Get transaction type label for display
+  getTransactionHistoryTypeLabel(type: string): string {
+    const labels: { [key: string]: string } = {
+      'new_loan': 'New Loan',
+      'partial_payment': 'Partial Payment',
+      'redemption': 'Redemption',
+      'renewal': 'Renewal',
+      'full_payment': 'Full Payment'
+    };
+    return labels[type] || type;
+  }
+
+  // Format time ago
+  getTimeAgo(date: Date | string): string {
+    const now = new Date();
+    const targetDate = typeof date === 'string' ? new Date(date) : date;
+    const diffMs = now.getTime() - targetDate.getTime();
+    const diffMins = Math.floor(diffMs / (1000 * 60));
+
+    if (diffMins < 60) {
+      return `${diffMins} minute(s) ago`;
+    } else if (diffMins < 1440) { // 24 hours
+      const diffHours = Math.floor(diffMins / 60);
+      return `${diffHours} hour(s) ago`;
+    } else {
+      const diffDays = Math.floor(diffMins / 1440);
+      return `${diffDays} day(s) ago`;
+    }
   }
 
   // Helper methods for template

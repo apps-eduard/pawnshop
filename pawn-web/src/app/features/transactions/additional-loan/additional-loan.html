@@ -91,11 +91,13 @@
 
             <!-- Additional Amount -->
             <div class="bg-yellow-50 dark:bg-yellow-900/20 p-1.5 rounded">
-              <div class="flex justify-between items-center">
+              <div class="flex justify-between items-center gap-2">
                 <label class="text-xs font-medium text-yellow-700 dark:text-yellow-300">Additional Amount</label>
-                <div class="text-sm font-bold text-yellow-600 dark:text-yellow-400">
-                  ₱{{ additionalComputation.additionalAmount | number:'1.2-2' }}
-                </div>
+                <input type="number" [(ngModel)]="additionalComputation.additionalAmount" (input)="onAdditionalAmountChange()"
+                  class="w-[65%] px-2 py-1 text-sm font-bold border border-yellow-300 dark:border-yellow-600 rounded focus:outline-none focus:ring-1 focus:ring-yellow-500 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400 text-right"
+                  [max]="additionalComputation.availableAmount"
+                  min="0"
+                  placeholder="0,000.00">
               </div>
             </div>
 

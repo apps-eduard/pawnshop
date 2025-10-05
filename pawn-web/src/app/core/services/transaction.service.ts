@@ -4,7 +4,7 @@ import { Observable } from 'rxjs';
 import { TransactionType, Loan, LoanTransaction } from '../models/interfaces';
 
 export interface Transaction {
-  id: string;
+  id: number;
   transaction_number: string;
   type: 'new_loan' | 'payment' | 'renewal' | 'redemption' | 'additional' | 'partial';
   customer_name: string;
@@ -26,6 +26,19 @@ export interface Transaction {
     appraisedValue: number;
     loanAmount: number;
     status: string;
+  }>;
+  transactionHistory?: Array<{
+    id: number;
+    transactionNumber: string;
+    transactionType: string;
+    transactionDate: Date;
+    principalAmount: number;
+    amountPaid: number;
+    balance: number;
+    status: string;
+    notes: string;
+    createdBy: number;
+    createdAt: Date;
   }>;
 }
 

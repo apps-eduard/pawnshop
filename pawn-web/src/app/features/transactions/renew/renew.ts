@@ -6,6 +6,8 @@ import { Location } from '@angular/common';
 import { ToastService } from '../../../core/services/toast.service';
 import { TransactionInfoComponent } from '../../../shared/components/transaction/transaction-info.component';
 import { PenaltyCalculatorService } from '../../../core/services/penalty-calculator.service';
+import { InvoiceModalComponent } from '../../../shared/modals/invoice-modal/invoice-modal.component';
+import { LoanInvoiceData } from '../../../shared/components/loan-invoice/loan-invoice.component';
 
 interface CustomerInfo {
   firstName: string;
@@ -51,7 +53,7 @@ interface RenewComputation {
 @Component({
   selector: 'app-renew',
   standalone: true,
-  imports: [CommonModule, FormsModule, TransactionInfoComponent],
+  imports: [CommonModule, FormsModule, TransactionInfoComponent, InvoiceModalComponent],
   templateUrl: './renew.html',
   styleUrl: './renew.css'
 })
@@ -97,6 +99,10 @@ export class Renew implements OnInit {
   };
 
   searchQuery: string = ''; // Keep for backward compatibility
+
+  // Invoice modal state
+  showInvoiceModal: boolean = false;
+  invoiceData: LoanInvoiceData | null = null;
 
   constructor(
     private router: Router,
@@ -151,7 +157,7 @@ export class Renew implements OnInit {
 
   private populateForm(data: any) {
     // Store transaction ID
-    this.transactionId = data.transactionId || 0;
+    this.transactionId = data.id || 0; // Use data.id which is the transaction ID
 
     // Populate customer info
     this.customerInfo = {
@@ -325,13 +331,13 @@ export class Renew implements OnInit {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
-        body: JSON.stringify({ amount })
+        body: JSON.stringify({ principalAmount: amount }) // Backend expects 'principalAmount', not 'amount'
       });
 
       const result = await response.json();
 
       if (result.success) {
-        return result.data.serviceCharge;
+        return result.data.serviceChargeAmount; // Backend returns 'serviceChargeAmount', not 'serviceCharge'
       } else {
         console.warn('Service charge API returned error, using fallback:', result.message);
         return this.calculateFallbackServiceCharge(amount);
@@ -476,9 +482,47 @@ export class Renew implements OnInit {
 
       if (result.success) {
         this.toastService.showSuccess('Success', 'Loan renewed successfully');
-        setTimeout(() => {
-          this.router.navigate(['/cashier-dashboard']);
-        }, 1500);
+
+        // Prepare invoice data
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+
+        // Calculate new maturity and expiry dates (30 days and 60 days from now)
+        const newMaturityDate = new Date();
+        newMaturityDate.setDate(newMaturityDate.getDate() + 30);
+        const newExpiryDate = new Date();
+        newExpiryDate.setDate(newExpiryDate.getDate() + 60);
+
+        this.invoiceData = {
+          transactionType: 'renewal',
+          transactionNumber: result.data?.transactionId || this.transactionInfo.transactionNumber,
+          ticketNumber: this.searchTicketNumber,
+          transactionDate: new Date(),
+          pawnerName: `${this.customerInfo.firstName} ${this.customerInfo.lastName}`,
+          pawnerContact: this.customerInfo.contactNumber,
+          pawnerAddress: this.customerInfo.address || 'N/A',
+          items: this.items.map(item => ({
+            category: item.category || 'N/A',
+            description: item.description || 'N/A',
+            appraisedValue: item.appraisalValue || 0
+          })),
+          principalAmount: this.renewComputation.principalLoan,
+          interestRate: this.renewComputation.interestRate,
+          interestAmount: this.renewComputation.interest,
+          serviceCharge: this.renewComputation.serviceFee,
+          paymentAmount: this.renewComputation.receivedAmount,
+          totalAmount: this.renewComputation.totalRenewAmount,
+          previousBalance: this.renewComputation.dueAmount,
+          remainingBalance: -this.renewComputation.change,
+          loanDate: new Date(),
+          maturityDate: newMaturityDate,
+          expiryDate: newExpiryDate,
+          branchName: user.branch_name || 'Main Branch',
+          cashierName: `${user.first_name || ''} ${user.last_name || ''}`.trim(),
+          notes: `Renewal - New Loan Amount: ₱${this.renewComputation.newLoanAmount.toFixed(2)}`
+        };
+
+        // Show invoice modal
+        this.showInvoiceModal = true;
       } else {
         this.toastService.showError('Error', result.message || 'Failed to process renewal');
       }
@@ -504,5 +548,12 @@ export class Renew implements OnInit {
   processRenewal() {
     // Alias for processRenew for backward compatibility
     this.processRenew();
+  }
+
+  // Close invoice modal and navigate back
+  closeInvoiceModal(): void {
+    this.showInvoiceModal = false;
+    this.invoiceData = null;
+    this.router.navigate(['/cashier-dashboard']);
   }
 }

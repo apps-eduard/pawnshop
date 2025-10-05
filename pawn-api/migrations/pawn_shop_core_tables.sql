@@ -151,6 +151,14 @@ CREATE TABLE IF NOT EXISTS pawn_tickets (
     -- Ticket Data (JSON for flexibility)
     ticket_data JSONB,
     
+    -- Partial Payment Fields
+    partial_payment DECIMAL(10,2) DEFAULT 0.00,
+    new_principal_loan DECIMAL(10,2),
+    discount_amount DECIMAL(10,2) DEFAULT 0.00,
+    advance_interest DECIMAL(10,2) DEFAULT 0.00,
+    net_payment DECIMAL(10,2) DEFAULT 0.00,
+    payment_amount DECIMAL(10,2) DEFAULT 0.00,
+    
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

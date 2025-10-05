@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ElementRef, ChangeDetectorRef } from '@angular/core';
 import { trigger, state, style, animate, transition } from '@angular/animations';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -51,7 +51,7 @@ interface DashboardCard {
     ])
   ]
 })
-export class CashierDashboard implements OnInit {
+export class CashierDashboard implements OnInit, OnDestroy {
   @ViewChild('newPawnerModal') newPawnerModal: any;
   @ViewChild('cityInput') cityInput: any;
   @ViewChild('barangayInput') barangayInput: any;
@@ -63,6 +63,11 @@ export class CashierDashboard implements OnInit {
   dashboardCards: DashboardCard[] = [];
   recentTransactions: Transaction[] = [];
   pendingAppraisals: Appraisal[] = [];
+  expandedTransactions = new Set<number>(); // Track which transactions are expanded
+
+  // Time update mechanism to prevent ExpressionChangedAfterItHasBeenCheckedError
+  private timeUpdateInterval: any;
+  private timeAgoCache = new Map<string, string>();
 
   // New Loan Modal Properties
   showNewLoanModal = false;
@@ -277,7 +282,8 @@ export class CashierDashboard implements OnInit {
     private categoriesService: CategoriesService,
     private transactionService: TransactionService,
     private http: HttpClient,
-    private router: Router
+    private router: Router,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit() {
@@ -287,6 +293,12 @@ export class CashierDashboard implements OnInit {
     this.updateTime();
     setInterval(() => this.updateTime(), 1000);
 
+    // Update time ago values every minute to prevent change detection errors
+    this.timeUpdateInterval = setInterval(() => {
+      this.timeAgoCache.clear();
+      this.cdr.markForCheck();
+    }, 60000); // Update every minute
+
     // Load categories to get interest rates from database
     console.log('🚀 Cashier Dashboard initializing - loading categories...');
     this.loadCategories();
@@ -294,6 +306,13 @@ export class CashierDashboard implements OnInit {
     // Load cities and barangays for pawner form
     this.loadCities();
     this.loadBarangays();
+  }
+
+  ngOnDestroy() {
+    // Clean up intervals to prevent memory leaks
+    if (this.timeUpdateInterval) {
+      clearInterval(this.timeUpdateInterval);
+    }
   }
 
   private loadDashboardData() {
@@ -514,20 +533,34 @@ export class CashierDashboard implements OnInit {
   }
 
   getTimeAgo(date: Date | string): string {
+    // Create a cache key from the date
+    const dateStr = typeof date === 'string' ? date : date.toISOString();
+
+    // Check if we have a cached value
+    if (this.timeAgoCache.has(dateStr)) {
+      return this.timeAgoCache.get(dateStr)!;
+    }
+
+    // Calculate the time ago value
     const now = new Date();
     const targetDate = typeof date === 'string' ? new Date(date) : date;
     const diffMs = now.getTime() - targetDate.getTime();
     const diffMins = Math.floor(diffMs / (1000 * 60));
 
+    let result: string;
     if (diffMins < 60) {
-      return `${diffMins} minute(s) ago`;
+      result = `${diffMins} minute(s) ago`;
     } else if (diffMins < 1440) { // 24 hours
       const diffHours = Math.floor(diffMins / 60);
-      return `${diffHours} hour(s) ago`;
+      result = `${diffHours} hour(s) ago`;
     } else {
       const diffDays = Math.floor(diffMins / 1440);
-      return `${diffDays} day(s) ago`;
+      result = `${diffDays} day(s) ago`;
     }
+
+    // Cache the result
+    this.timeAgoCache.set(dateStr, result);
+    return result;
   }
 
   loadPendingAppraisals() {
@@ -569,6 +602,33 @@ export class CashierDashboard implements OnInit {
     });
   }
 
+  // Toggle transaction history visibility
+  toggleTransactionHistory(transactionId: number, event: Event) {
+    event.stopPropagation(); // Prevent other click handlers
+    if (this.expandedTransactions.has(transactionId)) {
+      this.expandedTransactions.delete(transactionId);
+    } else {
+      this.expandedTransactions.add(transactionId);
+    }
+  }
+
+  // Check if transaction is expanded
+  isTransactionExpanded(transactionId: number): boolean {
+    return this.expandedTransactions.has(transactionId);
+  }
+
+  // Get transaction type label for display
+  getTransactionHistoryTypeLabel(type: string): string {
+    const labels: { [key: string]: string } = {
+      'new_loan': 'New Loan',
+      'partial_payment': 'Partial Payment',
+      'redemption': 'Redemption',
+      'renewal': 'Renewal',
+      'full_payment': 'Full Payment'
+    };
+    return labels[type] || type;
+  }
+
   loadRecentTransactions() {
     console.log('🔄 Loading recent transactions...');
     this.transactionService.getRecentTransactions().subscribe({
@@ -583,7 +643,7 @@ export class CashierDashboard implements OnInit {
               transaction_number: transaction.transaction_number
             });
             return {
-              id: String(transaction.id || transaction.transactionNumber || transaction.transaction_number),
+              id: parseInt(transaction.id) || 0,
               transaction_number: transaction.transactionNumber || transaction.ticketNumber || transaction.transaction_number || 'N/A',
               type: transaction.transactionType || 'new_loan',
               customer_name: transaction.pawnerName || transaction.pawner_name || `${transaction.pawnerFirstName || transaction.pawner_first_name || ''} ${transaction.pawnerLastName || transaction.pawner_last_name || ''}`.trim(),
@@ -595,7 +655,8 @@ export class CashierDashboard implements OnInit {
               loan_date: new Date(transaction.loanDate || transaction.loan_date || transaction.createdAt || transaction.created_at),
               maturity_date: new Date(transaction.maturityDate || transaction.maturity_date),
               expiry_date: new Date(transaction.expiryDate || transaction.expiry_date),
-              items: transaction.items || []
+              items: transaction.items || [],
+              transactionHistory: transaction.transactionHistory || []
             };
           });
         } else if (response.success && Array.isArray(response.data)) {
@@ -607,7 +668,7 @@ export class CashierDashboard implements OnInit {
               transaction_number: transaction.transaction_number
             });
             return {
-              id: String(transaction.id || transaction.transactionNumber || transaction.transaction_number),
+              id: parseInt(transaction.id) || 0,
               transaction_number: transaction.transactionNumber || transaction.ticketNumber || transaction.transaction_number || 'N/A',
               type: transaction.transactionType || 'new_loan',
               customer_name: transaction.pawnerName || transaction.pawner_name || `${transaction.pawnerFirstName || transaction.pawner_first_name || ''} ${transaction.pawnerLastName || transaction.pawner_last_name || ''}`.trim(),
@@ -619,7 +680,8 @@ export class CashierDashboard implements OnInit {
               loan_date: new Date(transaction.loanDate || transaction.loan_date || transaction.createdAt || transaction.created_at),
               maturity_date: new Date(transaction.maturityDate || transaction.maturity_date),
               expiry_date: new Date(transaction.expiryDate || transaction.expiry_date),
-              items: transaction.items || []
+              items: transaction.items || [],
+              transactionHistory: transaction.transactionHistory || []
             };
           });
         } else {

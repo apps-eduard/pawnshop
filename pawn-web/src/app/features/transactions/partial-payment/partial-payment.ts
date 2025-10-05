@@ -6,6 +6,8 @@ import { Location } from '@angular/common';
 import { ToastService } from '../../../core/services/toast.service';
 import { TransactionInfoComponent } from '../../../shared/components/transaction/transaction-info.component';
 import { PenaltyCalculatorService } from '../../../core/services/penalty-calculator.service';
+import { InvoiceModalComponent } from '../../../shared/modals/invoice-modal/invoice-modal.component';
+import { LoanInvoiceData } from '../../../shared/components/loan-invoice/loan-invoice.component';
 
 // Interfaces
 interface CustomerInfo {
@@ -59,7 +61,7 @@ interface PartialComputation {
 @Component({
   selector: 'app-partial-payment',
   standalone: true,
-  imports: [CommonModule, FormsModule, TransactionInfoComponent],
+  imports: [CommonModule, FormsModule, TransactionInfoComponent, InvoiceModalComponent],
   templateUrl: './partial-payment.html',
   styleUrl: './partial-payment.css'
 })
@@ -111,6 +113,10 @@ export class PartialPayment implements OnInit {
     change: 0
   };
 
+  // Invoice modal state
+  showInvoiceModal: boolean = false;
+  invoiceData: LoanInvoiceData | null = null;
+
   constructor(
     private router: Router,
     private location: Location,
@@ -128,6 +134,12 @@ export class PartialPayment implements OnInit {
   }
 
   async calculatePartialPayment() {
+    console.log('💰 calculatePartialPayment called with:', {
+      principalLoan: this.partialComputation.principalLoan,
+      partialPay: this.partialComputation.partialPay,
+      interestRate: this.partialComputation.interestRate
+    });
+
     // Update appraisal value from items
     this.partialComputation.appraisalValue = this.getTotalAppraisalValue();
 
@@ -189,15 +201,25 @@ export class PartialPayment implements OnInit {
       this.partialComputation.advanceInterest = this.partialComputation.newPrincipalLoan * monthlyRate;
 
       // Calculate service charge based on new principal
+      console.log('🔍 Calculating service charge for amount:', this.partialComputation.newPrincipalLoan);
       this.partialComputation.advServiceCharge = await this.calculateServiceCharge(this.partialComputation.newPrincipalLoan);
+      console.log('💵 Service charge calculated:', this.partialComputation.advServiceCharge);
 
       // Calculate net payment (partial payment + advance interest + service charge)
       this.partialComputation.netPayment =
         this.partialComputation.partialPay +
         this.partialComputation.advanceInterest +
         this.partialComputation.advServiceCharge;
+
+      console.log('📊 Final computation:', {
+        partialPay: this.partialComputation.partialPay,
+        advanceInterest: this.partialComputation.advanceInterest,
+        advServiceCharge: this.partialComputation.advServiceCharge,
+        netPayment: this.partialComputation.netPayment
+      });
     } else {
       // No partial payment specified
+      console.log('⚠️ No partial payment specified, setting values to 0');
       this.partialComputation.newPrincipalLoan = this.partialComputation.principalLoan;
       this.partialComputation.advanceInterest = 0;
       this.partialComputation.advServiceCharge = 0;
@@ -215,13 +237,15 @@ export class PartialPayment implements OnInit {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
-        body: JSON.stringify({ amount })
+        body: JSON.stringify({ principalAmount: amount }) // Backend expects 'principalAmount', not 'amount'
       });
 
       const result = await response.json();
 
+      console.log('📥 Service charge API response:', result);
+
       if (result.success) {
-        return result.data.serviceCharge;
+        return result.data.serviceChargeAmount; // Backend returns 'serviceChargeAmount', not 'serviceCharge'
       } else {
         console.warn('Service charge API returned error, using fallback:', result.message);
         return this.calculateFallbackServiceCharge(amount);
@@ -313,7 +337,7 @@ export class PartialPayment implements OnInit {
       const result = await response.json();
 
       if (result.success && result.data) {
-        this.populateForm(result.data);
+        await this.populateForm(result.data); // Await the async populateForm
         this.transactionFound = true;
         this.toastService.showSuccess('Success', 'Transaction found and loaded!');
       } else {
@@ -329,10 +353,10 @@ export class PartialPayment implements OnInit {
     }
   }
 
-  private populateForm(data: any) {
+  private async populateForm(data: any) {
     // Set transaction number and ID
     this.transactionNumber = data.ticketNumber;
-    this.transactionId = data.transactionId || 0;
+    this.transactionId = data.id || 0; // Use data.id which is the transaction ID
 
     // Populate customer info
     this.customerInfo = {
@@ -387,7 +411,14 @@ export class PartialPayment implements OnInit {
     };
 
     // Calculate partial payment amounts
-    this.calculatePartialPayment();
+    console.log('🔄 About to calculate partial payment...');
+    await this.calculatePartialPayment(); // Await the async calculation
+    console.log('✅ Partial payment calculated:', {
+      newPrincipalLoan: this.partialComputation.newPrincipalLoan,
+      advanceInterest: this.partialComputation.advanceInterest,
+      advServiceCharge: this.partialComputation.advServiceCharge,
+      netPayment: this.partialComputation.netPayment
+    });
   }
 
   private clearForm() {
@@ -478,19 +509,18 @@ export class PartialPayment implements OnInit {
 
     try {
       const paymentData = {
-        transactionId: this.transactionId,
+        ticketId: this.transactionId, // Backend expects 'ticketId', not 'transactionId'
         partialPayment: this.partialComputation.partialPay,
-        interestPaid: this.partialComputation.interest,
-        penaltyPaid: this.partialComputation.penalty,
-        newPrincipal: this.partialComputation.newPrincipalLoan,
+        newPrincipalLoan: this.partialComputation.newPrincipalLoan, // Backend expects 'newPrincipalLoan', not 'newPrincipal'
+        discountAmount: this.partialComputation.discount || 0,
         advanceInterest: this.partialComputation.advanceInterest,
-        serviceCharge: this.partialComputation.advServiceCharge,
-        amountReceived: this.partialComputation.amountReceived,
-        change: this.partialComputation.change,
-        totalPaid: this.partialComputation.netPayment
+        netPayment: this.partialComputation.netPayment,
+        notes: `Partial payment - Change: ₱${this.partialComputation.change.toFixed(2)}`
       };
 
-      const response = await fetch('http://localhost:3000/api/transactions/partial', {
+      console.log('💳 Sending partial payment data:', paymentData);
+
+      const response = await fetch('http://localhost:3000/api/transactions/partial-payment', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -503,9 +533,41 @@ export class PartialPayment implements OnInit {
 
       if (result.success) {
         this.toastService.showSuccess('Success', 'Partial payment processed successfully');
-        setTimeout(() => {
-          this.router.navigate(['/cashier-dashboard']);
-        }, 1500);
+
+        // Prepare invoice data
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+
+        this.invoiceData = {
+          transactionType: 'partial_payment',
+          transactionNumber: result.data?.transactionId || this.transactionNumber,
+          ticketNumber: this.searchTicketNumber,
+          transactionDate: new Date(),
+          pawnerName: `${this.customerInfo.firstName} ${this.customerInfo.lastName}`,
+          pawnerContact: this.customerInfo.contactNumber,
+          pawnerAddress: this.customerInfo.completeAddress || 'N/A',
+          items: this.pawnedItems.map(item => ({
+            category: item.category || 'N/A',
+            description: item.description || 'N/A',
+            appraisedValue: item.appraisalValue || 0
+          })),
+          principalAmount: this.partialComputation.principalLoan,
+          interestRate: this.partialComputation.interestRate,
+          interestAmount: this.partialComputation.interest,
+          serviceCharge: this.partialComputation.advServiceCharge,
+          paymentAmount: this.partialComputation.amountReceived,
+          totalAmount: this.partialComputation.netPayment,
+          previousBalance: this.partialComputation.principalLoan,
+          remainingBalance: this.partialComputation.newPrincipalLoan,
+          loanDate: new Date(this.transactionInfo.grantedDate),
+          maturityDate: new Date(this.transactionInfo.maturedDate),
+          expiryDate: new Date(this.transactionInfo.expiredDate),
+          branchName: user.branch_name || 'Main Branch',
+          cashierName: `${user.first_name || ''} ${user.last_name || ''}`.trim(),
+          notes: `Partial Payment - Change: ₱${this.partialComputation.change.toFixed(2)}`
+        };
+
+        // Show invoice modal
+        this.showInvoiceModal = true;
       } else {
         this.toastService.showError('Error', result.message || 'Failed to process partial payment');
       }
@@ -548,5 +610,12 @@ export class PartialPayment implements OnInit {
     const granted = new Date(this.transactionInfo.grantedDate);
     const now = new Date();
     return Math.floor((now.getTime() - granted.getTime()) / (1000 * 60 * 60 * 24));
+  }
+
+  // Close invoice modal and navigate back
+  closeInvoiceModal(): void {
+    this.showInvoiceModal = false;
+    this.invoiceData = null;
+    this.router.navigate(['/cashier-dashboard']);
   }
 }
