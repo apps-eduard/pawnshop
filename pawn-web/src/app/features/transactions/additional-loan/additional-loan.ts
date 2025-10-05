@@ -115,37 +115,55 @@ export class AdditionalLoan implements OnInit {
   }
 
   // Handle manual additional amount input
-  onAdditionalAmountChange() {
-    console.log('Additional amount changed:', this.additionalComputation.additionalAmount);
+  async onAdditionalAmountChange() {
+    console.log('🔢 Additional amount changed:', this.additionalComputation.additionalAmount);
+    console.log('📊 Available amount:', this.additionalComputation.availableAmount);
+
+    // Convert to number if it's a string
+    this.additionalComputation.additionalAmount = Number(this.additionalComputation.additionalAmount) || 0;
 
     // Ensure additional amount doesn't exceed available amount
     if (this.additionalComputation.additionalAmount > this.additionalComputation.availableAmount) {
+      console.warn('⚠️ Additional amount exceeds available amount, capping it');
       this.additionalComputation.additionalAmount = this.additionalComputation.availableAmount;
     }
 
     // Ensure it's not negative
     if (this.additionalComputation.additionalAmount < 0) {
+      console.warn('⚠️ Additional amount is negative, setting to 0');
       this.additionalComputation.additionalAmount = 0;
     }
 
+    console.log('✅ Final additional amount:', this.additionalComputation.additionalAmount);
+
     // Recalculate dependent values
-    this.recalculateDependentValues();
+    await this.recalculateDependentValues();
   }
 
   // Recalculate values that depend on additional amount
-  recalculateDependentValues() {
+  async recalculateDependentValues() {
+    console.log('🔄 Recalculating dependent values...');
+    console.log('  Previous Loan:', this.additionalComputation.previousLoan);
+    console.log('  Additional Amount:', this.additionalComputation.additionalAmount);
+
     // Calculate new principal loan
     this.additionalComputation.newPrincipalLoan =
       this.additionalComputation.previousLoan + this.additionalComputation.additionalAmount;
+
+    console.log('  New Principal Loan:', this.additionalComputation.newPrincipalLoan);
 
     // Calculate advance interest (1 month interest on new principal)
     this.additionalComputation.advanceInterest =
       (this.additionalComputation.newPrincipalLoan * this.additionalComputation.interestRate) / 100;
 
-    // Calculate advance service charge dynamically
-    this.calculateServiceCharge();
+    console.log('  Advance Interest:', this.additionalComputation.advanceInterest);
 
-    // Calculate net proceed
+    // Calculate advance service charge dynamically (WAIT for this to complete)
+    await this.calculateServiceCharge();
+
+    console.log('  Service Charge:', this.additionalComputation.advServiceCharge);
+
+    // Calculate net proceed (now service charge is ready)
     this.additionalComputation.netProceed =
       this.additionalComputation.additionalAmount -
       this.additionalComputation.advanceInterest -
@@ -153,14 +171,19 @@ export class AdditionalLoan implements OnInit {
       this.additionalComputation.interest -
       this.additionalComputation.penalty;
 
+    console.log('  Net Proceed:', this.additionalComputation.netProceed);
+
     // Calculate redeem amount (new principal + advance interest + service charge)
     this.additionalComputation.redeemAmount =
       this.additionalComputation.newPrincipalLoan +
       this.additionalComputation.advanceInterest +
       this.additionalComputation.advServiceCharge;
+
+    console.log('  Redeem Amount:', this.additionalComputation.redeemAmount);
+    console.log('✅ Recalculation complete!');
   }
 
-  calculateAdditionalLoan() {
+  async calculateAdditionalLoan() {
     console.log('Calculating additional loan...');
 
     // Update appraisal value from items
@@ -202,7 +225,7 @@ export class AdditionalLoan implements OnInit {
     }
 
     // Recalculate dependent values based on current additional amount
-    this.recalculateDependentValues();
+    await this.recalculateDependentValues();
 
     console.log('Calculation result:', {
       interest: this.additionalComputation.interest,
