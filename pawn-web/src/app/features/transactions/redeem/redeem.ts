@@ -298,8 +298,10 @@ export class Redeem implements OnInit {
         categoryName: item.categoryName || item.category || '',
         itemName: item.itemName || item.description || '',
         description: item.description || '',
+        descriptionName: item.descriptionName || item.description || '',
         appraisedValue: item.appraisedValue || item.appraisalValue || 0,
         appraisalValue: item.appraisalValue || item.appraisedValue || 0,
+        appraisalNotes: item.appraisalNotes || item.notes || '',
         category: item.categoryName || item.category || ''
       };
     });

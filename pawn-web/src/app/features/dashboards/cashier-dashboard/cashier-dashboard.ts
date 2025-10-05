@@ -565,36 +565,52 @@ export class CashierDashboard implements OnInit {
         console.log('📊 Transactions API Response:', response);
         if (Array.isArray(response)) {
           // Direct array response
-          this.recentTransactions = response.slice(0, 5).map((transaction: any) => ({
-            id: String(transaction.id || transaction.transaction_number),
-            transaction_number: transaction.transaction_number,
-            type: 'new_loan', // Default type, could be enhanced based on transaction data
-            customer_name: transaction.pawner_name || `${transaction.pawner_first_name || ''} ${transaction.pawner_last_name || ''}`.trim(),
-            pawner_name: transaction.pawner_name || `${transaction.pawner_first_name || ''} ${transaction.pawner_last_name || ''}`.trim(),
-            amount: parseFloat(transaction.principal_amount || transaction.total_amount || 0),
-            principal_amount: parseFloat(transaction.principal_amount || 0),
-            status: transaction.status === 'active' ? 'completed' : transaction.status,
-            created_at: new Date(transaction.created_at || transaction.loan_date),
-            loan_date: new Date(transaction.loan_date || transaction.created_at),
-            maturity_date: new Date(transaction.maturity_date),
-            expiry_date: new Date(transaction.expiry_date)
-          }));
+          this.recentTransactions = response.slice(0, 5).map((transaction: any) => {
+            console.log('🔍 Mapping transaction:', {
+              transactionNumber: transaction.transactionNumber,
+              ticketNumber: transaction.ticketNumber,
+              transaction_number: transaction.transaction_number
+            });
+            return {
+              id: String(transaction.id || transaction.transactionNumber || transaction.transaction_number),
+              transaction_number: transaction.transactionNumber || transaction.ticketNumber || transaction.transaction_number || 'N/A',
+              type: transaction.transactionType || 'new_loan',
+              customer_name: transaction.pawnerName || transaction.pawner_name || `${transaction.pawnerFirstName || transaction.pawner_first_name || ''} ${transaction.pawnerLastName || transaction.pawner_last_name || ''}`.trim(),
+              pawner_name: transaction.pawnerName || transaction.pawner_name || `${transaction.pawnerFirstName || transaction.pawner_first_name || ''} ${transaction.pawnerLastName || transaction.pawner_last_name || ''}`.trim(),
+              amount: parseFloat(transaction.principalAmount || transaction.principal_amount || transaction.totalAmount || transaction.total_amount || 0),
+              principal_amount: parseFloat(transaction.principalAmount || transaction.principal_amount || 0),
+              status: transaction.status === 'active' ? 'completed' : transaction.status,
+              created_at: new Date(transaction.createdAt || transaction.created_at || transaction.loanDate || transaction.loan_date),
+              loan_date: new Date(transaction.loanDate || transaction.loan_date || transaction.createdAt || transaction.created_at),
+              maturity_date: new Date(transaction.maturityDate || transaction.maturity_date),
+              expiry_date: new Date(transaction.expiryDate || transaction.expiry_date),
+              items: transaction.items || []
+            };
+          });
         } else if (response.success && Array.isArray(response.data)) {
           // Wrapped response
-          this.recentTransactions = response.data.slice(0, 5).map((transaction: any) => ({
-            id: String(transaction.id || transaction.transaction_number),
-            transaction_number: transaction.transaction_number,
-            type: 'new_loan',
-            customer_name: transaction.pawner_name || `${transaction.pawner_first_name || ''} ${transaction.pawner_last_name || ''}`.trim(),
-            pawner_name: transaction.pawner_name || `${transaction.pawner_first_name || ''} ${transaction.pawner_last_name || ''}`.trim(),
-            amount: parseFloat(transaction.principal_amount || transaction.total_amount || 0),
-            principal_amount: parseFloat(transaction.principal_amount || 0),
-            status: transaction.status === 'active' ? 'completed' : transaction.status,
-            created_at: new Date(transaction.created_at || transaction.loan_date),
-            loan_date: new Date(transaction.loan_date || transaction.created_at),
-            maturity_date: new Date(transaction.maturity_date),
-            expiry_date: new Date(transaction.expiry_date)
-          }));
+          this.recentTransactions = response.data.slice(0, 5).map((transaction: any) => {
+            console.log('🔍 Mapping transaction:', {
+              transactionNumber: transaction.transactionNumber,
+              ticketNumber: transaction.ticketNumber,
+              transaction_number: transaction.transaction_number
+            });
+            return {
+              id: String(transaction.id || transaction.transactionNumber || transaction.transaction_number),
+              transaction_number: transaction.transactionNumber || transaction.ticketNumber || transaction.transaction_number || 'N/A',
+              type: transaction.transactionType || 'new_loan',
+              customer_name: transaction.pawnerName || transaction.pawner_name || `${transaction.pawnerFirstName || transaction.pawner_first_name || ''} ${transaction.pawnerLastName || transaction.pawner_last_name || ''}`.trim(),
+              pawner_name: transaction.pawnerName || transaction.pawner_name || `${transaction.pawnerFirstName || transaction.pawner_first_name || ''} ${transaction.pawnerLastName || transaction.pawner_last_name || ''}`.trim(),
+              amount: parseFloat(transaction.principalAmount || transaction.principal_amount || transaction.totalAmount || transaction.total_amount || 0),
+              principal_amount: parseFloat(transaction.principalAmount || transaction.principal_amount || 0),
+              status: transaction.status === 'active' ? 'completed' : transaction.status,
+              created_at: new Date(transaction.createdAt || transaction.created_at || transaction.loanDate || transaction.loan_date),
+              loan_date: new Date(transaction.loanDate || transaction.loan_date || transaction.createdAt || transaction.created_at),
+              maturity_date: new Date(transaction.maturityDate || transaction.maturity_date),
+              expiry_date: new Date(transaction.expiryDate || transaction.expiry_date),
+              items: transaction.items || []
+            };
+          });
         } else {
           console.warn('⚠️ Unexpected transactions response format:', response);
           this.recentTransactions = [];

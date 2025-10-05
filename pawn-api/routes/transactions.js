@@ -163,7 +163,26 @@ router.get('/', async (req, res) => {
              p.city_id, p.barangay_id, p.house_number, p.street,
              c.name as city_name, b.name as barangay_name,
              e.first_name as cashier_first_name, e.last_name as cashier_last_name,
-             br.name as branch_name
+             br.name as branch_name,
+             (
+               SELECT json_agg(
+                 json_build_object(
+                   'id', pi.id,
+                   'categoryId', pi.category_id,
+                   'categoryName', cat.name,
+                   'descriptionId', pi.description_id,
+                   'descriptionName', d.description_name,
+                   'appraisalNotes', pi.appraisal_notes,
+                   'appraisedValue', pi.appraised_value,
+                   'loanAmount', pi.loan_amount,
+                   'status', pi.status
+                 )
+               )
+               FROM pawn_items pi
+               LEFT JOIN categories cat ON pi.category_id = cat.id
+               LEFT JOIN descriptions d ON pi.description_id = d.id
+               WHERE pi.transaction_id = t.id
+             ) as items
       FROM transactions t
       JOIN pawners p ON t.pawner_id = p.id
       LEFT JOIN cities c ON p.city_id = c.id
@@ -180,15 +199,16 @@ router.get('/', async (req, res) => {
       message: 'Transactions retrieved successfully',
       data: result.rows.map(row => ({
         id: row.id,
-        ticketNumber: row.ticket_number,
-        transactionNumber: row.ticket_number, // For compatibility
+        ticketNumber: row.transaction_number,  // Map transaction_number to ticketNumber
+        transactionNumber: row.transaction_number, // For compatibility
+        loanNumber: row.loan_number,
         pawnerId: row.pawner_id,
         branchId: row.branch_id,
         createdBy: row.created_by,
         transactionType: row.transaction_type,
         transactionDate: row.transaction_date,
-        loanDate: row.loan_date,
-        dateGranted: row.loan_date, // For compatibility
+        loanDate: row.granted_date || row.transaction_date,
+        dateGranted: row.granted_date || row.transaction_date, // For compatibility
         maturityDate: row.maturity_date,
         dateMatured: row.maturity_date, // For compatibility
         expiryDate: row.expiry_date,
@@ -198,25 +218,25 @@ router.get('/', async (req, res) => {
         interestRate: parseFloat(row.interest_rate || 0) * 100, // Convert decimal to percentage for display
         interestAmount: parseFloat(row.interest_amount || 0),
         serviceCharge: parseFloat(row.service_charge || 0),
-        netProceeds: parseFloat(row.net_proceeds || 0),
-        netProceed: parseFloat(row.net_proceeds || 0), // For compatibility
+        netProceeds: parseFloat(row.principal_amount || 0) - parseFloat(row.service_charge || 0),
+        netProceed: parseFloat(row.principal_amount || 0) - parseFloat(row.service_charge || 0), // For compatibility
         totalAmount: parseFloat(row.total_amount || 0),
-        paymentAmount: parseFloat(row.payment_amount || 0),
-        balanceRemaining: parseFloat(row.balance_remaining || 0),
-        dueAmount: parseFloat(row.due_amount || 0),
-        additionalAmount: parseFloat(row.additional_amount || 0),
-        renewalFee: parseFloat(row.renewal_fee || 0),
+        paymentAmount: parseFloat(row.amount_paid || 0),
+        balanceRemaining: parseFloat(row.balance || 0),
+        dueAmount: parseFloat(row.balance || 0),
+        additionalAmount: 0,
+        renewalFee: 0,
         penaltyAmount: parseFloat(row.penalty_amount || 0),
         penalty: parseFloat(row.penalty_amount || 0), // For compatibility
         status: row.status,
         loanStatus: row.status, // For compatibility
-        redeemedDate: row.redeemed_date,
-        renewedDate: row.renewed_date,
-        defaultedDate: row.defaulted_date,
-        parentTicketId: row.parent_ticket_id,
+        redeemedDate: null,
+        renewedDate: null,
+        defaultedDate: null,
+        parentTicketId: row.parent_transaction_id,
         approvedBy: row.approved_by,
         notes: row.notes,
-        reason: row.reason,
+        reason: null,
         createdAt: row.created_at,
         updatedAt: row.updated_at,
         // Pawner information
@@ -231,7 +251,9 @@ router.get('/', async (req, res) => {
         // Cashier information
         cashierName: `${row.cashier_first_name} ${row.cashier_last_name}`,
         // Branch information
-        branchName: row.branch_name
+        branchName: row.branch_name,
+        // Items information
+        items: row.items || []
       }))
     });
   } catch (error) {
@@ -273,9 +295,16 @@ router.get('/:id', async (req, res) => {
       });
     }
     
-    // Get items for this ticket
+    // Get items for this transaction with category and description names
     const itemsResult = await pool.query(`
-      SELECT * FROM pawn_items WHERE ticket_id = $1 ORDER BY id
+      SELECT pi.*, 
+             cat.name as category_name,
+             d.description_name
+      FROM pawn_items pi
+      LEFT JOIN categories cat ON pi.category_id = cat.id
+      LEFT JOIN descriptions d ON pi.description_id = d.id
+      WHERE pi.transaction_id = $1 
+      ORDER BY pi.id
     `, [id]);
     
     const row = result.rows[0];
@@ -340,10 +369,19 @@ router.get('/:id', async (req, res) => {
         // Items information
         items: itemsResult.rows.map(item => ({
           id: item.id,
-          category: item.category,
-          categoryDescription: item.category_description,
-          description: item.description,
-          appraisalValue: parseFloat(item.appraisal_value || 0)
+          categoryId: item.category_id,
+          categoryName: item.category_name,
+          descriptionId: item.description_id,
+          descriptionName: item.description_name,
+          category: item.category_name,
+          description: item.description_name,
+          itemDescription: item.description_name,
+          appraisalNotes: item.appraisal_notes,
+          notes: item.appraisal_notes,
+          appraisalValue: parseFloat(item.appraised_value || 0),
+          appraisedValue: parseFloat(item.appraised_value || 0),
+          loanAmount: parseFloat(item.loan_amount || 0),
+          status: item.status
         }))
       }
     });
@@ -478,7 +516,7 @@ router.post('/new-loan', async (req, res) => {
         let descriptionId = null;
         if (item.categoryDescription) {
           const descResult = await client.query(
-            'SELECT id FROM descriptions WHERE name = $1 AND category_id = $2', 
+            'SELECT id FROM descriptions WHERE description_name = $1 AND category_id = $2', 
             [item.categoryDescription, categoryId]
           );
           descriptionId = descResult.rows[0]?.id || null;
@@ -486,14 +524,14 @@ router.post('/new-loan', async (req, res) => {
         
         await client.query(`
           INSERT INTO pawn_items (
-            transaction_id, category_id, description_id, custom_description, 
+            transaction_id, category_id, description_id, appraisal_notes, 
             appraised_value, loan_amount, status
           ) VALUES ($1, $2, $3, $4, $5, $6, $7)
         `, [
           transaction.id,               // transaction_id (use transaction id, not ticket id)
           categoryId,                   // category_id 
           descriptionId,                // description_id (if found)
-          item.description || item.categoryDescription || '', // custom_description
+          item.description || item.categoryDescription || '', // appraisal_notes
           parseFloat(item.appraisalValue), // appraised_value
           parseFloat(item.appraisalValue), // loan_amount (same as appraised for now)
           'in_vault'                    // status - must use constraint-allowed value

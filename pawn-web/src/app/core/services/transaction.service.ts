@@ -16,6 +16,17 @@ export interface Transaction {
   loan_date: Date;
   maturity_date: Date;
   expiry_date: Date;
+  items?: Array<{
+    id: number;
+    categoryId: number;
+    categoryName: string;
+    descriptionId: number;
+    descriptionName: string;
+    appraisalNotes: string;
+    appraisedValue: number;
+    loanAmount: number;
+    status: string;
+  }>;
 }
 
 export interface PenaltyCalculation {
