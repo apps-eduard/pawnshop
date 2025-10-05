@@ -24,11 +24,7 @@ interface Branch {
   is_active: boolean;
 }
 
-interface LoanRules {
-  service_charge_rate: number;
-  minimum_service_charge: number;
-  minimum_loan_for_service: number;
-}
+
 
 interface VoucherType {
   id?: number;
@@ -47,6 +43,29 @@ interface AuditLogEntry {
   old_values: any;
   new_values: any;
   created_at: string;
+}
+
+interface PenaltyConfig {
+  id: number;
+  config_key: string;
+  config_value: number;
+  description: string;
+  is_active: boolean;
+}
+
+interface ServiceChargeBracket {
+  id: number;
+  bracket_name: string;
+  min_amount: number;
+  max_amount: number | null;
+  service_charge: number;
+  display_order: number;
+  is_active: boolean;
+}
+
+interface ServiceChargeConfig {
+  config: PenaltyConfig[];
+  brackets: ServiceChargeBracket[];
 }
 
 interface SystemStats {
@@ -111,7 +130,8 @@ export class AdminSettingsComponent implements OnInit {
     {key: 'categories', label: 'Categories & Interest', icon: 'tag'},
     {key: 'branches', label: 'Branches', icon: 'office'},
     {key: 'vouchers', label: 'Voucher Types', icon: 'receipt'},
-    {key: 'loan-rules', label: 'Loan Rules', icon: 'calculator'},
+    {key: 'penalty-config', label: 'Penalty Settings', icon: 'exclamation-triangle'},
+    {key: 'service-charge-config', label: 'Service Charge Settings', icon: 'currency-dollar'},
     {key: 'audit', label: 'Audit Trail', icon: 'clipboard'},
     {key: 'stats', label: 'Statistics', icon: 'chart'}
   ];
@@ -120,11 +140,6 @@ export class AdminSettingsComponent implements OnInit {
   categories: Category[] = [];
   branches: Branch[] = [];
   voucherTypes: VoucherType[] = [];
-  loanRules: LoanRules = {
-    service_charge_rate: 0.01,
-    minimum_service_charge: 5,
-    minimum_loan_for_service: 500
-  };
   branchConfig: BranchConfig | null = null;
   transactionConfig: TransactionConfig = {
     prefix: 'TXN',
@@ -135,6 +150,14 @@ export class AdminSettingsComponent implements OnInit {
     separator: '-'
   };
 
+  // Penalty and Service Charge Configuration
+  penaltyConfig: PenaltyConfig[] = [];
+  serviceChargeConfig: ServiceChargeConfig = {
+    config: [],
+    brackets: []
+  };
+  editingServiceChargeBracket: ServiceChargeBracket | null = null;
+
   // Make Math available in template
   Math = Math;
 
@@ -142,9 +165,10 @@ export class AdminSettingsComponent implements OnInit {
   categoryForm!: FormGroup;
   branchForm!: FormGroup;
   voucherForm!: FormGroup;
-  loanRulesForm!: FormGroup;
   branchConfigForm!: FormGroup;
   transactionConfigForm!: FormGroup;
+  penaltyConfigForm!: FormGroup;
+  serviceChargeBracketForm!: FormGroup;
 
   // Edit states
   editingCategory: Category | null = null;
@@ -202,11 +226,7 @@ export class AdminSettingsComponent implements OnInit {
       is_active: [true]
     });
 
-    this.loanRulesForm = this.fb.group({
-      service_charge_rate: [0.01, [Validators.required, Validators.min(0.001), Validators.max(1)]],
-      minimum_service_charge: [5, [Validators.required, Validators.min(1)]],
-      minimum_loan_for_service: [500, [Validators.required, Validators.min(100)]]
-    });
+
 
     this.branchConfigForm = this.fb.group({
       currentBranchId: ['', [Validators.required]],
@@ -222,6 +242,22 @@ export class AdminSettingsComponent implements OnInit {
       sequenceDigits: [2, [Validators.required, Validators.min(2), Validators.max(4)]],
       separator: ['-', [Validators.required]]
     });
+
+    this.penaltyConfigForm = this.fb.group({
+      monthly_penalty_rate: [0.02, [Validators.required, Validators.min(0.001), Validators.max(1)]],
+      daily_penalty_threshold_days: [3, [Validators.required, Validators.min(1), Validators.max(30)]],
+      grace_period_days: [0, [Validators.required, Validators.min(0), Validators.max(30)]],
+      penalty_compounding: [0, [Validators.required]],
+      max_penalty_multiplier: [12, [Validators.required, Validators.min(1), Validators.max(100)]]
+    });
+
+    this.serviceChargeBracketForm = this.fb.group({
+      bracket_name: ['', [Validators.required, Validators.minLength(3)]],
+      min_amount: [0, [Validators.required, Validators.min(0)]],
+      max_amount: [null],
+      service_charge: [0, [Validators.required, Validators.min(0)]],
+      display_order: [1, [Validators.required, Validators.min(1)]]
+    });
   }
 
   loadAllSettings(): void {
@@ -231,8 +267,9 @@ export class AdminSettingsComponent implements OnInit {
       this.loadCategories(),
       this.loadBranches(),
       this.loadVoucherTypes(),
-      this.loadLoanRules(),
-      this.loadTransactionConfig()
+      this.loadTransactionConfig(),
+      this.loadPenaltyConfig(),
+      this.loadServiceChargeConfig()
     ]).finally(() => {
       this.isLoading = false;
       // Force change detection to ensure UI updates
@@ -543,42 +580,7 @@ export class AdminSettingsComponent implements OnInit {
     this.editingVoucher = null;
   }
 
-  // Loan Rules Management
-  async loadLoanRules(): Promise<void> {
-    try {
-      const response = await this.http.get<any>('http://localhost:3000/api/admin/loan-rules').toPromise();
-      this.loanRules = response.data || this.loanRules;
-      this.loanRulesForm.patchValue(this.loanRules);
-    } catch (error) {
-      console.error('Error loading loan rules:', error);
-    }
-  }
 
-  saveLoanRules(): void {
-    if (!this.loanRulesForm.valid) {
-      this.toastService.showError('Validation Error', 'Please fill in all required fields correctly.');
-      return;
-    }
-
-    const rulesData = this.loanRulesForm.value;
-
-    this.http.put<{success: boolean, message: string, data?: any}>('http://localhost:3000/api/admin/loan-rules', rulesData).subscribe({
-      next: (response) => {
-        if (response.success) {
-          this.loanRules = response.data;
-          this.toastService.showSuccess('Rules Updated', response.message || 'Loan rules updated successfully!');
-        } else {
-          this.toastService.showError('Update Failed', response.message || 'Failed to update loan rules.');
-        }
-      },
-      error: (error) => {
-        console.error('Error updating loan rules:', error);
-        // For demo, update local data
-        this.loanRules = rulesData;
-        this.toastService.showWarning('Demo Mode', 'Loan rules updated locally (demo mode).');
-      }
-    });
-  }
 
   setActiveTab(tab: string): void {
     this.activeTab = tab;
@@ -943,6 +945,209 @@ export class AdminSettingsComponent implements OnInit {
     }
 
     return null;
+  }
+
+  // =============================================
+  // PENALTY CONFIGURATION METHODS
+  // =============================================
+
+  async loadPenaltyConfig(): Promise<void> {
+    try {
+      const response = await this.http.get<any>(
+        'http://localhost:3000/api/penalty-config',
+        {
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        }
+      ).toPromise();
+
+      if (response?.success && response?.data) {
+        this.penaltyConfig = response.data;
+
+        // Update form with current values
+        const configMap: { [key: string]: number } = {};
+        this.penaltyConfig.forEach(config => {
+          configMap[config.config_key] = config.config_value;
+        });
+
+        this.penaltyConfigForm.patchValue(configMap);
+      }
+    } catch (error) {
+      console.error('❌ Error loading penalty config:', error);
+      this.toastService.showError('Load Failed', 'Failed to load penalty configuration');
+    }
+  }
+
+  async savePenaltyConfig(): Promise<void> {
+    const formData = this.penaltyConfigForm.value;
+
+    try {
+      const updatePromises = Object.entries(formData).map(([key, value]) =>
+        this.http.put<any>(
+          `http://localhost:3000/api/penalty-config/${key}`,
+          { configValue: value },
+          { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } }
+        ).toPromise()
+      );
+
+      await Promise.all(updatePromises);
+
+      this.toastService.showSuccess('Success', 'Penalty configuration updated successfully');
+      await this.loadPenaltyConfig();
+    } catch (error) {
+      console.error('❌ Error saving penalty config:', error);
+      this.toastService.showError('Save Failed', 'Failed to update penalty configuration');
+    }
+  }
+
+  async testPenaltyCalculation(): Promise<void> {
+    try {
+      const testData = {
+        principalAmount: 15000,
+        maturityDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000), // 5 days ago
+        currentDate: new Date()
+      };
+
+      const response = await this.http.post<any>(
+        'http://localhost:3000/api/penalty-config/calculate',
+        testData,
+        { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } }
+      ).toPromise();
+
+      if (response?.success) {
+        const calculation = response.data;
+        const message = `Test Result:
+Principal: ₱${testData.principalAmount.toLocaleString()}
+Days Overdue: ${calculation.daysOverdue}
+Penalty: ₱${calculation.penaltyAmount.toLocaleString()}
+Method: ${calculation.calculationMethod}`;
+
+        this.toastService.showInfo('Penalty Test', message);
+      }
+    } catch (error) {
+      console.error('❌ Error testing penalty calculation:', error);
+      this.toastService.showError('Test Failed', 'Failed to test penalty calculation');
+    }
+  }
+
+  // =============================================
+  // SERVICE CHARGE CONFIGURATION METHODS
+  // =============================================
+
+  async loadServiceChargeConfig(): Promise<void> {
+    try {
+      const response = await this.http.get<any>(
+        'http://localhost:3000/api/service-charge-config',
+        {
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        }
+      ).toPromise();
+
+      if (response?.success && response?.data) {
+        this.serviceChargeConfig = response.data;
+      }
+    } catch (error) {
+      console.error('❌ Error loading service charge config:', error);
+      this.toastService.showError('Load Failed', 'Failed to load service charge configuration');
+    }
+  }
+
+  async saveServiceChargeBracket(): Promise<void> {
+    if (this.serviceChargeBracketForm.invalid) {
+      this.toastService.showError('Invalid Form', 'Please fix form errors before saving');
+      return;
+    }
+
+    const formData = this.serviceChargeBracketForm.value;
+
+    try {
+      if (this.editingServiceChargeBracket) {
+        // Update existing bracket
+        await this.http.put<any>(
+          `http://localhost:3000/api/service-charge-config/brackets/${this.editingServiceChargeBracket.id}`,
+          formData,
+          { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } }
+        ).toPromise();
+
+        this.toastService.showSuccess('Success', 'Service charge bracket updated successfully');
+        this.editingServiceChargeBracket = null;
+      } else {
+        // Create new bracket
+        await this.http.post<any>(
+          'http://localhost:3000/api/service-charge-config/brackets',
+          formData,
+          { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } }
+        ).toPromise();
+
+        this.toastService.showSuccess('Success', 'Service charge bracket created successfully');
+      }
+
+      this.serviceChargeBracketForm.reset();
+      await this.loadServiceChargeConfig();
+    } catch (error) {
+      console.error('❌ Error saving service charge bracket:', error);
+      this.toastService.showError('Save Failed', 'Failed to save service charge bracket');
+    }
+  }
+
+  editServiceChargeBracket(bracket: ServiceChargeBracket): void {
+    this.editingServiceChargeBracket = bracket;
+    this.serviceChargeBracketForm.patchValue({
+      bracket_name: bracket.bracket_name,
+      min_amount: bracket.min_amount,
+      max_amount: bracket.max_amount,
+      service_charge: bracket.service_charge,
+      display_order: bracket.display_order
+    });
+  }
+
+  async deleteServiceChargeBracket(bracketId: number): Promise<void> {
+    if (!confirm('Are you sure you want to delete this service charge bracket?')) {
+      return;
+    }
+
+    try {
+      await this.http.delete<any>(
+        `http://localhost:3000/api/service-charge-config/brackets/${bracketId}`,
+        { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } }
+      ).toPromise();
+
+      this.toastService.showSuccess('Success', 'Service charge bracket deleted successfully');
+      await this.loadServiceChargeConfig();
+    } catch (error) {
+      console.error('❌ Error deleting service charge bracket:', error);
+      this.toastService.showError('Delete Failed', 'Failed to delete service charge bracket');
+    }
+  }
+
+  async testServiceChargeCalculation(): Promise<void> {
+    try {
+      const testData = { principalAmount: 250 };
+
+      const response = await this.http.post<any>(
+        'http://localhost:3000/api/service-charge-config/calculate',
+        testData,
+        { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } }
+      ).toPromise();
+
+      if (response?.success) {
+        const calculation = response.data;
+        const message = `Test Result:
+Principal: ₱${testData.principalAmount.toLocaleString()}
+Service Charge: ₱${calculation.serviceChargeAmount.toLocaleString()}
+Method: ${calculation.calculationMethod}
+Bracket: ${calculation.bracketUsed || 'N/A'}`;
+
+        this.toastService.showInfo('Service Charge Test', message);
+      }
+    } catch (error) {
+      console.error('❌ Error testing service charge calculation:', error);
+      this.toastService.showError('Test Failed', 'Failed to test service charge calculation');
+    }
+  }
+
+  cancelServiceChargeBracketEdit(): void {
+    this.editingServiceChargeBracket = null;
+    this.serviceChargeBracketForm.reset();
   }
 }
 

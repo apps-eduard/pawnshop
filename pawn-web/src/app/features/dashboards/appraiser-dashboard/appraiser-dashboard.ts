@@ -489,7 +489,7 @@ export class AppraiserDashboard implements OnInit {
           this.categoryDescriptions = {};
           response.data.forEach(cat => {
             if (cat.descriptions && cat.descriptions.length > 0) {
-              this.categoryDescriptions[cat.name] = cat.descriptions.map(desc => ({ description: desc.name }));
+              this.categoryDescriptions[cat.name] = cat.descriptions.map(desc => ({ description: desc.description_name }));
             } else {
               this.categoryDescriptions[cat.name] = [];
             }

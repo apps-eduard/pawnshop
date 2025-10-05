@@ -2,8 +2,10 @@ const express = require('express');
 const { pool } = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
 const { generateTicketNumber } = require('../utils/transactionUtils');
+const PenaltyCalculatorService = require('../services/penalty-calculator.service');
 
 const router = express.Router();
+const penaltyCalculator = new PenaltyCalculatorService();
 
 // Apply authentication middleware to all routes
 router.use(authenticateToken);

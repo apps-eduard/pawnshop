@@ -22,6 +22,9 @@ const addressRoutes = require('./routes/addresses');
 const branchConfigRoutes = require('./routes/branch-config');
 const syncLogsRoutes = require('./routes/sync-logs');
 const transactionRoutes = require('./routes/transactions');
+const penaltyConfigRoutes = require('./routes/penalty-config');
+const serviceChargeConfigRoutes = require('./routes/service-charge-config');
+const adminCalculationsRoutes = require('./routes/admin-calculations');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -204,6 +207,9 @@ app.use('/api/addresses', addressRoutes);
 app.use('/api/branch-config', branchConfigRoutes);
 app.use('/api/sync-logs', syncLogsRoutes);
 app.use('/api/transactions', transactionRoutes);
+app.use('/api/penalty-config', penaltyConfigRoutes);
+app.use('/api/service-charge-config', serviceChargeConfigRoutes);
+app.use('/api/admin-calculations', adminCalculationsRoutes);
 
 // Enhanced error handling middleware with CORS support
 app.use((err, req, res, next) => {

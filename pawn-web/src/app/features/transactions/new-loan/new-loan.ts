@@ -155,7 +155,9 @@ export class NewLoan implements OnInit, OnDestroy {
     serviceCharge: 0 // Will be calculated automatically
   };
 
-
+  // Dynamic service charge properties
+  calculatedServiceCharge: number = 0;
+  serviceChargeDetails: any = null;
 
   constructor(
     private router: Router,
@@ -300,6 +302,7 @@ export class NewLoan implements OnInit, OnDestroy {
 
     // Set loan form with suggested values
     this.loanForm.principalAmount = appraisalData.totalAppraisedValue || 0;
+    this.loanForm.loanAmount = this.loanForm.principalAmount;
 
     // Calculate interest rate based on category if available
     if (appraisalData.category) {
@@ -308,6 +311,9 @@ export class NewLoan implements OnInit, OnDestroy {
         this.loanForm.interestRate = Number(category.interest_rate) || 3.5;
       }
     }
+
+    // Calculate service charge for the loaded appraisal
+    this.calculateServiceCharge(this.loanForm.loanAmount);
 
     console.log('✅ Appraisal data loaded successfully for new loan');
     this.toastService.showSuccess('Success', 'Appraisal data loaded! Please review and complete the loan details.');
@@ -592,7 +598,8 @@ export class NewLoan implements OnInit, OnDestroy {
       next: (response) => {
         this.isLoadingDescriptions = false;
         if (response.success && response.data) {
-          this.categoryDescriptions = response.data.map(desc => desc.name);
+          this.categoryDescriptions = response.data.map(desc => desc.description_name);
+          console.log('📝 Loaded category descriptions:', this.categoryDescriptions);
         } else {
           this.categoryDescriptions = [];
           this.toastService.showError('Error', 'Failed to load category descriptions');
@@ -722,6 +729,9 @@ export class NewLoan implements OnInit, OnDestroy {
   // Loan calculations and management
   updateLoanAmount() {
     this.loanForm.principalAmount = this.getTotalAppraisalValue();
+    this.loanForm.loanAmount = this.loanForm.principalAmount;
+    // Recalculate service charge when loan amount is updated from items
+    this.calculateServiceCharge(this.loanForm.loanAmount);
   }
 
   getTotalAppraisalValue(): number {
@@ -740,14 +750,47 @@ export class NewLoan implements OnInit, OnDestroy {
   }
 
   getServiceCharge(): number {
-    const principalLoan = this.loanForm.loanAmount;
+    // Return cached service charge or 0 if not calculated yet
+    return this.calculatedServiceCharge || 0;
+  }
 
-    if (principalLoan <= 0) return 0;
-    if (principalLoan <= 100) return 1;
-    if (principalLoan <= 200) return 2;
-    if (principalLoan <= 300) return 3;
-    if (principalLoan <= 400) return 4;
-    return 5; // 401 and up
+  // Dynamic service charge calculation using backend API
+  async calculateServiceCharge(principalAmount: number): Promise<void> {
+    if (principalAmount <= 0) {
+      this.calculatedServiceCharge = 0;
+      return;
+    }
+
+    try {
+      const response = await this.http.post<any>('http://localhost:3000/api/service-charge-config/calculate', {
+        principalAmount: principalAmount
+      }).toPromise();
+
+      if (response.success) {
+        this.calculatedServiceCharge = response.data.serviceChargeAmount;
+        this.serviceChargeDetails = response.data;
+        console.log(`💰 Service charge calculated: ₱${this.calculatedServiceCharge} (${response.data.calculationMethod})`);
+      } else {
+        console.error('Service charge calculation failed:', response.message);
+        this.fallbackServiceChargeCalculation(principalAmount);
+      }
+    } catch (error) {
+      console.error('Error calculating service charge:', error);
+      this.fallbackServiceChargeCalculation(principalAmount);
+    }
+  }
+
+  // Fallback service charge calculation (in case API is unavailable)
+  private fallbackServiceChargeCalculation(principalAmount: number): void {
+    let serviceCharge = 0;
+    if (principalAmount <= 100) serviceCharge = 1;
+    else if (principalAmount <= 200) serviceCharge = 2;
+    else if (principalAmount <= 300) serviceCharge = 3;
+    else if (principalAmount <= 400) serviceCharge = 4;
+    else serviceCharge = 5;
+
+    this.calculatedServiceCharge = serviceCharge;
+    console.log(`⚠️ Using fallback service charge: ₱${serviceCharge}`);
   }
 
   getNetProceeds(): number {
@@ -781,6 +824,8 @@ export class NewLoan implements OnInit, OnDestroy {
   // Principal loan amount change handler
   onPrincipalLoanChange(value: number) {
     this.loanForm.loanAmount = value;
+    // Recalculate service charge when loan amount changes
+    this.calculateServiceCharge(value);
   }
 
   // Appraisal value change handler

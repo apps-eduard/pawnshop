@@ -771,35 +771,48 @@
         </div>
       </div>
 
-      <!-- Loan Rules Tab -->
-      <div *ngIf="isActiveTab('loan-rules')" class="p-4">
-        <div class="max-w-2xl">
-          <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 mb-6">
+      <!-- =============================================
+           PENALTY CONFIGURATION TAB
+           ============================================= -->
+      <div *ngIf="isActiveTab('penalty-config')" class="p-4">
+        <div class="max-w-4xl mx-auto">
+
+          <!-- Warning Banner -->
+          <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4 mb-6">
             <div class="flex">
               <div class="flex-shrink-0">
-                <svg class="h-5 w-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                <svg class="h-5 w-5 text-amber-400" fill="currentColor" viewBox="0 0 20 20">
                   <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
                 </svg>
               </div>
               <div class="ml-3">
-                <h3 class="text-sm font-medium text-yellow-800 dark:text-yellow-200">
-                  Important: Core Business Rules
+                <h3 class="text-sm font-medium text-amber-800 dark:text-amber-200">
+                  Dynamic Penalty Configuration
                 </h3>
-                <div class="mt-2 text-sm text-yellow-700 dark:text-yellow-300">
-                  <p>These settings affect all loan calculations across the system. Changes will apply to new loans immediately.</p>
+                <div class="mt-2 text-sm text-amber-700 dark:text-amber-300">
+                  <p>Changes to penalty settings will apply immediately to all new penalty calculations. Current formula: Less than 3 days = daily penalty, 3+ days = monthly penalty.</p>
                 </div>
               </div>
             </div>
           </div>
 
           <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
-            <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Loan Calculation Rules</h3>
+            <div class="flex justify-between items-center mb-6">
+              <h3 class="text-lg font-medium text-gray-900 dark:text-white">Penalty Settings</h3>
+              <button
+                (click)="testPenaltyCalculation()"
+                class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                Test Calculation
+              </button>
+            </div>
 
-            <form [formGroup]="loanRulesForm" (ngSubmit)="saveLoanRules()" class="space-y-6">
+            <form [formGroup]="penaltyConfigForm" (ngSubmit)="savePenaltyConfig()" class="space-y-6">
               <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                <!-- Monthly Penalty Rate -->
                 <div>
                   <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Service Charge Rate
+                    Monthly Penalty Rate
                   </label>
                   <div class="relative">
                     <input
@@ -807,82 +820,317 @@
                       step="0.001"
                       min="0.001"
                       max="1"
-                      formControlName="service_charge_rate"
-                      placeholder="0.01"
+                      formControlName="monthly_penalty_rate"
+                      title="Monthly penalty rate (0.02 = 2%)"
+                      placeholder="0.02"
                       class="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900 dark:text-white">
                     <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                      <span class="text-gray-500 dark:text-gray-400 text-sm">per ₱100</span>
+                      <span class="text-gray-500 dark:text-gray-400 text-sm">{{ (penaltyConfigForm.get('monthly_penalty_rate')?.value * 100).toFixed(2) }}%</span>
                     </div>
                   </div>
                   <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                    Current: ₱{{ loanRulesForm.get('service_charge_rate')?.value }} per ₱100
+                    Penalty rate applied per month (decimal format: 0.02 = 2%)
                   </p>
                 </div>
 
+                <!-- Daily Penalty Threshold -->
                 <div>
                   <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Minimum Service Charge
+                    Daily Penalty Threshold
                   </label>
                   <div class="relative">
-                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <span class="text-gray-500 dark:text-gray-400 text-sm">₱</span>
-                    </div>
                     <input
                       type="number"
                       min="1"
-                      formControlName="minimum_service_charge"
-                      class="w-full pl-8 pr-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900 dark:text-white">
+                      max="30"
+                      formControlName="daily_penalty_threshold_days"
+                      title="Days to switch from daily to monthly penalty"
+                      placeholder="3"
+                      class="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900 dark:text-white">
+                    <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                      <span class="text-gray-500 dark:text-gray-400 text-sm">days</span>
+                    </div>
                   </div>
                   <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                    Minimum charge regardless of loan amount
+                    Days after maturity to switch from daily to monthly penalty
                   </p>
                 </div>
+
+                <!-- Grace Period -->
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Grace Period
+                  </label>
+                  <div class="relative">
+                    <input
+                      type="number"
+                      min="0"
+                      max="30"
+                      formControlName="grace_period_days"
+                      title="Grace period in days before penalty starts"
+                      placeholder="0"
+                      class="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900 dark:text-white">
+                    <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                      <span class="text-gray-500 dark:text-gray-400 text-sm">days</span>
+                    </div>
+                  </div>
+                  <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    Days after maturity before penalty starts
+                  </p>
+                </div>
+
+                <!-- Max Penalty Multiplier -->
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Maximum Penalty Multiplier
+                  </label>
+                  <div class="relative">
+                    <input
+                      type="number"
+                      min="1"
+                      max="100"
+                      formControlName="max_penalty_multiplier"
+                      title="Maximum penalty cap in months"
+                      placeholder="12"
+                      class="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900 dark:text-white">
+                    <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                      <span class="text-gray-500 dark:text-gray-400 text-sm">months</span>
+                    </div>
+                  </div>
+                  <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    Maximum penalty amount (months worth of penalty)
+                  </p>
+                </div>
+
               </div>
 
+              <!-- Penalty Compounding -->
               <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Minimum Loan for Service Charge
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                  Penalty Compounding
                 </label>
-                <div class="relative">
-                  <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <span class="text-gray-500 dark:text-gray-400 text-sm">₱</span>
-                  </div>
-                  <input
-                    type="number"
-                    min="100"
-                    formControlName="minimum_loan_for_service"
-                    class="w-full pl-8 pr-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900 dark:text-white">
+                <div class="flex items-center space-x-6">
+                  <label class="flex items-center">
+                    <input
+                      type="radio"
+                      [value]="0"
+                      formControlName="penalty_compounding"
+                      class="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300">
+                    <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">Disabled (Simple penalty)</span>
+                  </label>
+                  <label class="flex items-center">
+                    <input
+                      type="radio"
+                      [value]="1"
+                      formControlName="penalty_compounding"
+                      class="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300">
+                    <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">Enabled (Compound penalty)</span>
+                  </label>
                 </div>
                 <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  Loans above this amount will have service charge applied
+                  Whether penalties compound over multiple months
                 </p>
               </div>
 
-              <!-- Example Calculation -->
-              <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-                <h4 class="text-sm font-medium text-gray-900 dark:text-white mb-3">Example Calculation</h4>
-                <div class="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                  <p>For a ₱1,000 loan:</p>
-                  <p>• Service Charge = ₱{{ ((1000 / 100) * (loanRulesForm.get('service_charge_rate')?.value || 0.01)).toFixed(2) }}</p>
-                  <p>• Minimum Applied = ₱{{ Math.max((1000 / 100) * (loanRulesForm.get('service_charge_rate')?.value || 0.01), (loanRulesForm.get('minimum_service_charge')?.value || 5)).toFixed(2) }}</p>
-                </div>
-              </div>
-
-              <div class="flex space-x-3">
+              <!-- Save Button -->
+              <div class="flex justify-end space-x-3">
                 <button
                   type="submit"
-                  [disabled]="!loanRulesForm.valid"
-                  class="bg-primary-600 hover:bg-primary-700 disabled:bg-gray-400 text-white px-6 py-2 rounded-lg text-sm font-medium transition-colors">
-                  Save Loan Rules
-                </button>
-                <button
-                  type="button"
-                  (click)="loadLoanRules()"
-                  class="px-6 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                  Reset
+                  class="bg-primary-600 hover:bg-primary-700 text-white px-6 py-2 rounded-lg text-sm font-medium transition-colors">
+                  Save Penalty Settings
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- =============================================
+           SERVICE CHARGE CONFIGURATION TAB
+           ============================================= -->
+      <div *ngIf="isActiveTab('service-charge-config')" class="p-4">
+        <div class="max-w-6xl mx-auto">
+
+          <!-- Info Banner -->
+          <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-6">
+            <div class="flex">
+              <div class="flex-shrink-0">
+                <svg class="h-5 w-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+              </div>
+              <div class="ml-3">
+                <h3 class="text-sm font-medium text-blue-800 dark:text-blue-200">
+                  Dynamic Service Charge Configuration
+                </h3>
+                <div class="mt-2 text-sm text-blue-700 dark:text-blue-300">
+                  <p>Configure service charge brackets for different loan amounts. Current system: ₱1-100=₱1, ₱101-200=₱2, ₱201-300=₱3, ₱301-400=₱4, ₱500+=₱5</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+            <!-- Service Charge Brackets List -->
+            <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
+              <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white">Current Brackets</h3>
+                <button
+                  (click)="testServiceChargeCalculation()"
+                  class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm transition-colors">
+                  Test
+                </button>
+              </div>
+
+              <div class="space-y-3">
+                <div
+                  *ngFor="let bracket of serviceChargeConfig.brackets"
+                  class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                  <div class="flex-1">
+                    <div class="font-medium text-gray-900 dark:text-white">
+                      {{ bracket.bracket_name }}
+                    </div>
+                    <div class="text-sm text-gray-500 dark:text-gray-400">
+                      ₱{{ bracket.min_amount.toLocaleString() }}{{ bracket.max_amount ? ' - ₱' + bracket.max_amount.toLocaleString() : '+' }}
+                      → ₱{{ bracket.service_charge }}
+                    </div>
+                  </div>
+                  <div class="flex space-x-2">
+                    <button
+                      (click)="editServiceChargeBracket(bracket)"
+                      class="text-blue-600 hover:text-blue-800 text-sm">
+                      Edit
+                    </button>
+                    <button
+                      (click)="deleteServiceChargeBracket(bracket.id)"
+                      class="text-red-600 hover:text-red-800 text-sm">
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div *ngIf="serviceChargeConfig.brackets.length === 0" class="text-center py-4 text-gray-500 dark:text-gray-400">
+                No service charge brackets configured
+              </div>
+            </div>
+
+            <!-- Add/Edit Service Charge Bracket Form -->
+            <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
+              <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">
+                {{ editingServiceChargeBracket ? 'Edit' : 'Add' }} Service Charge Bracket
+              </h3>
+
+              <form [formGroup]="serviceChargeBracketForm" (ngSubmit)="saveServiceChargeBracket()" class="space-y-4">
+
+                <!-- Bracket Name -->
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Bracket Name
+                  </label>
+                  <input
+                    type="text"
+                    formControlName="bracket_name"
+                    placeholder="e.g., Bracket 1-100"
+                    class="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900 dark:text-white">
+                </div>
+
+                <!-- Amount Range -->
+                <div class="grid grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Minimum Amount
+                    </label>
+                    <div class="relative">
+                      <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <span class="text-gray-500 dark:text-gray-400 text-sm">₱</span>
+                      </div>
+                      <input
+                        type="number"
+                        min="0"
+                        formControlName="min_amount"
+                        title="Minimum loan amount for this bracket"
+                        placeholder="1"
+                        class="w-full pl-8 pr-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900 dark:text-white">
+                    </div>
+                  </div>
+
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Maximum Amount
+                    </label>
+                    <div class="relative">
+                      <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <span class="text-gray-500 dark:text-gray-400 text-sm">₱</span>
+                      </div>
+                      <input
+                        type="number"
+                        min="0"
+                        formControlName="max_amount"
+                        placeholder="Leave empty for no limit"
+                        class="w-full pl-8 pr-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900 dark:text-white">
+                    </div>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      Leave empty for unlimited maximum
+                    </p>
+                  </div>
+                </div>
+
+                <!-- Service Charge and Display Order -->
+                <div class="grid grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Service Charge
+                    </label>
+                    <div class="relative">
+                      <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <span class="text-gray-500 dark:text-gray-400 text-sm">₱</span>
+                      </div>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        formControlName="service_charge"
+                        title="Service charge amount for this bracket"
+                        placeholder="1"
+                        class="w-full pl-8 pr-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900 dark:text-white">
+                    </div>
+                  </div>
+
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Display Order
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      formControlName="display_order"
+                      title="Display order for this bracket"
+                      placeholder="1"
+                      class="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900 dark:text-white">
+                  </div>
+                </div>
+
+                <!-- Form Actions -->
+                <div class="flex justify-end space-x-3 pt-4">
+                  <button
+                    *ngIf="editingServiceChargeBracket"
+                    type="button"
+                    (click)="cancelServiceChargeBracketEdit()"
+                    class="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    [disabled]="serviceChargeBracketForm.invalid"
+                    class="bg-primary-600 hover:bg-primary-700 disabled:bg-gray-400 text-white px-6 py-2 rounded-lg text-sm font-medium transition-colors">
+                    {{ editingServiceChargeBracket ? 'Update' : 'Add' }} Bracket
+                  </button>
+                </div>
+              </form>
+            </div>
+
           </div>
         </div>
       </div>

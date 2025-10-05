@@ -17,7 +17,7 @@ export interface Category {
 export interface CategoryDescription {
   id: number;
   category_id: number;
-  name: string;
+  description_name: string;
   description?: string;
   notes?: string;
   is_active: boolean;
