@@ -154,8 +154,14 @@ export class NewLoan implements OnInit, OnDestroy {
     principalAmount: 0,
     loanAmount: 0,
     interestRate: 0,
-    transactionDate: new Date().toISOString().split('T')[0],
-    loanDate: new Date().toISOString().split('T')[0],
+    transactionDate: (() => {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    })(),
+    loanDate: (() => {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    })(),
     maturityDate: '', // Will be set after initialization
     expiryDate: '', // Will be set after initialization
     serviceCharge: 0 // Will be calculated automatically
@@ -225,8 +231,9 @@ export class NewLoan implements OnInit, OnDestroy {
     // Load cities
     this.loadCities();
 
-    // Initialize loan dates
-    this.loanForm.loanDate = new Date().toISOString().split('T')[0];
+    // Initialize loan dates using local timezone formatting
+    const today = new Date();
+    this.loanForm.loanDate = this.formatDateLocal(today);
     this.loanForm.maturityDate = this.getDefaultMaturityDate();
     this.loanForm.expiryDate = this.getDefaultExpiryDate();
 
@@ -808,24 +815,35 @@ export class NewLoan implements OnInit, OnDestroy {
     return this.loanForm.loanAmount - this.getInterestAmount() - this.getServiceCharge();
   }
 
+  /**
+   * Format date as YYYY-MM-DD in local timezone (not UTC)
+   * This prevents timezone shifts when converting dates
+   */
+  private formatDateLocal(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
   getDefaultMaturityDate(): string {
     if (!this.loanForm?.loanDate) {
       return '';
     }
-    const date = new Date(this.loanForm.loanDate);
+    const date = new Date(this.loanForm.loanDate + 'T12:00:00'); // Parse as local time at noon
     // Add 1 month for maturity date
     date.setMonth(date.getMonth() + 1);
-    return date.toISOString().split('T')[0];
+    return this.formatDateLocal(date);
   }
 
   getDefaultExpiryDate(): string {
     if (!this.loanForm?.loanDate) {
       return '';
     }
-    const date = new Date(this.loanForm.loanDate);
+    const date = new Date(this.loanForm.loanDate + 'T12:00:00'); // Parse as local time at noon
     // Add 4 months for expiry date (from loan date, not maturity date)
     date.setMonth(date.getMonth() + 4);
-    return date.toISOString().split('T')[0];
+    return this.formatDateLocal(date);
   }
 
   // Handle transaction date change - sync to loan date and auto-calculate maturity and expiry if enabled

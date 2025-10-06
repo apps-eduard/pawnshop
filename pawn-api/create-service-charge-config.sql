@@ -23,10 +23,10 @@ CREATE TABLE IF NOT EXISTS service_charge_brackets (
 
 -- Insert default service charge brackets
 INSERT INTO service_charge_brackets (bracket_name, min_amount, max_amount, service_charge, display_order, created_by, updated_by) VALUES
-('Bracket 1-100', 1, 100, 1, 1, 1, 1),
-('Bracket 101-200', 101, 200, 2, 2, 1, 1),
-('Bracket 201-300', 201, 300, 3, 3, 1, 1),
-('Bracket 301-400', 301, 400, 4, 4, 1, 1),
+('Bracket 1-199', 1, 199, 1, 1, 1, 1),
+('Bracket 200-299', 200, 299, 2, 2, 1, 1),
+('Bracket 300-399', 300, 399, 3, 3, 1, 1),
+('Bracket 400-499', 400, 499, 4, 4, 1, 1),
 ('Bracket 500+', 500, NULL, 5, 5, 1, 1)
 ON CONFLICT (min_amount, max_amount) DO UPDATE SET
     service_charge = EXCLUDED.service_charge,

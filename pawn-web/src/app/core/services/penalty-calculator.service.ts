@@ -52,9 +52,9 @@ export class PenaltyCalculatorService {
     const maturity = new Date(maturityDate);
     const current = new Date(currentDate);
 
-    // Calculate days overdue
+    // Calculate days overdue (use floor to count only complete days)
     const timeDifference = current.getTime() - maturity.getTime();
-    const daysOverdue = Math.max(0, Math.ceil(timeDifference / (1000 * 3600 * 24)));
+    const daysOverdue = Math.max(0, Math.floor(timeDifference / (1000 * 3600 * 24)));
 
     const monthlyPenaltyAmount = principalAmount * this.PENALTY_RATE_MONTHLY;
     const dailyPenaltyRate = this.PENALTY_RATE_MONTHLY / this.DAYS_IN_MONTH;

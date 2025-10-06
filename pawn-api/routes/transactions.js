@@ -119,6 +119,48 @@ router.get('/search/:ticketNumber', async (req, res) => {
 
     const row = result.rows[0];
     
+    console.log('📅 Search - Raw dates from DB:', {
+      transaction_date: row.transaction_date,
+      granted_date: row.granted_date,
+      maturity_date: row.maturity_date,
+      expiry_date: row.expiry_date
+    });
+
+    // Format dates as YYYY-MM-DD strings to avoid timezone issues
+    const formatDateForResponse = (date, isDateColumn = false) => {
+      if (!date) return null;
+      const d = new Date(date);
+      
+      if (isDateColumn) {
+        // For DATE columns: PostgreSQL stores them as local dates but pg driver returns them
+        // as midnight UTC, which can shift the date when converted to local timezone
+        // Add 12 hours to ensure we're in the middle of the correct day
+        const adjusted = new Date(d.getTime() + (12 * 60 * 60 * 1000));
+        const year = adjusted.getUTCFullYear();
+        const month = String(adjusted.getUTCMonth() + 1).padStart(2, '0');
+        const day = String(adjusted.getUTCDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      } else {
+        // For TIMESTAMP columns: use local date parts
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      }
+    };
+
+    const transactionDateStr = formatDateForResponse(row.transaction_date, false); // TIMESTAMP
+    const grantedDateStr = formatDateForResponse(row.granted_date || row.transaction_date, false); // TIMESTAMP
+    const maturityDateStr = formatDateForResponse(row.maturity_date, true); // DATE column
+    const expiryDateStr = formatDateForResponse(row.expiry_date, true); // DATE column
+
+    console.log('📅 Search - Formatted dates for frontend:', {
+      transactionDateStr,
+      grantedDateStr,
+      maturityDateStr,
+      expiryDateStr
+    });
+    
     // Use balance for remaining amount to pay, fallback to total_amount if balance is not set
     const currentBalance = parseFloat(row.balance || row.total_amount || 0);
     const amountPaid = parseFloat(row.amount_paid || 0);
@@ -134,13 +176,13 @@ router.get('/search/:ticketNumber', async (req, res) => {
         branchId: row.branch_id,
         createdBy: row.created_by,
         transactionType: row.transaction_type,
-        transactionDate: row.transaction_date,
-        loanDate: row.granted_date || row.transaction_date,
-        dateGranted: row.granted_date || row.transaction_date,
-        maturityDate: row.maturity_date,
-        dateMatured: row.maturity_date,
-        expiryDate: row.expiry_date,
-        dateExpired: row.expiry_date,
+        transactionDate: transactionDateStr,
+        loanDate: grantedDateStr,
+        dateGranted: grantedDateStr,
+        maturityDate: maturityDateStr,
+        dateMatured: maturityDateStr,
+        expiryDate: expiryDateStr,
+        dateExpired: expiryDateStr,
         principalAmount: parseFloat(row.principal_amount || 0), // Original principal
         principalLoan: parseFloat(row.principal_amount || 0), // Original principal
         interestRate: parseFloat(row.interest_rate || 0) * 100, // Convert decimal to percentage for display
@@ -685,19 +727,61 @@ router.post('/new-loan', async (req, res) => {
       
       const ticketNumber = await generateTicketNumber(branchId);
       
-      // 3. Calculate dates
-      const txnDate = transactionDate ? new Date(transactionDate) : new Date();
-      const grantedDate = loanDate ? new Date(loanDate) : new Date();
-      const maturedDate = maturityDate ? new Date(maturityDate) : (() => {
+      // 3. Calculate dates (preserve local time, avoid timezone shifts)
+      const parseLocalDate = (dateStr) => {
+        if (!dateStr) return new Date();
+        // If it's a date-only string (YYYY-MM-DD), parse it directly as local date
+        if (typeof dateStr === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+          const [year, month, day] = dateStr.split('-').map(Number);
+          return new Date(year, month - 1, day, 12, 0, 0); // month is 0-indexed
+        }
+        return new Date(dateStr);
+      };
+
+      const txnDate = parseLocalDate(transactionDate);
+      const grantedDate = parseLocalDate(loanDate);
+      
+      const maturedDate = maturityDate ? parseLocalDate(maturityDate) : (() => {
         const date = new Date(grantedDate);
-        date.setMonth(date.getMonth() + 4); // 4 months maturity
+        date.setMonth(date.getMonth() + 1); // 1 month maturity
         return date;
       })();
-      const expiredDate = expiryDate ? new Date(expiryDate) : (() => {
+      
+      const expiredDate = expiryDate ? parseLocalDate(expiryDate) : (() => {
         const date = new Date(maturedDate);
-        date.setMonth(date.getMonth() + 1); // 1 month grace period
+        date.setMonth(date.getMonth() + 3); // 3 months grace period (total 4 months from grant)
         return date;
       })();
+
+      console.log('📅 Date Processing:', {
+        received: { transactionDate, loanDate, maturityDate, expiryDate },
+        parsed: {
+          txnDate: txnDate.toISOString(),
+          grantedDate: grantedDate.toISOString(),
+          maturedDate: maturedDate.toISOString(),
+          expiredDate: expiredDate.toISOString()
+        }
+      });
+
+      // Format dates as YYYY-MM-DD strings to avoid timezone issues
+      const formatDateForDB = (date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      };
+
+      const txnDateStr = formatDateForDB(txnDate);
+      const grantedDateStr = formatDateForDB(grantedDate);
+      const maturedDateStr = formatDateForDB(maturedDate);
+      const expiredDateStr = formatDateForDB(expiredDate);
+
+      console.log('📅 Formatted for DB:', {
+        txnDateStr,
+        grantedDateStr,
+        maturedDateStr,
+        expiredDateStr
+      });
       
       // 4. Calculate totals
       const totalAppraisal = items.reduce((sum, item) => sum + parseFloat(item.appraisalValue || 0), 0);
@@ -721,7 +805,7 @@ router.post('/new-loan', async (req, res) => {
       `, [
         ticketNumber, pawnerId, req.user.branch_id || 1, 'new_loan', 'active',
         principalAmount, interestRate, interestAmount, serviceCharge, 
-        totalAmount, totalAmount, txnDate, grantedDate, maturedDate, expiredDate,
+        totalAmount, totalAmount, txnDateStr, grantedDateStr, maturedDateStr, expiredDateStr,
         notes || '', req.user.id, new Date(), new Date()
       ]);
       

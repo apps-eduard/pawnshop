@@ -143,16 +143,30 @@ export class PartialPayment implements OnInit {
     // Update appraisal value from items
     this.partialComputation.appraisalValue = this.getTotalAppraisalValue();
 
-    // Calculate interest from grant date to now
+    // Calculate interest from grant date to now (EXCLUDING the first 30 days already paid)
     if (this.transactionInfo.grantedDate) {
       const grantDate = new Date(this.transactionInfo.grantedDate);
       const now = new Date();
-      const daysDiff = Math.floor((now.getTime() - grantDate.getTime()) / (1000 * 60 * 60 * 24));
+      const totalDays = Math.floor((now.getTime() - grantDate.getTime()) / (1000 * 60 * 60 * 24));
 
-      // Calculate daily interest rate and total interest
+      // Only count days AFTER the first 30 days (which were already paid in advance)
+      const additionalDays = Math.max(0, totalDays - 30);
+
+      // Calculate daily interest rate and interest for additional days only
       const monthlyRate = this.partialComputation.interestRate / 100;
       const dailyRate = monthlyRate / 30;
-      this.partialComputation.interest = this.partialComputation.principalLoan * dailyRate * daysDiff;
+
+      // Interest only for days beyond the first 30 days
+      const baseInterest = this.partialComputation.principalLoan * dailyRate * additionalDays;
+
+      // Apply discount (discount represents days to waive)
+      const discountDays = this.partialComputation.discount;
+      const discountAmount = this.partialComputation.principalLoan * dailyRate * discountDays;
+
+      this.partialComputation.interest = Math.max(0, baseInterest - discountAmount);
+
+      console.log(`📅 Days calculation: Total=${totalDays}, Additional=${additionalDays}, Discount=${discountDays} days`);
+      console.log(`💰 Interest: Base=${baseInterest.toFixed(2)}, Discount=${discountAmount.toFixed(2)}, Final=${this.partialComputation.interest.toFixed(2)}`);
     } else {
       this.partialComputation.interest = 0;
     }
@@ -162,39 +176,68 @@ export class PartialPayment implements OnInit {
       const maturityDate = new Date(this.transactionInfo.maturedDate);
       const now = new Date();
 
+      // Use the penalty calculator service to get the base penalty
       const penaltyDetails = this.penaltyCalculatorService.calculatePenalty(
         this.partialComputation.principalLoan,
-        maturityDate
+        maturityDate,
+        now
       );
 
-      this.partialComputation.penalty = penaltyDetails.penaltyAmount;
+      console.log(`⚠️ Penalty Details from Service:`, {
+        daysOverdue: penaltyDetails.daysOverdue,
+        penaltyAmount: penaltyDetails.penaltyAmount,
+        calculationMethod: penaltyDetails.calculationMethod,
+        isFullMonthPenalty: penaltyDetails.isFullMonthPenalty,
+        dailyPenaltyRate: penaltyDetails.dailyPenaltyRate,
+        monthlyPenaltyAmount: penaltyDetails.monthlyPenaltyAmount
+      });
+
+      if (penaltyDetails.daysOverdue > 0) {
+        let finalPenalty = penaltyDetails.penaltyAmount;
+
+        // Apply discount based on calculation method
+        if (this.partialComputation.discount > 0) {
+          if (penaltyDetails.isFullMonthPenalty) {
+            // For full month penalty (4+ days), discount can't reduce it - user already gets full month
+            // Unless they want to waive it completely, but that's administrative
+            finalPenalty = penaltyDetails.penaltyAmount;
+            console.log(`⚠️ Full month penalty applied (4+ days), discount does not apply`);
+          } else {
+            // For daily penalty (1-3 days), apply discount per day
+            const discountDays = Math.min(this.partialComputation.discount, penaltyDetails.daysOverdue);
+            const penaltyDiscountAmount = penaltyDetails.dailyPenaltyRate * this.partialComputation.principalLoan * discountDays;
+            finalPenalty = Math.max(0, penaltyDetails.penaltyAmount - penaltyDiscountAmount);
+
+            console.log(`⚠️ Daily penalty with discount:`, {
+              basePenalty: penaltyDetails.penaltyAmount.toFixed(2),
+              daysOverdue: penaltyDetails.daysOverdue,
+              discountDays,
+              penaltyDiscountAmount: penaltyDiscountAmount.toFixed(2),
+              finalPenalty: finalPenalty.toFixed(2)
+            });
+          }
+        }
+
+        this.partialComputation.penalty = finalPenalty;
+      } else {
+        this.partialComputation.penalty = 0;
+      }
     } else {
       this.partialComputation.penalty = 0;
     }
 
-    // Calculate total obligation (principal + interest + penalty - discount)
+    // Calculate total obligation (principal + interest + penalty)
     const totalObligation = this.partialComputation.principalLoan +
                            this.partialComputation.interest +
-                           this.partialComputation.penalty -
-                           this.partialComputation.discount;
+                           this.partialComputation.penalty;
 
     // Calculate redeem amount (what customer needs to pay to fully redeem)
     this.partialComputation.redeemAmount = totalObligation;
 
     // If partial payment is specified, calculate new principal and advance charges
     if (this.partialComputation.partialPay > 0) {
-      // Calculate how payment is applied: penalties first, then interest, then principal
-      let remainingPayment = this.partialComputation.partialPay;
-      let penaltyPaid = Math.min(remainingPayment, this.partialComputation.penalty);
-      remainingPayment -= penaltyPaid;
-
-      let interestPaid = Math.min(remainingPayment, this.partialComputation.interest);
-      remainingPayment -= interestPaid;
-
-      let principalPaid = remainingPayment;
-
-      // Calculate new principal loan after partial payment
-      this.partialComputation.newPrincipalLoan = this.partialComputation.principalLoan - principalPaid;
+      // New Principal = Current Principal - Partial Payment
+      this.partialComputation.newPrincipalLoan = this.partialComputation.principalLoan - this.partialComputation.partialPay;
 
       // Calculate advance interest for 1 month on new principal
       const monthlyRate = this.partialComputation.interestRate / 100;
@@ -205,17 +248,22 @@ export class PartialPayment implements OnInit {
       this.partialComputation.advServiceCharge = await this.calculateServiceCharge(this.partialComputation.newPrincipalLoan);
       console.log('💵 Service charge calculated:', this.partialComputation.advServiceCharge);
 
-      // Calculate net payment (partial payment + advance interest + service charge)
+      // Net Payment = Partial Pay + Interest + Penalty + Advance Interest + Adv Service Charge
       this.partialComputation.netPayment =
         this.partialComputation.partialPay +
+        this.partialComputation.interest +
+        this.partialComputation.penalty +
         this.partialComputation.advanceInterest +
         this.partialComputation.advServiceCharge;
 
       console.log('📊 Final computation:', {
         partialPay: this.partialComputation.partialPay,
+        interest: this.partialComputation.interest,
+        penalty: this.partialComputation.penalty,
         advanceInterest: this.partialComputation.advanceInterest,
         advServiceCharge: this.partialComputation.advServiceCharge,
-        netPayment: this.partialComputation.netPayment
+        netPayment: this.partialComputation.netPayment,
+        newPrincipalLoan: this.partialComputation.newPrincipalLoan
       });
     } else {
       // No partial payment specified
