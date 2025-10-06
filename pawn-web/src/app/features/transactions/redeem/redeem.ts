@@ -372,12 +372,24 @@ export class Redeem implements OnInit {
     };
 
     // Populate transaction info
+    console.log('🗓️ Date fields from API:', {
+      transactionDate: data.transactionDate,
+      dateGranted: data.dateGranted,
+      loanDate: data.loanDate,
+      dateMatured: data.dateMatured,
+      maturityDate: data.maturityDate,
+      dateExpired: data.dateExpired,
+      expiryDate: data.expiryDate
+    });
+    
     this.transactionInfo = {
       transactionDate: this.formatDate(data.transactionDate),
       grantedDate: this.formatDate(data.dateGranted || data.loanDate),
       maturedDate: this.formatDate(data.dateMatured || data.maturityDate),
       expiredDate: this.formatDate(data.dateExpired || data.expiryDate)
     };
+    
+    console.log('🗓️ Formatted transactionInfo:', this.transactionInfo);
 
     // Populate items - map to component interface structure
     console.log('Items data from API:', data.items);
