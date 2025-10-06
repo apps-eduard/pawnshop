@@ -80,7 +80,7 @@ try {
         Write-Host ""
         Write-Host "Database Setup Summary:" -ForegroundColor Cyan
         Write-Host "  * 24 database tables created" -ForegroundColor Green
-        Write-Host "  * Transactions table with partial payment support (5 new fields)" -ForegroundColor Green
+        Write-Host "  * Transactions table with granted_date and partial payment support (6 new fields)" -ForegroundColor Green
         Write-Host "  * Categories and loan rules seeded" -ForegroundColor Green
         Write-Host "  * Penalty config seeded (2 percent monthly, 3-day threshold)" -ForegroundColor Green
         Write-Host "  * Service charge brackets seeded (P1-P5)" -ForegroundColor Green
