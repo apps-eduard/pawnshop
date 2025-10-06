@@ -16,10 +16,12 @@ router.get('/', async (req, res) => {
       SELECT pi.id, pi.brand, pi.model, pi.custom_description, 
              pi.appraised_value, pi.loan_amount, pi.serial_number, 
              pi.weight, pi.karat, pi.item_condition, pi.defects,
+             pi.appraisal_notes,
              pi.status, pi.location, pi.created_at,
              t.transaction_number, t.principal_amount, t.status as transaction_status,
              p.first_name, p.last_name, p.mobile_number,
              c.name as category_name,
+             d.name as description_name,
              d.description as description_text
       FROM pawn_items pi
       LEFT JOIN transactions t ON pi.transaction_id = t.id
@@ -33,7 +35,7 @@ router.get('/', async (req, res) => {
       id: row.id,
       brand: row.brand,
       model: row.model,
-      description: row.custom_description || row.description_text,
+      description: row.custom_description || row.description_name || row.description_text,
       categoryName: row.category_name,
       appraisedValue: row.appraised_value ? parseFloat(row.appraised_value) : null,
       loanAmount: row.loan_amount ? parseFloat(row.loan_amount) : null,
@@ -41,6 +43,7 @@ router.get('/', async (req, res) => {
       weight: row.weight ? parseFloat(row.weight) : null,
       karat: row.karat,
       condition: row.item_condition,
+      conditionNotes: row.appraisal_notes,
       defects: row.defects,
       status: row.status,
       location: row.location,

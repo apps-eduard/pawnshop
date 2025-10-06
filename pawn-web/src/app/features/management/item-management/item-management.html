@@ -194,23 +194,33 @@
               <!-- Item Details -->
               <td class="px-6 py-4">
                 <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">ID: #{{ item.id }}</div>
-                <div class="text-sm font-medium text-gray-900 dark:text-white">{{ item.categoryName || item.itemType || 'N/A' }}</div>
-                <div class="text-sm text-gray-500 dark:text-gray-400">
+                <div class="text-sm font-semibold text-gray-900 dark:text-white">
+                  {{ item.categoryName || item.itemType || 'No Category' }}
+                </div>
+                <div *ngIf="item.brand || item.model" class="text-sm text-gray-500 dark:text-gray-400">
                   <span *ngIf="item.brand">{{ item.brand }}</span>
                   <span *ngIf="item.brand && item.model"> - </span>
                   <span *ngIf="item.model">{{ item.model }}</span>
                 </div>
-                <div class="text-xs text-gray-400 dark:text-gray-500 mt-1">{{ item.description }}</div>
-                <div *ngIf="item.serialNumber" class="text-xs text-gray-400 dark:text-gray-500">SN: {{ item.serialNumber }}</div>
-                <div *ngIf="item.conditionNotes || item.condition" class="text-xs text-gray-500 dark:text-gray-400 mt-1 italic">
-                  Notes: {{ item.conditionNotes || item.condition }}
+                <div *ngIf="item.description" class="text-sm text-gray-600 dark:text-gray-300 mt-1">
+                  {{ item.description }}
                 </div>
-                <div *ngIf="item.defects" class="text-xs text-red-500 dark:text-red-400 mt-1">
-                  Defects: {{ item.defects }}
+                <div *ngIf="item.serialNumber" class="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                  SN: {{ item.serialNumber }}
                 </div>
-                <div class="flex gap-2 mt-1">
-                  <span *ngIf="item.weight" class="text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300 px-2 py-1 rounded">{{ item.weight }}g</span>
-                  <span *ngIf="item.karat" class="text-xs bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300 px-2 py-1 rounded">{{ item.karat }}k</span>
+                <div *ngIf="item.conditionNotes || item.condition" class="text-xs text-blue-600 dark:text-blue-400 mt-1 italic">
+                  <span class="font-medium">Notes:</span> {{ item.conditionNotes || item.condition }}
+                </div>
+                <div *ngIf="item.defects" class="text-xs text-red-600 dark:text-red-400 mt-1 font-medium">
+                  <span class="font-semibold">Defects:</span> {{ item.defects }}
+                </div>
+                <div *ngIf="item.weight || item.karat" class="flex gap-2 mt-2">
+                  <span *ngIf="item.weight" class="text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300 px-2 py-1 rounded font-medium">
+                    {{ item.weight }}g
+                  </span>
+                  <span *ngIf="item.karat" class="text-xs bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300 px-2 py-1 rounded font-medium">
+                    {{ item.karat }}k
+                  </span>
                 </div>
               </td>
 
