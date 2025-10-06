@@ -813,19 +813,19 @@ export class NewLoan implements OnInit, OnDestroy {
       return '';
     }
     const date = new Date(this.loanForm.loanDate);
-    // Add 4 months (120 days) for default maturity date
-    date.setDate(date.getDate() + 120);
+    // Add 1 month for maturity date
+    date.setMonth(date.getMonth() + 1);
     return date.toISOString().split('T')[0];
   }
 
   getDefaultExpiryDate(): string {
-    if (!this.loanForm?.maturityDate) {
+    if (!this.loanForm?.loanDate) {
       return '';
     }
-    const maturityDate = new Date(this.loanForm.maturityDate);
-    // Add 1 month (30 days) grace period for default expiry date
-    maturityDate.setDate(maturityDate.getDate() + 30);
-    return maturityDate.toISOString().split('T')[0];
+    const date = new Date(this.loanForm.loanDate);
+    // Add 4 months for expiry date (from loan date, not maturity date)
+    date.setMonth(date.getMonth() + 4);
+    return date.toISOString().split('T')[0];
   }
 
   // Handle transaction date change - sync to loan date and auto-calculate maturity and expiry if enabled
