@@ -381,14 +381,14 @@ export class Redeem implements OnInit {
       dateExpired: data.dateExpired,
       expiryDate: data.expiryDate
     });
-    
+
     this.transactionInfo = {
       transactionDate: this.formatDate(data.transactionDate),
       grantedDate: this.formatDate(data.dateGranted || data.loanDate),
       maturedDate: this.formatDate(data.dateMatured || data.maturityDate),
       expiredDate: this.formatDate(data.dateExpired || data.expiryDate)
     };
-    
+
     console.log('🗓️ Formatted transactionInfo:', this.transactionInfo);
 
     // Populate items - map to component interface structure
