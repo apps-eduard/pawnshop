@@ -623,7 +623,7 @@
           <h4 class="text-lg font-bold text-blue-600 dark:text-blue-400 mb-4 print:text-black">
             {{ selectedHistory.transactionType === 'partial_payment' ? 'PARTIAL PAYMENT DETAILS' : 'COMPUTATION BREAKDOWN' }}
           </h4>
-          
+
           <div class="space-y-3">
             <!-- Appraisal Value (for partial payment) -->
             <div class="flex justify-between items-center py-2 border-b border-gray-200 dark:border-gray-700" *ngIf="selectedHistory.transactionType === 'partial_payment' && selectedHistory.appraisalValue">
