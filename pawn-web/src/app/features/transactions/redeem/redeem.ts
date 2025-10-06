@@ -396,8 +396,39 @@ export class Redeem implements OnInit {
     });
 
     // Populate redeem computation
+    // Use new_principal_loan from most recent child transaction (partial payment) if exists
+    let currentPrincipal = data.principalAmount || 0;
+    
+    console.log('🔍 Transaction data received:', {
+      principalAmount: data.principalAmount,
+      hasTransactionHistory: !!data.transactionHistory,
+      historyLength: data.transactionHistory?.length || 0,
+      transactionHistory: data.transactionHistory
+    });
+    
+    if (data.transactionHistory && data.transactionHistory.length > 0) {
+      // Find the most recent transaction with new_principal_loan
+      const mostRecentWithNewPrincipal = [...data.transactionHistory]
+        .reverse()
+        .find((t: any) => t.newPrincipalLoan && t.newPrincipalLoan > 0);
+      
+      if (mostRecentWithNewPrincipal) {
+        currentPrincipal = mostRecentWithNewPrincipal.newPrincipalLoan;
+        console.log('✅ Using new principal from transaction history:', {
+          originalPrincipal: data.principalAmount,
+          newPrincipal: currentPrincipal,
+          fromTransaction: mostRecentWithNewPrincipal.transactionNumber,
+          transactionType: mostRecentWithNewPrincipal.transactionType
+        });
+      } else {
+        console.log('⚠️ No transaction with newPrincipalLoan found in history');
+      }
+    } else {
+      console.log('⚠️ No transaction history found, using original principal');
+    }
+    
     this.redeemComputation = {
-      principalLoan: data.principalAmount || 0,
+      principalLoan: currentPrincipal,
       interestRate: data.interestRate || 0,
       interest: 0, // Will be calculated
       penalty: data.penaltyAmount || 0,

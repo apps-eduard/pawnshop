@@ -202,17 +202,26 @@
 
           <!-- Date Fields Section -->
           <div class="section-compact card-compact bg-white dark:bg-gray-800 rounded-lg border-2 border-gray-200 dark:border-gray-700">
-            <div class="flex items-center mb-compact">
-              <svg class="w-4 h-4 mr-1 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-              </svg>
-              <h5 class="text-compact-xs font-semibold text-gray-900 dark:text-gray-100">Transaction Dates</h5>
+            <div class="flex items-center justify-between mb-compact">
+              <div class="flex items-center">
+                <svg class="w-4 h-4 mr-1 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                </svg>
+                <h5 class="text-compact-xs font-semibold text-gray-900 dark:text-gray-100">Transaction Dates</h5>
+              </div>
+              <!-- Auto-calculate toggle -->
+              <label class="flex items-center cursor-pointer">
+                <input type="checkbox" [(ngModel)]="autoCalculateDates" 
+                  class="w-3.5 h-3.5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+                <span class="ml-1.5 text-xs text-gray-700 dark:text-gray-300">Auto-calculate</span>
+              </label>
             </div>
             <div class="grid grid-cols-2 gap-compact">
               <!-- Date Transaction -->
               <div>
                 <label for="dateTransaction" class="block text-compact-xs font-medium text-gray-700 dark:text-gray-300 mb-0.5">Date Transaction</label>
                 <input id="dateTransaction" type="date" [(ngModel)]="loanForm.transactionDate" name="dateTransaction" tabindex="-1"
+                  (ngModelChange)="onTransactionDateChange()"
                   class="input-compact w-full border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-400 focus:border-blue-500 dark:bg-gray-700 dark:text-white bg-white transition-all">
               </div>
 
@@ -220,6 +229,7 @@
               <div>
                 <label for="dateGranted" class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-0.5">Date Granted</label>
                 <input id="dateGranted" type="date" [(ngModel)]="loanForm.loanDate" name="dateGranted" tabindex="-1"
+                  (ngModelChange)="onLoanDateChange()"
                   class="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-400 focus:border-blue-500 dark:bg-gray-700 dark:text-white bg-white transition-all">
               </div>
 
@@ -227,6 +237,7 @@
               <div>
                 <label for="dateMature" class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-0.5">Date Mature</label>
                 <input id="dateMature" type="date" [(ngModel)]="loanForm.maturityDate" name="dateMature" tabindex="-1"
+                  (ngModelChange)="onMaturityDateChange()"
                   class="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:text-white bg-white transition-all">
               </div>
 

@@ -88,6 +88,34 @@ router.get('/search/:ticketNumber', async (req, res) => {
       WHERE pi.transaction_id = $1 
       ORDER BY pi.id
     `, [result.rows[0].transaction_id]);
+    
+    // Get transaction history (partial payments, additional loans, etc.)
+    const historyResult = await pool.query(`
+      SELECT 
+        ct.id,
+        ct.transaction_number,
+        ct.transaction_type,
+        ct.transaction_date,
+        ct.principal_amount,
+        ct.interest_rate,
+        ct.interest_amount,
+        ct.penalty_amount,
+        ct.service_charge,
+        ct.total_amount,
+        ct.amount_paid,
+        ct.balance,
+        ct.discount_amount,
+        ct.advance_interest,
+        ct.advance_service_charge,
+        ct.net_payment,
+        ct.new_principal_loan,
+        ct.status,
+        ct.notes,
+        ct.created_at
+      FROM transactions ct
+      WHERE ct.parent_transaction_id = $1
+      ORDER BY ct.created_at ASC
+    `, [result.rows[0].transaction_id]);
 
     const row = result.rows[0];
     
@@ -171,6 +199,29 @@ router.get('/search/:ticketNumber', async (req, res) => {
           appraisedBy: item.appraised_by,
           createdAt: item.created_at,
           updatedAt: item.updated_at
+        })),
+        // Transaction history (partial payments, additional loans, etc.)
+        transactionHistory: historyResult.rows.map(history => ({
+          id: history.id,
+          transactionNumber: history.transaction_number,
+          transactionType: history.transaction_type,
+          transactionDate: history.transaction_date,
+          principalAmount: parseFloat(history.principal_amount || 0),
+          interestRate: parseFloat(history.interest_rate || 0),
+          interestAmount: parseFloat(history.interest_amount || 0),
+          penaltyAmount: parseFloat(history.penalty_amount || 0),
+          serviceCharge: parseFloat(history.service_charge || 0),
+          totalAmount: parseFloat(history.total_amount || 0),
+          amountPaid: parseFloat(history.amount_paid || 0),
+          balance: parseFloat(history.balance || 0),
+          discountAmount: parseFloat(history.discount_amount || 0),
+          advanceInterest: parseFloat(history.advance_interest || 0),
+          advanceServiceCharge: parseFloat(history.advance_service_charge || 0),
+          netPayment: parseFloat(history.net_payment || 0),
+          newPrincipalLoan: parseFloat(history.new_principal_loan || 0),
+          status: history.status,
+          notes: history.notes,
+          createdAt: history.created_at
         }))
       }
     });

@@ -88,6 +88,9 @@ export class NewLoan implements OnInit, OnDestroy {
   // Lifecycle management
   private destroy$ = new Subject<void>();
 
+  // Date Management - Add flag to control auto-calculation
+  autoCalculateDates = true;
+
   // Search & Pawner Management
   searchQuery = '';
   isSearching = false;
@@ -153,8 +156,8 @@ export class NewLoan implements OnInit, OnDestroy {
     interestRate: 0,
     transactionDate: new Date().toISOString().split('T')[0],
     loanDate: new Date().toISOString().split('T')[0],
-    maturityDate: this.getDefaultMaturityDate(),
-    expiryDate: this.getDefaultExpiryDate(),
+    maturityDate: '', // Will be set after initialization
+    expiryDate: '', // Will be set after initialization
     serviceCharge: 0 // Will be calculated automatically
   };
 
@@ -225,6 +228,7 @@ export class NewLoan implements OnInit, OnDestroy {
     // Initialize loan dates
     this.loanForm.loanDate = new Date().toISOString().split('T')[0];
     this.loanForm.maturityDate = this.getDefaultMaturityDate();
+    this.loanForm.expiryDate = this.getDefaultExpiryDate();
 
     // Set autofocus on search input after view initialization (unless we have appraisal data)
     if (!navigation?.extras.state?.['fromAppraisal']) {
@@ -805,17 +809,48 @@ export class NewLoan implements OnInit, OnDestroy {
   }
 
   getDefaultMaturityDate(): string {
-    const date = new Date();
-    // Add 30 days for default maturity date
-    date.setDate(date.getDate() + 30);
+    if (!this.loanForm?.loanDate) {
+      return '';
+    }
+    const date = new Date(this.loanForm.loanDate);
+    // Add 4 months (120 days) for default maturity date
+    date.setDate(date.getDate() + 120);
     return date.toISOString().split('T')[0];
   }
 
   getDefaultExpiryDate(): string {
-    const date = new Date();
-    // Add 4 months for default expiry date
-    date.setMonth(date.getMonth() + 4);
-    return date.toISOString().split('T')[0];
+    if (!this.loanForm?.maturityDate) {
+      return '';
+    }
+    const maturityDate = new Date(this.loanForm.maturityDate);
+    // Add 1 month (30 days) grace period for default expiry date
+    maturityDate.setDate(maturityDate.getDate() + 30);
+    return maturityDate.toISOString().split('T')[0];
+  }
+
+  // Handle transaction date change - sync to loan date and auto-calculate maturity and expiry if enabled
+  onTransactionDateChange() {
+    if (this.autoCalculateDates) {
+      // Transaction date should sync to loan date (Date Granted)
+      this.loanForm.loanDate = this.loanForm.transactionDate;
+      this.loanForm.maturityDate = this.getDefaultMaturityDate();
+      this.loanForm.expiryDate = this.getDefaultExpiryDate();
+    }
+  }
+
+  // Handle loan date change - auto-calculate maturity and expiry if enabled
+  onLoanDateChange() {
+    if (this.autoCalculateDates) {
+      this.loanForm.maturityDate = this.getDefaultMaturityDate();
+      this.loanForm.expiryDate = this.getDefaultExpiryDate();
+    }
+  }
+
+  // Handle maturity date change - auto-calculate expiry if enabled
+  onMaturityDateChange() {
+    if (this.autoCalculateDates) {
+      this.loanForm.expiryDate = this.getDefaultExpiryDate();
+    }
   }
 
   // Currency formatting methods
