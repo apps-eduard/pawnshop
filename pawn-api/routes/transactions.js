@@ -51,7 +51,7 @@ router.get('/search/:ticketNumber', async (req, res) => {
       SELECT pt.*, 
              t.transaction_number, t.pawner_id, t.principal_amount, t.interest_rate,
              t.interest_amount, t.penalty_amount, t.service_charge, t.total_amount,
-             t.maturity_date, t.expiry_date, t.transaction_date, t.status as transaction_status,
+             t.maturity_date, t.expiry_date, t.transaction_date, t.granted_date, t.status as transaction_status,
              t.balance, t.amount_paid, t.days_overdue,
              p.first_name, p.last_name, p.mobile_number, p.email,
              p.city_id, p.barangay_id, p.house_number, p.street,
@@ -90,6 +90,10 @@ router.get('/search/:ticketNumber', async (req, res) => {
     `, [result.rows[0].transaction_id]);
 
     const row = result.rows[0];
+    
+    // Use balance for remaining amount to pay, fallback to total_amount if balance is not set
+    const currentBalance = parseFloat(row.balance || row.total_amount || 0);
+    const amountPaid = parseFloat(row.amount_paid || 0);
 
     res.json({
       success: true,
@@ -103,22 +107,22 @@ router.get('/search/:ticketNumber', async (req, res) => {
         createdBy: row.created_by,
         transactionType: row.transaction_type,
         transactionDate: row.transaction_date,
-        loanDate: row.loan_date,
-        dateGranted: row.loan_date,
+        loanDate: row.granted_date || row.transaction_date,
+        dateGranted: row.granted_date || row.transaction_date,
         maturityDate: row.maturity_date,
         dateMatured: row.maturity_date,
         expiryDate: row.expiry_date,
         dateExpired: row.expiry_date,
-        principalAmount: parseFloat(row.principal_amount || 0),
-        principalLoan: parseFloat(row.principal_amount || 0),
+        principalAmount: parseFloat(row.principal_amount || 0), // Original principal
+        principalLoan: parseFloat(row.principal_amount || 0), // Original principal
         interestRate: parseFloat(row.interest_rate || 0) * 100, // Convert decimal to percentage for display
         interestAmount: parseFloat(row.interest_amount || 0),
         serviceCharge: parseFloat(row.service_charge || 0),
         netProceeds: parseFloat(row.net_proceeds || 0),
-        totalAmount: parseFloat(row.total_amount || 0),
-        paymentAmount: parseFloat(row.payment_amount || 0),
-        balanceRemaining: parseFloat(row.balance_remaining || 0),
-        dueAmount: parseFloat(row.due_amount || 0),
+        totalAmount: currentBalance, // Use current balance for redeem calculation
+        paymentAmount: amountPaid,
+        balanceRemaining: currentBalance, // Current balance after partial payments
+        dueAmount: currentBalance, // Amount due for redemption
         additionalAmount: parseFloat(row.additional_amount || 0),
         renewalFee: parseFloat(row.renewal_fee || 0),
         penaltyAmount: parseFloat(row.penalty_amount || 0),
@@ -293,6 +297,7 @@ router.get('/', async (req, res) => {
                    'transactionNumber', ct.transaction_number,
                    'transactionType', ct.transaction_type,
                    'transactionDate', ct.transaction_date,
+                   'dateGranted', parent_t.granted_date,
                    'principalAmount', ct.principal_amount,
                    'interestRate', ct.interest_rate,
                    'interestAmount', ct.interest_amount,
@@ -320,6 +325,7 @@ router.get('/', async (req, res) => {
                  ) ORDER BY ct.created_at ASC
                )
                FROM transactions ct
+               LEFT JOIN transactions parent_t ON ct.parent_transaction_id = parent_t.id
                WHERE ct.parent_transaction_id = t.id
              ) as transaction_history
       FROM transactions t
@@ -657,14 +663,14 @@ router.post('/new-loan', async (req, res) => {
         INSERT INTO transactions (
           transaction_number, pawner_id, branch_id, transaction_type, status,
           principal_amount, interest_rate, interest_amount, service_charge, 
-          total_amount, balance, transaction_date, maturity_date, expiry_date,
+          total_amount, balance, transaction_date, granted_date, maturity_date, expiry_date,
           notes, created_by, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
         RETURNING *
       `, [
         ticketNumber, pawnerId, req.user.branch_id || 1, 'new_loan', 'active',
         principalAmount, interestRate, interestAmount, serviceCharge, 
-        totalAmount, totalAmount, txnDate, maturedDate, expiredDate,
+        totalAmount, totalAmount, txnDate, grantedDate, maturedDate, expiredDate,
         notes || '', req.user.id, new Date(), new Date()
       ]);
       
@@ -794,7 +800,7 @@ router.post('/redeem', async (req, res) => {
       
       // 1. Get current transaction details using transaction ID
       const transactionResult = await client.query(`
-        SELECT t.*, pt.ticket_number, t.pawner_id, t.branch_id, t.interest_rate,
+        SELECT t.*, pt.ticket_number, t.granted_date, t.pawner_id, t.branch_id, t.interest_rate,
                t.maturity_date, t.expiry_date
         FROM transactions t
         LEFT JOIN pawn_tickets pt ON pt.transaction_id = t.id
@@ -830,6 +836,7 @@ router.post('/redeem', async (req, res) => {
           amount_paid,
           balance,
           transaction_date,
+          granted_date,
           maturity_date,
           expiry_date,
           parent_transaction_id,
@@ -839,7 +846,7 @@ router.post('/redeem', async (req, res) => {
         ) VALUES (
           $1, $2, $3, 'redemption', 'redeemed',
           $4, $5, $6, $7, 0, $8, $9, 0,
-          CURRENT_TIMESTAMP, $10, $11, $12, $13, $14, $14
+          CURRENT_TIMESTAMP, $10, $11, $12, $13, $14, $15, $15
         ) RETURNING id
       `, [
         newTransactionNumber,
@@ -851,6 +858,7 @@ router.post('/redeem', async (req, res) => {
         parseFloat(penaltyAmount || 0),
         parseFloat(totalDue || redeemAmount),
         parseFloat(redeemAmount),
+        transaction.granted_date,
         transaction.maturity_date,
         transaction.expiry_date,
         ticketId, // Link to original transaction
@@ -986,7 +994,7 @@ router.post('/partial-payment', async (req, res) => {
       
       // 1. Get current ticket and transaction details
       const ticketResult = await client.query(`
-        SELECT pt.*, 
+        SELECT pt.*, t.granted_date,
                t.balance, t.principal_amount, t.total_amount,
                t.pawner_id, t.branch_id, t.interest_rate,
                t.maturity_date, t.expiry_date, t.status as transaction_status
@@ -1052,6 +1060,7 @@ router.post('/partial-payment', async (req, res) => {
           amount_paid,
           balance,
           transaction_date,
+          granted_date,
           maturity_date,
           expiry_date,
           parent_transaction_id,
@@ -1066,7 +1075,7 @@ router.post('/partial-payment', async (req, res) => {
         ) VALUES (
           $1, $2, $3, 'partial_payment', $4,
           $5, $6, 0, 0, $7, $8, $9,
-          CURRENT_TIMESTAMP, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $19
+          CURRENT_TIMESTAMP, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $20
         ) RETURNING id
       `, [
         newTransactionNumber,
@@ -1078,6 +1087,7 @@ router.post('/partial-payment', async (req, res) => {
         newBalance,
         paymentAmt,
         newBalance,
+        ticket.granted_date,
         ticket.maturity_date,
         ticket.expiry_date,
         ticket.transaction_id, // Link to original transaction
@@ -1200,7 +1210,7 @@ router.post('/additional-loan', async (req, res) => {
       
       // 1. Get original ticket details
       const ticketResult = await client.query(`
-        SELECT pt.*, t.pawner_id, t.branch_id, t.principal_amount, t.interest_rate, t.total_amount
+        SELECT pt.*, t.granted_date, t.pawner_id, t.branch_id, t.principal_amount, t.interest_rate, t.total_amount
         FROM pawn_tickets pt 
         JOIN transactions t ON pt.transaction_id = t.id 
         WHERE pt.id = $1 AND t.status = 'active'
@@ -1247,14 +1257,14 @@ router.post('/additional-loan', async (req, res) => {
         INSERT INTO transactions (
           transaction_number, pawner_id, branch_id, transaction_type, status,
           principal_amount, interest_rate, interest_amount, service_charge, 
-          total_amount, balance, transaction_date, maturity_date, expiry_date,
+          total_amount, balance, transaction_date, granted_date, maturity_date, expiry_date,
           parent_transaction_id, notes, created_by, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
         RETURNING *
       `, [
         newTicketNumber, originalTicket.pawner_id, originalTicket.branch_id, 'additional_loan', 'active',
         newPrincipal, interestRateDecimal, interestAmount, serviceCharge,
-        totalAmount, totalAmount, new Date(), maturityDate, expiryDate,
+        totalAmount, totalAmount, new Date(), originalTicket.granted_date, maturityDate, expiryDate,
         originalTicket.transaction_id, notes || `Additional loan of ${addAmount} on ticket ${originalTicket.ticket_number}`,
         req.user.id, new Date(), new Date()
       ]);

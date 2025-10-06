@@ -18,6 +18,7 @@ interface Transaction {
   balance_remaining: number;
   status: string;
   loan_date: string;
+  dateGranted?: string;
   maturity_date: string;
   first_name: string;
   last_name: string;
@@ -27,6 +28,7 @@ interface Transaction {
     transactionNumber: string;
     transactionType: string;
     transactionDate: Date;
+    dateGranted?: Date;
     principalAmount: number;
     interestRate: number;
     interestAmount: number;

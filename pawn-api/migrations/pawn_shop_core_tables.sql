@@ -117,6 +117,7 @@ CREATE TABLE IF NOT EXISTS transactions (
     
     -- Dates
     transaction_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    granted_date TIMESTAMP, -- Date when loan was originally granted (for new_loan, or copied from parent)
     maturity_date DATE NOT NULL,
     expiry_date DATE NOT NULL,
     last_payment_date TIMESTAMP,
