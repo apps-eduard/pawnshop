@@ -303,6 +303,16 @@ router.get('/', async (req, res) => {
                    'totalAmount', ct.total_amount,
                    'amountPaid', ct.amount_paid,
                    'balance', ct.balance,
+                   'discountAmount', ct.discount_amount,
+                   'advanceInterest', ct.advance_interest,
+                   'advanceServiceCharge', ct.advance_service_charge,
+                   'netPayment', ct.net_payment,
+                   'newPrincipalLoan', ct.new_principal_loan,
+                   'appraisalValue', (
+                     SELECT SUM(pi.appraised_value)
+                     FROM pawn_items pi
+                     WHERE pi.transaction_id = ct.id
+                   ),
                    'status', ct.status,
                    'notes', ct.notes,
                    'createdBy', ct.created_by,
@@ -1045,13 +1055,18 @@ router.post('/partial-payment', async (req, res) => {
           maturity_date,
           expiry_date,
           parent_transaction_id,
+          discount_amount,
+          advance_interest,
+          advance_service_charge,
+          net_payment,
+          new_principal_loan,
           notes,
           created_by,
           updated_by
         ) VALUES (
           $1, $2, $3, 'partial_payment', $4,
           $5, $6, 0, 0, $7, $8, $9,
-          CURRENT_TIMESTAMP, $10, $11, $12, $13, $14, $14
+          CURRENT_TIMESTAMP, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $19
         ) RETURNING id
       `, [
         newTransactionNumber,
@@ -1066,6 +1081,11 @@ router.post('/partial-payment', async (req, res) => {
         ticket.maturity_date,
         ticket.expiry_date,
         ticket.transaction_id, // Link to original transaction
+        discount,
+        advance,
+        parseFloat(req.body.advanceServiceCharge || 0),
+        netPay,
+        newPrincipal,
         notes ? `Partial payment: ${notes}` : `Partial payment of ${paymentAmt}`,
         req.user.id
       ]);

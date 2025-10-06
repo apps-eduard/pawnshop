@@ -37,6 +37,12 @@ interface Transaction {
     totalAmount: number;
     amountPaid: number;
     balance: number;
+    discountAmount?: number;
+    advanceInterest?: number;
+    advanceServiceCharge?: number;
+    netPayment?: number;
+    newPrincipalLoan?: number;
+    appraisalValue?: number;
     status: string;
     notes: string;
     createdBy: number;

@@ -108,6 +108,13 @@ CREATE TABLE IF NOT EXISTS transactions (
     amount_paid DECIMAL(15,2) DEFAULT 0,
     balance DECIMAL(15,2) DEFAULT 0,
     
+    -- Partial Payment Fields
+    discount_amount DECIMAL(10,2) DEFAULT 0,
+    advance_interest DECIMAL(10,2) DEFAULT 0,
+    advance_service_charge DECIMAL(10,2) DEFAULT 0,
+    net_payment DECIMAL(10,2) DEFAULT 0,
+    new_principal_loan DECIMAL(10,2),
+    
     -- Dates
     transaction_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     maturity_date DATE NOT NULL,

@@ -619,65 +619,112 @@
         </div>
 
         <!-- History Computation Breakdown -->
-        <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
-          <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Computation Breakdown</h4>
-          <div class="space-y-2">
+        <div class="bg-white dark:bg-gray-800 border-2 border-blue-500 dark:border-blue-600 rounded-lg p-4 print:border-black print:border-2">
+          <h4 class="text-lg font-bold text-blue-600 dark:text-blue-400 mb-4 print:text-black">
+            {{ selectedHistory.transactionType === 'partial_payment' ? 'PARTIAL PAYMENT DETAILS' : 'COMPUTATION BREAKDOWN' }}
+          </h4>
+          
+          <div class="space-y-3">
+            <!-- Appraisal Value (for partial payment) -->
+            <div class="flex justify-between items-center py-2 border-b border-gray-200 dark:border-gray-700" *ngIf="selectedHistory.transactionType === 'partial_payment' && selectedHistory.appraisalValue">
+              <span class="text-sm text-gray-600 dark:text-gray-400">Appraisal Value:</span>
+              <span class="text-base font-semibold text-gray-900 dark:text-white">{{ formatCurrency(selectedHistory.appraisalValue) }}</span>
+            </div>
+
+            <!-- Discount (for partial payment) -->
+            <div class="flex justify-between items-center py-2 border-b border-gray-200 dark:border-gray-700" *ngIf="selectedHistory.transactionType === 'partial_payment' && selectedHistory.discountAmount">
+              <span class="text-sm text-gray-600 dark:text-gray-400">Discount:</span>
+              <span class="text-base font-semibold text-green-600 dark:text-green-400">-{{ formatCurrency(selectedHistory.discountAmount) }}</span>
+            </div>
+
             <!-- Principal Amount -->
-            <div class="flex justify-between text-sm" *ngIf="selectedHistory.principalAmount">
-              <span class="text-gray-600 dark:text-gray-400">Principal Amount:</span>
-              <span class="font-medium text-gray-900 dark:text-white">{{ formatCurrency(selectedHistory.principalAmount) }}</span>
-            </div>
-
-            <!-- Interest -->
-            <div class="flex justify-between text-sm" *ngIf="selectedHistory.interestAmount">
-              <span class="text-gray-600 dark:text-gray-400">
-                Interest ({{ (selectedHistory.interestRate * 100).toFixed(2) }}%):
+            <div class="flex justify-between items-center py-2 border-b border-gray-200 dark:border-gray-700" *ngIf="selectedHistory.principalAmount">
+              <span class="text-sm text-gray-600 dark:text-gray-400">
+                {{ selectedHistory.transactionType === 'partial_payment' ? 'Principal Loan:' : 'Principal Amount:' }}
               </span>
-              <span class="font-medium text-gray-900 dark:text-white">{{ formatCurrency(selectedHistory.interestAmount) }}</span>
+              <span class="text-base font-semibold text-gray-900 dark:text-white">{{ formatCurrency(selectedHistory.principalAmount) }}</span>
             </div>
 
-            <!-- Service Charge -->
-            <div class="flex justify-between text-sm" *ngIf="selectedHistory.serviceCharge">
-              <span class="text-gray-600 dark:text-gray-400">Service Charge:</span>
-              <span class="font-medium text-gray-900 dark:text-white">{{ formatCurrency(selectedHistory.serviceCharge) }}</span>
+            <!-- Interest Rate -->
+            <div class="flex justify-between items-center py-2 border-b border-gray-200 dark:border-gray-700" *ngIf="selectedHistory.interestRate">
+              <span class="text-sm text-gray-600 dark:text-gray-400">Interest Rate:</span>
+              <span class="text-base font-semibold text-gray-900 dark:text-white">
+                {{ (selectedHistory.interestRate * 100).toFixed(0) }}% monthly
+              </span>
+            </div>
+
+            <!-- Interest Amount -->
+            <div class="flex justify-between items-center py-2 border-b border-gray-200 dark:border-gray-700" *ngIf="selectedHistory.interestAmount">
+              <span class="text-sm text-gray-600 dark:text-gray-400">Interest:</span>
+              <span class="text-base font-semibold text-gray-900 dark:text-white">{{ formatCurrency(selectedHistory.interestAmount) }}</span>
             </div>
 
             <!-- Penalty -->
-            <div class="flex justify-between text-sm" *ngIf="selectedHistory.penaltyAmount">
-              <span class="text-gray-600 dark:text-gray-400">
+            <div class="flex justify-between items-center py-2 border-b border-gray-200 dark:border-gray-700" *ngIf="selectedHistory.penaltyAmount">
+              <span class="text-sm text-gray-600 dark:text-gray-400">
                 Penalty ({{ (selectedHistory.penaltyRate * 100).toFixed(2) }}%):
               </span>
-              <span class="font-medium text-red-600 dark:text-red-400">{{ formatCurrency(selectedHistory.penaltyAmount) }}</span>
+              <span class="text-base font-semibold text-red-600 dark:text-red-400">{{ formatCurrency(selectedHistory.penaltyAmount) }}</span>
+            </div>
+
+            <!-- Advance Interest (for partial payment) -->
+            <div class="flex justify-between items-center py-2 border-b border-gray-200 dark:border-gray-700" *ngIf="selectedHistory.transactionType === 'partial_payment' && selectedHistory.advanceInterest">
+              <span class="text-sm text-gray-600 dark:text-gray-400">Advance Interest:</span>
+              <span class="text-base font-semibold text-gray-900 dark:text-white">{{ formatCurrency(selectedHistory.advanceInterest) }}</span>
+            </div>
+
+            <!-- Service Charge -->
+            <div class="flex justify-between items-center py-2 border-b border-gray-200 dark:border-gray-700" *ngIf="selectedHistory.serviceCharge">
+              <span class="text-sm text-gray-600 dark:text-gray-400">Service Charge:</span>
+              <span class="text-base font-semibold text-gray-900 dark:text-white">{{ formatCurrency(selectedHistory.serviceCharge) }}</span>
+            </div>
+
+            <!-- Advance Service Charge (for partial payment) -->
+            <div class="flex justify-between items-center py-2 border-b border-gray-200 dark:border-gray-700" *ngIf="selectedHistory.transactionType === 'partial_payment' && selectedHistory.advanceServiceCharge">
+              <span class="text-sm text-gray-600 dark:text-gray-400">Advance Service Charge:</span>
+              <span class="text-base font-semibold text-gray-900 dark:text-white">{{ formatCurrency(selectedHistory.advanceServiceCharge) }}</span>
             </div>
 
             <!-- Other Charges -->
-            <div class="flex justify-between text-sm" *ngIf="selectedHistory.otherCharges">
-              <span class="text-gray-600 dark:text-gray-400">Other Charges:</span>
-              <span class="font-medium text-gray-900 dark:text-white">{{ formatCurrency(selectedHistory.otherCharges) }}</span>
+            <div class="flex justify-between items-center py-2 border-b border-gray-200 dark:border-gray-700" *ngIf="selectedHistory.otherCharges">
+              <span class="text-sm text-gray-600 dark:text-gray-400">Other Charges:</span>
+              <span class="text-base font-semibold text-gray-900 dark:text-white">{{ formatCurrency(selectedHistory.otherCharges) }}</span>
             </div>
 
-            <!-- Total Amount Due -->
-            <div class="border-t border-gray-300 dark:border-gray-600 pt-2 flex justify-between text-sm font-semibold" *ngIf="selectedHistory.totalAmount">
-              <span class="text-gray-700 dark:text-gray-300">Total Amount Due:</span>
-              <span class="text-gray-900 dark:text-white">{{ formatCurrency(selectedHistory.totalAmount) }}</span>
+            <!-- New Principal Loan (for partial payment) -->
+            <div class="flex justify-between items-center py-2 border-b border-gray-200 dark:border-gray-700" *ngIf="selectedHistory.transactionType === 'partial_payment' && selectedHistory.newPrincipalLoan">
+              <span class="text-sm text-gray-600 dark:text-gray-400">New Principal Loan:</span>
+              <span class="text-base font-semibold text-blue-600 dark:text-blue-400">{{ formatCurrency(selectedHistory.newPrincipalLoan) }}</span>
+            </div>
+
+            <!-- Net Payment (for partial payment) -->
+            <div class="flex justify-between items-center py-3 bg-green-50 dark:bg-green-900/20 -mx-4 px-4 mt-2 print:bg-gray-100 print:border-2 print:border-black" *ngIf="selectedHistory.transactionType === 'partial_payment' && selectedHistory.netPayment">
+              <span class="text-base font-bold text-green-700 dark:text-green-400 print:text-black">Net Payment:</span>
+              <span class="text-xl font-bold text-green-700 dark:text-green-400 print:text-black">{{ formatCurrency(selectedHistory.netPayment) }}</span>
+            </div>
+
+            <!-- Total Amount Due (for non-partial payment) -->
+            <div class="flex justify-between items-center py-3 bg-red-50 dark:bg-red-900/20 -mx-4 px-4 mt-2 print:bg-gray-100 print:border-2 print:border-black" *ngIf="selectedHistory.transactionType !== 'partial_payment' && selectedHistory.totalAmount">
+              <span class="text-base font-bold text-red-700 dark:text-red-400 print:text-black">Total Amount Due:</span>
+              <span class="text-xl font-bold text-red-700 dark:text-red-400 print:text-black">{{ formatCurrency(selectedHistory.totalAmount) }}</span>
             </div>
 
             <!-- Amount Paid -->
-            <div class="flex justify-between text-sm" *ngIf="selectedHistory.amountPaid">
-              <span class="text-gray-600 dark:text-gray-400">Amount Paid:</span>
-              <span class="font-medium text-green-600 dark:text-green-400">{{ formatCurrency(selectedHistory.amountPaid) }}</span>
+            <div class="flex justify-between items-center py-2 border-b border-gray-200 dark:border-gray-700" *ngIf="selectedHistory.amountPaid">
+              <span class="text-sm text-gray-600 dark:text-gray-400">Amount Paid:</span>
+              <span class="text-base font-semibold text-green-600 dark:text-green-400">{{ formatCurrency(selectedHistory.amountPaid) }}</span>
             </div>
 
             <!-- Balance After Transaction -->
-            <div class="border-t border-gray-300 dark:border-gray-600 pt-2 flex justify-between text-sm font-semibold">
-              <span class="text-gray-700 dark:text-gray-300">Balance After Transaction:</span>
-              <span class="text-blue-600 dark:text-blue-400">{{ formatCurrency(selectedHistory.balance) }}</span>
+            <div class="flex justify-between items-center py-3 bg-blue-50 dark:bg-blue-900/20 -mx-4 px-4 mt-2 print:bg-white print:border-2 print:border-black">
+              <span class="text-base font-bold text-blue-700 dark:text-blue-400 print:text-black">Balance After Transaction:</span>
+              <span class="text-xl font-bold text-blue-700 dark:text-blue-400 print:text-black">{{ formatCurrency(selectedHistory.balance) }}</span>
             </div>
 
             <!-- Change (if overpayment) -->
-            <div class="flex justify-between text-sm bg-yellow-50 dark:bg-yellow-900/20 p-2 rounded" *ngIf="selectedHistory.amountPaid && selectedHistory.totalAmount && selectedHistory.amountPaid > selectedHistory.totalAmount">
-              <span class="text-yellow-700 dark:text-yellow-400">Change Given:</span>
-              <span class="font-medium text-yellow-700 dark:text-yellow-400">{{ formatCurrency(selectedHistory.amountPaid - selectedHistory.totalAmount) }}</span>
+            <div class="flex justify-between items-center py-2 bg-yellow-50 dark:bg-yellow-900/20 -mx-4 px-4 rounded print:bg-gray-100" *ngIf="selectedHistory.amountPaid && selectedHistory.totalAmount && selectedHistory.amountPaid > selectedHistory.totalAmount">
+              <span class="text-sm font-semibold text-yellow-700 dark:text-yellow-400 print:text-black">Change Given:</span>
+              <span class="text-base font-bold text-yellow-700 dark:text-yellow-400 print:text-black">{{ formatCurrency(selectedHistory.amountPaid - selectedHistory.totalAmount) }}</span>
             </div>
           </div>
         </div>
