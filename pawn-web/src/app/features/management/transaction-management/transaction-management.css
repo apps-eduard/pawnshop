@@ -4,6 +4,175 @@
   min-height: 100vh;
 }
 
+/* Print Styles - Only show invoice content when printing */
+@media print {
+  /* Hide everything on the page */
+  body * {
+    visibility: hidden !important;
+    display: none !important;
+  }
+
+  /* Show only the invoice */
+  #invoiceToPrint,
+  #invoiceToPrint * {
+    visibility: visible !important;
+    display: block !important;
+  }
+
+  /* Reset display for specific elements */
+  #invoiceToPrint .flex {
+    display: flex !important;
+  }
+
+  #invoiceToPrint .grid {
+    display: grid !important;
+  }
+
+  #invoiceToPrint span,
+  #invoiceToPrint button {
+    display: inline-block !important;
+  }
+
+  #invoiceToPrint svg {
+    display: inline-block !important;
+  }
+
+  /* Position invoice at top of page */
+  #invoiceToPrint {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    max-width: 210mm !important;
+    margin: 0 !important;
+    padding: 8mm !important;
+    background: white !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  /* Force white background and black text */
+  #invoiceToPrint,
+  #invoiceToPrint * {
+    color: black !important;
+    background: white !important;
+    background-color: white !important;
+  }
+
+  /* Ensure borders are visible */
+  #invoiceToPrint .border,
+  #invoiceToPrint .border-b,
+  #invoiceToPrint .border-t,
+  #invoiceToPrint .border-2 {
+    border-color: #000 !important;
+  }
+
+  /* Hide print button and close button */
+  #invoiceToPrint button {
+    display: none !important;
+  }
+
+  /* Page setup for A4 */
+  @page {
+    size: A4 portrait;
+    margin: 8mm;
+  }
+
+  /* Prevent page breaks */
+  #invoiceToPrint,
+  #invoiceToPrint > div {
+    page-break-inside: avoid !important;
+    page-break-before: avoid !important;
+    page-break-after: avoid !important;
+  }
+
+  /* Compact spacing for print */
+  #invoiceToPrint {
+    font-size: 9pt !important;
+    line-height: 1.3 !important;
+  }
+
+  #invoiceToPrint h3 {
+    font-size: 14pt !important;
+    margin-bottom: 4pt !important;
+  }
+
+  #invoiceToPrint h4 {
+    font-size: 11pt !important;
+    margin-bottom: 3pt !important;
+  }
+
+  #invoiceToPrint .text-xl {
+    font-size: 16pt !important;
+  }
+
+  #invoiceToPrint .text-lg {
+    font-size: 12pt !important;
+  }
+
+  #invoiceToPrint .text-base {
+    font-size: 10pt !important;
+  }
+
+  #invoiceToPrint .text-sm {
+    font-size: 8pt !important;
+  }
+
+  #invoiceToPrint .text-xs {
+    font-size: 7pt !important;
+  }
+
+  /* Reduce spacing between sections */
+  #invoiceToPrint .space-y-4 > * + * {
+    margin-top: 6pt !important;
+  }
+
+  #invoiceToPrint .space-y-3 > * + * {
+    margin-top: 4pt !important;
+  }
+
+  #invoiceToPrint .space-y-2 > * + * {
+    margin-top: 3pt !important;
+  }
+
+  /* Compact padding */
+  #invoiceToPrint .p-4 {
+    padding: 4pt !important;
+  }
+
+  #invoiceToPrint .p-5 {
+    padding: 5pt !important;
+  }
+
+  #invoiceToPrint .py-2 {
+    padding-top: 2pt !important;
+    padding-bottom: 2pt !important;
+  }
+
+  #invoiceToPrint .py-3 {
+    padding-top: 3pt !important;
+    padding-bottom: 3pt !important;
+  }
+
+  #invoiceToPrint .pb-3 {
+    padding-bottom: 3pt !important;
+  }
+
+  #invoiceToPrint .mt-4 {
+    margin-top: 6pt !important;
+  }
+
+  /* Compact gap in grid */
+  #invoiceToPrint .gap-3 {
+    gap: 3pt !important;
+  }
+
+  /* Remove rounded corners for print */
+  #invoiceToPrint * {
+    border-radius: 0 !important;
+  }
+}
+
 /* Loading Animation */
 @keyframes spin {
   0% { transform: rotate(0deg); }
@@ -28,7 +197,7 @@
   .transaction-table {
     font-size: 0.875rem;
   }
-  
+
   .transaction-table th,
   .transaction-table td {
     padding: 0.75rem 0.5rem;

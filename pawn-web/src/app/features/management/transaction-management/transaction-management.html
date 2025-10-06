@@ -200,8 +200,20 @@
               <!-- Transaction Number -->
               <td class="px-6 py-4 whitespace-nowrap">
                 <div class="flex items-center space-x-2">
-                  <div>
-                    <div class="text-sm font-medium text-gray-900 dark:text-white">{{ transaction.ticket_number }}</div>
+                  <div
+                    (click)="toggleTransactionHistory(transaction.id, $event)"
+                    class="cursor-pointer hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+                    [title]="(transaction.transactionHistory && transaction.transactionHistory.length > 0) ? (isTransactionExpanded(transaction.id) ? 'Hide Transaction History' : 'Show Transaction History') : 'Click to expand'">
+                    <div class="text-sm font-medium text-gray-900 dark:text-white flex items-center">
+                      {{ transaction.ticket_number }}
+                      <!-- Expand/Collapse icon -->
+                      <svg *ngIf="!isTransactionExpanded(transaction.id)" class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                      </svg>
+                      <svg *ngIf="isTransactionExpanded(transaction.id)" class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
+                      </svg>
+                    </div>
                     <div class="text-sm text-gray-500 dark:text-gray-400">ID: {{ transaction.id }}</div>
                   </div>
                   <!-- History indicator -->
@@ -258,21 +270,15 @@
               <!-- Actions -->
               <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                 <div class="flex space-x-2">
-                  <!-- View Details / Toggle History Button -->
+                  <!-- View Invoice / Computation Details Button -->
                   <button
-                    (click)="toggleTransactionHistory(transaction.id, $event)"
-                    [class]="'transition-all ' + (isTransactionExpanded(transaction.id) ? 'text-primary-600 hover:text-primary-700' : 'text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300')"
-                    [title]="(transaction.transactionHistory && transaction.transactionHistory.length > 0) ?
-                             (isTransactionExpanded(transaction.id) ? 'Hide Transaction History' : 'View Transaction History (' + transaction.transactionHistory.length + ')') :
-                             'View Details'">
+                    (click)="viewComputationDetails(transaction, $event)"
+                    class="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300 transition-all"
+                    title="View Invoice / Print Receipt">
                     <!-- Eye Icon -->
-                    <svg *ngIf="!isTransactionExpanded(transaction.id)" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-                    </svg>
-                    <!-- Eye Off Icon (when expanded) -->
-                    <svg *ngIf="isTransactionExpanded(transaction.id)" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"></path>
                     </svg>
                   </button>
 
@@ -304,7 +310,7 @@
                   <p class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Transaction History:</p>
                   <div class="space-y-2">
                     <div *ngFor="let history of transaction.transactionHistory"
-                      class="flex items-center justify-between p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                      class="flex items-center justify-between p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
                       <div class="flex-1">
                         <div class="flex items-center space-x-2 mb-1">
                           <span class="text-sm font-medium text-gray-900 dark:text-white">{{ history.transactionNumber }}</span>
@@ -318,13 +324,25 @@
                         <p class="text-xs text-gray-500 dark:text-gray-400">{{ getTimeAgo(history.createdAt) }} • {{ formatDate(history.transactionDate) }}</p>
                         <p *ngIf="history.notes" class="text-xs text-gray-600 dark:text-gray-400 mt-1">{{ history.notes }}</p>
                       </div>
-                      <div class="text-right ml-4">
-                        <p class="text-sm font-medium text-gray-900 dark:text-white" *ngIf="history.amountPaid">
-                          Paid: {{ formatCurrency(history.amountPaid) }}
-                        </p>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">
-                          Balance: {{ formatCurrency(history.balance) }}
-                        </p>
+                      <div class="flex items-center space-x-3">
+                        <div class="text-right">
+                          <p class="text-sm font-medium text-gray-900 dark:text-white" *ngIf="history.amountPaid">
+                            Paid: {{ formatCurrency(history.amountPaid) }}
+                          </p>
+                          <p class="text-xs text-gray-500 dark:text-gray-400">
+                            Balance: {{ formatCurrency(history.balance) }}
+                          </p>
+                        </div>
+                        <!-- View History Invoice / Computation Button -->
+                        <button
+                          (click)="viewHistoryComputationDetails(transaction, history, $event)"
+                          class="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300 transition-all flex-shrink-0"
+                          title="View Receipt / Print Invoice">
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                          </svg>
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -400,6 +418,299 @@
             </nav>
           </div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Computation Details Modal -->
+  <div *ngIf="showComputationModal"
+    class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center print:bg-transparent print:relative print:inset-auto"
+    (click)="closeComputationModal()">
+    <div id="invoiceToPrint" class="relative mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white dark:bg-gray-800 print:w-full print:max-w-full print:shadow-none print:border-0 print:p-8"
+      (click)="$event.stopPropagation()">
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between pb-3 border-b border-gray-200 dark:border-gray-700 print:border-b-2 print:border-black">
+        <div class="flex-1">
+          <div class="flex items-center space-x-3">
+            <h3 class="text-xl font-semibold text-gray-900 dark:text-white print:text-black">
+              {{ isViewingHistory ? 'Payment Receipt' : 'Transaction Invoice' }}
+            </h3>
+            <span *ngIf="selectedTransaction" [class]="'px-3 py-1 rounded-full text-sm font-bold print:border-2 print:border-black ' + getTransactionTypeBadgeClass(selectedTransaction.transaction_type)">
+              {{ getTransactionTypeLabel(selectedTransaction.transaction_type) }}
+            </span>
+          </div>
+        </div>
+        <div class="flex items-center space-x-2 print:hidden">
+          <button
+            (click)="printInvoice()"
+            class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 p-2"
+            title="Print / Save as PDF">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
+            </svg>
+          </button>
+          <button
+            (click)="closeComputationModal()"
+            class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+            title="Close">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Modal Content - Main Transaction -->
+      <div *ngIf="selectedTransaction && !isViewingHistory" class="mt-4 space-y-4">
+        <!-- Transaction Info -->
+        <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 print:bg-white print:border print:border-gray-300">
+          <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 print:text-black print:text-base">Transaction Information</h4>
+          <div class="grid grid-cols-2 gap-3 text-sm">
+            <div>
+              <span class="text-gray-500 dark:text-gray-400">Transaction #:</span>
+              <span class="ml-2 font-medium text-gray-900 dark:text-white">{{ selectedTransaction.ticket_number }}</span>
+            </div>
+            <div>
+              <span class="text-gray-500 dark:text-gray-400">Type:</span>
+              <span class="ml-2 font-medium text-gray-900 dark:text-white">{{ selectedTransaction.transaction_type | titlecase }}</span>
+            </div>
+            <div>
+              <span class="text-gray-500 dark:text-gray-400">Status:</span>
+              <span class="ml-2" [class]="'px-2 py-1 rounded-full text-xs font-medium ' + getStatusClass(selectedTransaction.status)">
+                {{ selectedTransaction.status | titlecase }}
+              </span>
+            </div>
+            <div>
+              <span class="text-gray-500 dark:text-gray-400">Customer:</span>
+              <span class="ml-2 font-medium text-gray-900 dark:text-white">{{ selectedTransaction.first_name }} {{ selectedTransaction.last_name }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- LOAN DETAILS -->
+        <div class="bg-white dark:bg-gray-800 border-2 border-blue-500 dark:border-blue-600 rounded-lg p-4 print:border-black print:border-2">
+          <h4 class="text-lg font-bold text-blue-600 dark:text-blue-400 mb-4 print:text-black">LOAN DETAILS</h4>
+
+          <div class="space-y-3">
+            <!-- Principal Amount -->
+            <div class="flex justify-between items-center py-2 border-b border-gray-200 dark:border-gray-700">
+              <span class="text-sm text-gray-600 dark:text-gray-400">Principal Amount:</span>
+              <span class="text-base font-semibold text-gray-900 dark:text-white">{{ formatCurrency(selectedTransaction.principal_amount) }}</span>
+            </div>
+
+            <!-- Interest Rate -->
+            <div class="flex justify-between items-center py-2 border-b border-gray-200 dark:border-gray-700">
+              <span class="text-sm text-gray-600 dark:text-gray-400">Interest Rate:</span>
+              <span class="text-base font-semibold text-gray-900 dark:text-white">
+                {{ selectedTransaction.interest_rate > 1 ? selectedTransaction.interest_rate.toFixed(0) : (selectedTransaction.interest_rate * 100).toFixed(0) }}% monthly
+              </span>
+            </div>
+
+            <!-- Interest Amount -->
+            <div class="flex justify-between items-center py-2 border-b border-gray-200 dark:border-gray-700">
+              <span class="text-sm text-gray-600 dark:text-gray-400">Interest Amount:</span>
+              <span class="text-base font-semibold text-gray-900 dark:text-white">{{ formatCurrency(selectedTransaction.interest_amount) }}</span>
+            </div>
+
+            <!-- Service Charge -->
+            <div class="flex justify-between items-center py-2 border-b border-gray-200 dark:border-gray-700">
+              <span class="text-sm text-gray-600 dark:text-gray-400">Service Charge:</span>
+              <span class="text-base font-semibold text-gray-900 dark:text-white">{{ formatCurrency(selectedTransaction.service_charge) }}</span>
+            </div>
+
+            <!-- Net Proceeds (Principal - Service Charge) -->
+            <div class="flex justify-between items-center py-2 border-b border-gray-200 dark:border-gray-700">
+              <span class="text-sm text-gray-600 dark:text-gray-400">Net Proceeds:</span>
+              <span class="text-base font-semibold text-gray-900 dark:text-white">{{ formatCurrency(selectedTransaction.principal_amount - selectedTransaction.service_charge) }}</span>
+            </div>
+
+            <!-- Total Amount Due -->
+            <div class="flex justify-between items-center py-3 bg-red-50 dark:bg-red-900/20 -mx-4 px-4 mt-2 print:bg-gray-100 print:border-2 print:border-black">
+              <span class="text-base font-bold text-red-700 dark:text-red-400 print:text-black">Total Amount Due:</span>
+              <span class="text-xl font-bold text-red-700 dark:text-red-400 print:text-black">{{ formatCurrency(selectedTransaction.total_amount) }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Current Balance (if different from total) -->
+        <div *ngIf="selectedTransaction.balance_remaining !== selectedTransaction.total_amount" class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 print:bg-white print:border-black">
+          <div class="flex justify-between items-center">
+            <span class="text-sm font-semibold text-blue-700 dark:text-blue-300 print:text-black">Current Balance Remaining:</span>
+            <span class="text-lg font-bold text-blue-700 dark:text-blue-300 print:text-black">{{ formatCurrency(selectedTransaction.balance_remaining) }}</span>
+          </div>
+          <p class="text-xs text-blue-600 dark:text-blue-400 mt-2 print:text-black">
+            This balance reflects payments made. View transaction history below for payment details.
+          </p>
+        </div>
+
+        <!-- Date Information -->
+        <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 print:bg-white print:border print:border-gray-300">
+          <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 print:text-black print:text-base">Date Information</h4>
+          <div class="grid grid-cols-2 gap-3 text-sm">
+            <div>
+              <span class="text-gray-500 dark:text-gray-400">Loan Date:</span>
+              <span class="ml-2 font-medium text-gray-900 dark:text-white">{{ formatDate(selectedTransaction.loan_date) }}</span>
+            </div>
+            <div *ngIf="selectedTransaction.maturity_date">
+              <span class="text-gray-500 dark:text-gray-400">Maturity Date:</span>
+              <span class="ml-2 font-medium text-gray-900 dark:text-white">{{ formatDate(selectedTransaction.maturity_date) }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Additional Details -->
+        <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 print:hidden">
+          <div class="flex items-start">
+            <svg class="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+            </svg>
+            <div class="ml-3">
+              <h5 class="text-sm font-medium text-blue-800 dark:text-blue-300">Note</h5>
+              <p class="text-xs text-blue-700 dark:text-blue-400 mt-1">
+                This computation is based on the original loan terms. For detailed payment history, view the transaction history by clicking on the transaction number.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Content - Transaction History -->
+      <div *ngIf="selectedTransaction && isViewingHistory && selectedHistory" class="mt-4 space-y-4">
+        <!-- Parent Transaction Info -->
+        <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+          <div class="flex items-start">
+            <svg class="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+            </svg>
+            <div class="ml-3 flex-1">
+              <h5 class="text-sm font-medium text-blue-800 dark:text-blue-300">Parent Transaction</h5>
+              <p class="text-xs text-blue-700 dark:text-blue-400 mt-1">
+                {{ selectedTransaction.ticket_number }} • {{ selectedTransaction.first_name }} {{ selectedTransaction.last_name }}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- History Transaction Info -->
+        <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
+          <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Transaction Information</h4>
+          <div class="grid grid-cols-2 gap-3 text-sm">
+            <div>
+              <span class="text-gray-500 dark:text-gray-400">Transaction #:</span>
+              <span class="ml-2 font-medium text-gray-900 dark:text-white">{{ selectedHistory.transactionNumber }}</span>
+            </div>
+            <div>
+              <span class="text-gray-500 dark:text-gray-400">Type:</span>
+              <span class="ml-2" [class]="'px-2 py-1 rounded-full text-xs font-medium ' + getTypeClass(selectedHistory.transactionType)">
+                {{ getTransactionHistoryTypeLabel(selectedHistory.transactionType) }}
+              </span>
+            </div>
+            <div>
+              <span class="text-gray-500 dark:text-gray-400">Status:</span>
+              <span class="ml-2" [class]="'px-2 py-1 rounded-full text-xs font-medium ' + getStatusClass(selectedHistory.status)">
+                {{ selectedHistory.status | titlecase }}
+              </span>
+            </div>
+            <div>
+              <span class="text-gray-500 dark:text-gray-400">Date:</span>
+              <span class="ml-2 font-medium text-gray-900 dark:text-white">{{ formatDate(selectedHistory.transactionDate) }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- History Computation Breakdown -->
+        <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
+          <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Computation Breakdown</h4>
+          <div class="space-y-2">
+            <!-- Principal Amount -->
+            <div class="flex justify-between text-sm" *ngIf="selectedHistory.principalAmount">
+              <span class="text-gray-600 dark:text-gray-400">Principal Amount:</span>
+              <span class="font-medium text-gray-900 dark:text-white">{{ formatCurrency(selectedHistory.principalAmount) }}</span>
+            </div>
+
+            <!-- Interest -->
+            <div class="flex justify-between text-sm" *ngIf="selectedHistory.interestAmount">
+              <span class="text-gray-600 dark:text-gray-400">
+                Interest ({{ (selectedHistory.interestRate * 100).toFixed(2) }}%):
+              </span>
+              <span class="font-medium text-gray-900 dark:text-white">{{ formatCurrency(selectedHistory.interestAmount) }}</span>
+            </div>
+
+            <!-- Service Charge -->
+            <div class="flex justify-between text-sm" *ngIf="selectedHistory.serviceCharge">
+              <span class="text-gray-600 dark:text-gray-400">Service Charge:</span>
+              <span class="font-medium text-gray-900 dark:text-white">{{ formatCurrency(selectedHistory.serviceCharge) }}</span>
+            </div>
+
+            <!-- Penalty -->
+            <div class="flex justify-between text-sm" *ngIf="selectedHistory.penaltyAmount">
+              <span class="text-gray-600 dark:text-gray-400">
+                Penalty ({{ (selectedHistory.penaltyRate * 100).toFixed(2) }}%):
+              </span>
+              <span class="font-medium text-red-600 dark:text-red-400">{{ formatCurrency(selectedHistory.penaltyAmount) }}</span>
+            </div>
+
+            <!-- Other Charges -->
+            <div class="flex justify-between text-sm" *ngIf="selectedHistory.otherCharges">
+              <span class="text-gray-600 dark:text-gray-400">Other Charges:</span>
+              <span class="font-medium text-gray-900 dark:text-white">{{ formatCurrency(selectedHistory.otherCharges) }}</span>
+            </div>
+
+            <!-- Total Amount Due -->
+            <div class="border-t border-gray-300 dark:border-gray-600 pt-2 flex justify-between text-sm font-semibold" *ngIf="selectedHistory.totalAmount">
+              <span class="text-gray-700 dark:text-gray-300">Total Amount Due:</span>
+              <span class="text-gray-900 dark:text-white">{{ formatCurrency(selectedHistory.totalAmount) }}</span>
+            </div>
+
+            <!-- Amount Paid -->
+            <div class="flex justify-between text-sm" *ngIf="selectedHistory.amountPaid">
+              <span class="text-gray-600 dark:text-gray-400">Amount Paid:</span>
+              <span class="font-medium text-green-600 dark:text-green-400">{{ formatCurrency(selectedHistory.amountPaid) }}</span>
+            </div>
+
+            <!-- Balance After Transaction -->
+            <div class="border-t border-gray-300 dark:border-gray-600 pt-2 flex justify-between text-sm font-semibold">
+              <span class="text-gray-700 dark:text-gray-300">Balance After Transaction:</span>
+              <span class="text-blue-600 dark:text-blue-400">{{ formatCurrency(selectedHistory.balance) }}</span>
+            </div>
+
+            <!-- Change (if overpayment) -->
+            <div class="flex justify-between text-sm bg-yellow-50 dark:bg-yellow-900/20 p-2 rounded" *ngIf="selectedHistory.amountPaid && selectedHistory.totalAmount && selectedHistory.amountPaid > selectedHistory.totalAmount">
+              <span class="text-yellow-700 dark:text-yellow-400">Change Given:</span>
+              <span class="font-medium text-yellow-700 dark:text-yellow-400">{{ formatCurrency(selectedHistory.amountPaid - selectedHistory.totalAmount) }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Notes -->
+        <div *ngIf="selectedHistory.notes" class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+          <h4 class="text-sm font-semibold text-yellow-800 dark:text-yellow-300 mb-2">Notes</h4>
+          <p class="text-sm text-yellow-700 dark:text-yellow-400">{{ selectedHistory.notes }}</p>
+        </div>
+
+        <!-- Metadata -->
+        <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
+          <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Additional Information</h4>
+          <div class="grid grid-cols-2 gap-3 text-sm">
+            <div>
+              <span class="text-gray-500 dark:text-gray-400">Created:</span>
+              <span class="ml-2 font-medium text-gray-900 dark:text-white">{{ getTimeAgo(selectedHistory.createdAt) }}</span>
+            </div>
+            <div>
+              <span class="text-gray-500 dark:text-gray-400">Created At:</span>
+              <span class="ml-2 font-medium text-gray-900 dark:text-white">{{ formatDate(selectedHistory.createdAt) }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="flex justify-end mt-5 pt-4 border-t border-gray-200 dark:border-gray-700 print:hidden">
+        <button
+          (click)="closeComputationModal()"
+          class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors">
+          Close
+        </button>
       </div>
     </div>
   </div>

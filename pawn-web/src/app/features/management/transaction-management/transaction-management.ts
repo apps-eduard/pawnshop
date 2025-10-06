@@ -9,6 +9,11 @@ interface Transaction {
   ticket_number: string;
   transaction_type: string;
   principal_amount: number;
+  interest_rate: number;
+  interest_amount: number;
+  service_charge: number;
+  penalty_amount: number;
+  other_charges: number;
   total_amount: number;
   balance_remaining: number;
   status: string;
@@ -23,6 +28,13 @@ interface Transaction {
     transactionType: string;
     transactionDate: Date;
     principalAmount: number;
+    interestRate: number;
+    interestAmount: number;
+    penaltyRate: number;
+    penaltyAmount: number;
+    serviceCharge: number;
+    otherCharges: number;
+    totalAmount: number;
     amountPaid: number;
     balance: number;
     status: string;
@@ -53,6 +65,12 @@ export class TransactionManagement implements OnInit {
   loading = false;
   searchForm: FormGroup;
   expandedTransactions = new Set<number>(); // Track which transactions are expanded
+
+  // Computation modal properties
+  showComputationModal = false;
+  selectedTransaction: Transaction | null = null;
+  selectedHistory: any = null; // For viewing history computation details
+  isViewingHistory = false; // Flag to know if viewing main transaction or history
 
   // Pagination
   currentPage = 1;
@@ -158,6 +176,11 @@ export class TransactionManagement implements OnInit {
             ticket_number: row.ticket_number || row.transactionNumber,
             transaction_type: row.transaction_type || row.transactionType,
             principal_amount: parseFloat(row.principal_amount || row.principalAmount || 0),
+            interest_rate: parseFloat(row.interest_rate || row.interestRate || 0),
+            interest_amount: parseFloat(row.interest_amount || row.interestAmount || 0),
+            service_charge: parseFloat(row.service_charge || row.serviceCharge || 0),
+            penalty_amount: parseFloat(row.penalty_amount || row.penaltyAmount || 0),
+            other_charges: parseFloat(row.other_charges || row.otherCharges || 0),
             total_amount: parseFloat(row.total_amount || row.totalAmount || 0),
             balance_remaining: parseFloat(row.balance_remaining || row.balanceRemaining || row.balance || 0),
             status: row.status,
@@ -297,6 +320,35 @@ export class TransactionManagement implements OnInit {
     return this.expandedTransactions.has(transactionId);
   }
 
+  // View computation details
+  viewComputationDetails(transaction: Transaction, event: Event) {
+    console.log('👁️ Viewing computation details for transaction:', transaction.ticket_number);
+    event.stopPropagation(); // Prevent other click handlers
+    this.selectedTransaction = transaction;
+    this.selectedHistory = null;
+    this.isViewingHistory = false;
+    this.showComputationModal = true;
+  }
+
+  // View history computation details
+  viewHistoryComputationDetails(transaction: Transaction, history: any, event: Event) {
+    console.log('👁️ Viewing history computation details for:', history.transactionNumber);
+    event.stopPropagation(); // Prevent other click handlers
+    this.selectedTransaction = transaction;
+    this.selectedHistory = history;
+    this.isViewingHistory = true;
+    this.showComputationModal = true;
+  }
+
+  // Close computation modal
+  closeComputationModal() {
+    console.log('❌ Closing computation modal');
+    this.showComputationModal = false;
+    this.selectedTransaction = null;
+    this.selectedHistory = null;
+    this.isViewingHistory = false;
+  }
+
   // Get transaction type label for display
   getTransactionHistoryTypeLabel(type: string): string {
     const labels: { [key: string]: string } = {
@@ -304,9 +356,37 @@ export class TransactionManagement implements OnInit {
       'partial_payment': 'Partial Payment',
       'redemption': 'Redemption',
       'renewal': 'Renewal',
+      'renew': 'Renewal',
+      'redeem': 'Redemption',
+      'additional': 'Additional Loan',
       'full_payment': 'Full Payment'
     };
     return labels[type] || type;
+  }
+
+  // Get transaction type label (alias for consistency)
+  getTransactionTypeLabel(type: string): string {
+    return this.getTransactionHistoryTypeLabel(type);
+  }
+
+  // Get transaction type badge class
+  getTransactionTypeBadgeClass(type: string): string {
+    const classes: { [key: string]: string } = {
+      'new_loan': 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
+      'partial_payment': 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
+      'redemption': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+      'redeem': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+      'renewal': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+      'renew': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+      'additional': 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200',
+      'full_payment': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+    };
+    return classes[type] || 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
+  }
+
+  // Print invoice
+  printInvoice() {
+    window.print();
   }
 
   // Format time ago
