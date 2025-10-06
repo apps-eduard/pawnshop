@@ -1208,37 +1208,52 @@ router.post('/additional-loan', async (req, res) => {
     try {
       await client.query('BEGIN');
       
-      // 1. Get original ticket details
-      const ticketResult = await client.query(`
-        SELECT pt.*, t.granted_date, t.pawner_id, t.branch_id, t.principal_amount, t.interest_rate, t.total_amount
-        FROM pawn_tickets pt 
-        JOIN transactions t ON pt.transaction_id = t.id 
-        WHERE pt.id = $1 AND t.status = 'active'
+      // 1. Get original transaction details and the most recent new_principal_loan
+      const transactionResult = await client.query(`
+        SELECT t.*, 
+               COALESCE(
+                 (SELECT ct.new_principal_loan 
+                  FROM transactions ct 
+                  WHERE ct.parent_transaction_id = t.id 
+                    AND ct.new_principal_loan IS NOT NULL
+                  ORDER BY ct.created_at DESC 
+                  LIMIT 1),
+                 t.principal_amount
+               ) as current_principal
+        FROM transactions t 
+        WHERE t.id = $1 AND t.status = 'active'
       `, [originalTicketId]);
       
-      if (ticketResult.rows.length === 0) {
+      if (transactionResult.rows.length === 0) {
         return res.status(404).json({
           success: false,
-          message: 'Active pawn ticket not found'
+          message: 'Active transaction not found'
         });
       }
       
-      const originalTicket = ticketResult.rows[0];
+      const originalTransaction = transactionResult.rows[0];
       
       // 2. Generate new ticket number for additional loan
-      const branchId = originalTicket.branch_id;
+      const branchId = originalTransaction.branch_id;
       
       const newTicketNumber = await generateTicketNumber(branchId);
       
-      // 3. Calculate new amounts
+      // 3. Calculate new amounts - use current_principal (which includes partial payment adjustments)
       const addAmount = parseFloat(additionalAmount);
-      const currentPrincipal = parseFloat(originalTicket.principal_amount);
+      const currentPrincipal = parseFloat(originalTransaction.current_principal);
       const newPrincipal = currentPrincipal + addAmount;
-      const interestRateDecimal = newInterestRate ? parseFloat(newInterestRate) / 100 : parseFloat(originalTicket.interest_rate);
+      const interestRateDecimal = newInterestRate ? parseFloat(newInterestRate) / 100 : parseFloat(originalTransaction.interest_rate);
       const serviceCharge = parseFloat(newServiceCharge || 0);
       const interestAmount = newPrincipal * interestRateDecimal;
       const totalAmount = newPrincipal + interestAmount + serviceCharge;
       const netProceeds = addAmount - serviceCharge;
+      
+      console.log(`📊 Additional Loan Calculation:
+        - Original Principal: ${originalTransaction.principal_amount}
+        - Current Principal (after partial payments): ${currentPrincipal}
+        - Additional Amount: ${addAmount}
+        - New Principal: ${newPrincipal}
+      `);
       
       // 4. Calculate new dates
       const maturityDate = newMaturityDate ? new Date(newMaturityDate) : (() => {
@@ -1252,20 +1267,20 @@ router.post('/additional-loan', async (req, res) => {
         return date;
       })();
       
-      // 5. Create new transaction for additional loan
+      // 5. Create new transaction for additional loan with new_principal_loan saved
       const newTransactionResult = await client.query(`
         INSERT INTO transactions (
           transaction_number, pawner_id, branch_id, transaction_type, status,
           principal_amount, interest_rate, interest_amount, service_charge, 
           total_amount, balance, transaction_date, granted_date, maturity_date, expiry_date,
-          parent_transaction_id, notes, created_by, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+          parent_transaction_id, new_principal_loan, notes, created_by, created_at, updated_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
         RETURNING *
       `, [
-        newTicketNumber, originalTicket.pawner_id, originalTicket.branch_id, 'additional_loan', 'active',
+        newTicketNumber, originalTransaction.pawner_id, originalTransaction.branch_id, 'additional_loan', 'active',
         newPrincipal, interestRateDecimal, interestAmount, serviceCharge,
-        totalAmount, totalAmount, new Date(), originalTicket.granted_date, maturityDate, expiryDate,
-        originalTicket.transaction_id, notes || `Additional loan of ${addAmount} on ticket ${originalTicket.ticket_number}`,
+        totalAmount, totalAmount, new Date(), originalTransaction.granted_date, maturityDate, expiryDate,
+        originalTransaction.id, newPrincipal, notes || `Additional loan of ${addAmount} on ticket ${originalTransaction.transaction_number}. Previous principal: ${currentPrincipal}, New principal: ${newPrincipal}`,
         req.user.id, new Date(), new Date()
       ]);
       
@@ -1283,52 +1298,70 @@ router.post('/additional-loan', async (req, res) => {
       
       const newTicket = newTicketResult.rows[0];
       
-      // 6. Copy items from original ticket to new ticket
+      // 7. Copy items from original transaction to new transaction
       await client.query(`
-        INSERT INTO pawn_items (ticket_id, category, category_description, description, appraisal_value)
-        SELECT $1, category, category_description, description, appraisal_value
-        FROM pawn_items WHERE ticket_id = $2
-      `, [newTicket.id, originalTicketId]);
+        INSERT INTO pawn_items (transaction_id, category_id, description_id, appraisal_notes, appraised_value, loan_amount, status)
+        SELECT $1, category_id, description_id, appraisal_notes, appraised_value, loan_amount, status
+        FROM pawn_items WHERE transaction_id = $2
+      `, [newTransaction.id, originalTransaction.id]);
       
-      // 7. Update original ticket status
+      // 8. Update original transaction principal_amount and balance to reflect new loan
       await client.query(`
-        UPDATE pawn_tickets SET
-          status = 'replaced_by_additional',
-          additional_amount = $1,
-          notes = COALESCE(notes, '') || $2,
-          updated_at = CURRENT_TIMESTAMP
-        WHERE id = $3
+        UPDATE transactions SET
+          principal_amount = $1,
+          balance = $2,
+          total_amount = $3,
+          updated_at = CURRENT_TIMESTAMP,
+          updated_by = $4
+        WHERE id = $5
       `, [
-        addAmount,
-        `\nReplaced by additional loan ticket: ${newTicketNumber}`,
-        originalTicketId
+        newPrincipal,
+        totalAmount,
+        totalAmount,
+        req.user.id,
+        originalTransaction.id
       ]);
       
-      // 8. Log audit trail
+      // 9. Update pawn ticket status
+      await client.query(`
+        UPDATE pawn_tickets SET
+          status = 'active',
+          updated_at = CURRENT_TIMESTAMP
+        WHERE transaction_id = $1
+      `, [originalTransaction.id]);
+      
+      // 10. Log audit trail
       await client.query(`
         INSERT INTO audit_logs (
           table_name, record_id, action, user_id, new_values
         ) VALUES ($1, $2, $3, $4, $5)
       `, [
-        'pawn_tickets',
-        newTicket.id,
-        'CREATE',
+        'transactions',
+        newTransaction.id,
+        'ADDITIONAL_LOAN',
         req.user.id,
-        JSON.stringify(newTicket)
+        JSON.stringify({ 
+          new_transaction_id: newTransaction.id,
+          previous_principal: currentPrincipal,
+          additional_amount: addAmount,
+          new_principal: newPrincipal
+        })
       ]);
       
       await client.query('COMMIT');
       
-      console.log(`✅ Additional loan completed - New ticket: ${newTicketNumber}`);
+      console.log(`✅ Additional loan completed - New transaction: ${newTicketNumber}`);
+      console.log(`   Previous principal: ${currentPrincipal}, Added: ${addAmount}, New principal: ${newPrincipal}`);
       
       res.json({
         success: true,
         message: 'Additional loan processed successfully',
         data: {
-          originalTicketId,
-          originalTicketNumber: originalTicket.ticket_number,
-          newTicketId: newTicket.id,
+          originalTransactionId: originalTransaction.id,
+          originalTicketNumber: originalTransaction.transaction_number,
+          newTransactionId: newTransaction.id,
           newTicketNumber,
+          previousPrincipal: currentPrincipal,
           additionalAmount: addAmount,
           newPrincipalAmount: newPrincipal,
           netProceeds,
