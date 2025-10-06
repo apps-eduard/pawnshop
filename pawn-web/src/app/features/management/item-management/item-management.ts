@@ -93,7 +93,7 @@ export class ItemManagementComponent implements OnInit {
       if (response.success) {
         console.log('📦 Raw API Response:', response.data);
         console.log('📦 First item structure:', response.data[0]);
-        
+
         this.items = response.data.map((item: any) => ({
           ...item,
           isEditing: false
