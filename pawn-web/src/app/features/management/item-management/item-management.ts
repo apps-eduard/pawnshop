@@ -6,20 +6,29 @@ import { ToastService } from '../../../core/services/toast.service';
 
 interface Item {
   id?: number;
-  ticketId: number;
-  itemType: string;
+  ticketId?: number;
+  itemType?: string;
+  categoryName?: string; // From API
   brand?: string;
   model?: string;
-  description: string;
-  estimatedValue: number;
+  description?: string;
+  estimatedValue?: number;
+  appraisedValue?: number; // From API
+  loanAmount?: number; // From API
   conditionNotes?: string;
+  condition?: string; // From API
+  defects?: string; // From API
   serialNumber?: string;
   weight?: number;
   karat?: number;
+  status?: string;
+  location?: string; // From API
   createdAt?: string;
   ticketNumber?: string;
+  transactionNumber?: string; // From API
   principalAmount?: number;
   ticketStatus?: string;
+  transactionStatus?: string; // From API
   pawnerName?: string;
   pawnerContact?: string;
   isEditing?: boolean;
@@ -82,11 +91,15 @@ export class ItemManagementComponent implements OnInit {
 
       const response = await this.itemService.getItems();
       if (response.success) {
+        console.log('📦 Raw API Response:', response.data);
+        console.log('📦 First item structure:', response.data[0]);
+        
         this.items = response.data.map((item: any) => ({
           ...item,
           isEditing: false
         }));
         console.log(`✅ Loaded ${this.items.length} items`);
+        console.log('📦 Mapped items:', this.items);
       } else {
         console.error('Failed to load items:', response.message);
         this.toastService.showError('Load Error', 'Failed to load items');
@@ -201,7 +214,10 @@ export class ItemManagementComponent implements OnInit {
     }
   }
 
-  formatCurrency(amount: number): string {
+  formatCurrency(amount: number | undefined | null): string {
+    if (amount === undefined || amount === null || isNaN(amount)) {
+      return '₱0.00';
+    }
     return new Intl.NumberFormat('en-PH', {
       style: 'currency',
       currency: 'PHP'

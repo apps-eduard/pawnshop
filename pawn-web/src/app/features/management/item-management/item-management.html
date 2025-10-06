@@ -193,7 +193,8 @@
             <tr *ngFor="let item of items" class="hover:bg-gray-50 dark:hover:bg-gray-600">
               <!-- Item Details -->
               <td class="px-6 py-4">
-                <div class="text-sm font-medium text-gray-900 dark:text-white">{{ item.itemType }}</div>
+                <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">ID: #{{ item.id }}</div>
+                <div class="text-sm font-medium text-gray-900 dark:text-white">{{ item.categoryName || item.itemType || 'N/A' }}</div>
                 <div class="text-sm text-gray-500 dark:text-gray-400">
                   <span *ngIf="item.brand">{{ item.brand }}</span>
                   <span *ngIf="item.brand && item.model"> - </span>
@@ -201,6 +202,12 @@
                 </div>
                 <div class="text-xs text-gray-400 dark:text-gray-500 mt-1">{{ item.description }}</div>
                 <div *ngIf="item.serialNumber" class="text-xs text-gray-400 dark:text-gray-500">SN: {{ item.serialNumber }}</div>
+                <div *ngIf="item.conditionNotes || item.condition" class="text-xs text-gray-500 dark:text-gray-400 mt-1 italic">
+                  Notes: {{ item.conditionNotes || item.condition }}
+                </div>
+                <div *ngIf="item.defects" class="text-xs text-red-500 dark:text-red-400 mt-1">
+                  Defects: {{ item.defects }}
+                </div>
                 <div class="flex gap-2 mt-1">
                   <span *ngIf="item.weight" class="text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300 px-2 py-1 rounded">{{ item.weight }}g</span>
                   <span *ngIf="item.karat" class="text-xs bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300 px-2 py-1 rounded">{{ item.karat }}k</span>
@@ -209,8 +216,8 @@
 
               <!-- Ticket Info -->
               <td class="px-6 py-4">
-                <div class="text-sm font-medium text-gray-900 dark:text-white">#{{ item.ticketNumber }}</div>
-                <div *ngIf="item.principalAmount" class="text-sm text-gray-500 dark:text-gray-400">{{ formatCurrency(item.principalAmount) }}</div>
+                <div class="text-sm font-medium text-gray-900 dark:text-white">{{ item.transactionNumber || item.ticketNumber || 'N/A' }}</div>
+                <div *ngIf="item.principalAmount" class="text-sm text-gray-500 dark:text-gray-400">₱{{ item.principalAmount | number:'1.2-2' }}</div>
               </td>
 
               <!-- Pawner -->
@@ -221,13 +228,15 @@
 
               <!-- Value -->
               <td class="px-6 py-4">
-                <div class="text-sm font-medium text-gray-900 dark:text-white">{{ formatCurrency(item.estimatedValue) }}</div>
+                <div class="text-sm font-medium text-gray-900 dark:text-white">
+                  ₱{{ (item.appraisedValue || item.estimatedValue || 0) | number:'1.2-2' }}
+                </div>
               </td>
 
               <!-- Status -->
               <td class="px-6 py-4">
-                <span [class]="getStatusBadgeClass(item.ticketStatus)" class="inline-flex px-2 py-1 text-xs font-semibold rounded-full">
-                  {{ item.ticketStatus || 'active' }}
+                <span [class]="getStatusBadgeClass(item.transactionStatus || item.ticketStatus)" class="inline-flex px-2 py-1 text-xs font-semibold rounded-full">
+                  {{ item.transactionStatus || item.ticketStatus || 'active' }}
                 </span>
               </td>
 
