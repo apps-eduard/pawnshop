@@ -143,6 +143,32 @@ export class PartialPayment implements OnInit {
     // Update appraisal value from items
     this.partialComputation.appraisalValue = this.getTotalAppraisalValue();
 
+    // Calculate days overdue to set automatic discount
+    let autoDiscount = 0;
+    if (this.transactionInfo.maturedDate) {
+      const maturityDate = new Date(this.transactionInfo.maturedDate);
+      const now = new Date();
+      const daysOverdue = Math.floor((now.getTime() - maturityDate.getTime()) / (1000 * 60 * 60 * 24));
+      
+      // Auto-set discount: Only for days 1-3, 0 if greater than 3 (full month penalty applies)
+      if (daysOverdue === 3) {
+        autoDiscount = 3;
+      } else if (daysOverdue === 2) {
+        autoDiscount = 2;
+      } else if (daysOverdue === 1) {
+        autoDiscount = 1;
+      } else if (daysOverdue > 3) {
+        autoDiscount = 0; // No discount for day 4+ (full month penalty)
+      }
+      
+      // Apply auto discount only if user hasn't manually changed it
+      if (this.partialComputation.discount === 0) {
+        this.partialComputation.discount = autoDiscount;
+      }
+      
+      console.log(`🎯 Auto-discount set: ${autoDiscount} days (overdue: ${daysOverdue} days)`);
+    }
+
     // Calculate interest from grant date to now (EXCLUDING the first 30 days already paid)
     if (this.transactionInfo.grantedDate) {
       const grantDate = new Date(this.transactionInfo.grantedDate);

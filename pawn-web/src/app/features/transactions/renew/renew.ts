@@ -40,10 +40,13 @@ interface PawnedItem {
 interface RenewComputation {
   principalLoan: number;
   interestRate: number;
+  discount: number;
   interest: number;
   penalty: number;
   dueAmount: number;
   newLoanAmount: number;
+  advanceInterest: number;
+  advServiceCharge: number;
   serviceFee: number;
   totalRenewAmount: number;
   receivedAmount: number;
@@ -88,10 +91,13 @@ export class Renew implements OnInit {
   renewComputation: RenewComputation = {
     principalLoan: 0,
     interestRate: 3.5,
+    discount: 0,
     interest: 0,
     penalty: 0,
     dueAmount: 0,
     newLoanAmount: 0,
+    advanceInterest: 0,
+    advServiceCharge: 0,
     serviceFee: 0,
     totalRenewAmount: 0,
     receivedAmount: 0,
@@ -194,10 +200,13 @@ export class Renew implements OnInit {
     this.renewComputation = {
       principalLoan: data.principalAmount || 0,
       interestRate: data.interestRate || 3.5,
+      discount: 0,
       interest: 0, // Will be calculated
       penalty: data.penaltyAmount || 0,
       dueAmount: 0, // Will be calculated
       newLoanAmount: 0,
+      advanceInterest: 0, // Will be calculated
+      advServiceCharge: 0, // Will be calculated
       serviceFee: 0, // Will be calculated
       totalRenewAmount: 0, // Will be calculated
       receivedAmount: 0,
@@ -236,10 +245,13 @@ export class Renew implements OnInit {
     this.renewComputation = {
       principalLoan: 0,
       interestRate: 3.5,
+      discount: 0,
       interest: 0,
       penalty: 0,
       dueAmount: 0,
       newLoanAmount: 0,
+      advanceInterest: 0,
+      advServiceCharge: 0,
       serviceFee: 0,
       totalRenewAmount: 0,
       receivedAmount: 0,
@@ -265,16 +277,56 @@ export class Renew implements OnInit {
   }
 
   async calculateRenewAmount() {
-    // Calculate interest from grant date to now
+    // Calculate days overdue to set automatic discount
+    let autoDiscount = 0;
+    if (this.transactionInfo.maturedDate) {
+      const maturityDate = new Date(this.transactionInfo.maturedDate);
+      const now = new Date();
+      const daysOverdue = Math.floor((now.getTime() - maturityDate.getTime()) / (1000 * 60 * 60 * 24));
+      
+      // Auto-set discount: Only for days 1-3, 0 if greater than 3 (full month penalty applies)
+      if (daysOverdue === 3) {
+        autoDiscount = 3;
+      } else if (daysOverdue === 2) {
+        autoDiscount = 2;
+      } else if (daysOverdue === 1) {
+        autoDiscount = 1;
+      } else if (daysOverdue > 3) {
+        autoDiscount = 0; // No discount for day 4+ (full month penalty)
+      }
+      
+      // Apply auto discount only if user hasn't manually changed it
+      if (this.renewComputation.discount === 0) {
+        this.renewComputation.discount = autoDiscount;
+      }
+      
+      console.log(`🎯 Renew auto-discount set: ${autoDiscount} days (overdue: ${daysOverdue} days)`);
+    }
+
+    // Calculate interest from grant date to now (EXCLUDING the first 30 days already paid)
     if (this.transactionInfo.grantedDate) {
       const grantDate = new Date(this.transactionInfo.grantedDate);
       const now = new Date();
-      const daysDiff = Math.floor((now.getTime() - grantDate.getTime()) / (1000 * 60 * 60 * 24));
+      const totalDays = Math.floor((now.getTime() - grantDate.getTime()) / (1000 * 60 * 60 * 24));
 
-      // Calculate daily interest rate and total interest
+      // Only count days AFTER the first 30 days (which were already paid in advance)
+      const additionalDays = Math.max(0, totalDays - 30);
+
+      // Calculate daily interest rate and interest for additional days only
       const monthlyRate = this.renewComputation.interestRate / 100;
       const dailyRate = monthlyRate / 30;
-      this.renewComputation.interest = this.renewComputation.principalLoan * dailyRate * daysDiff;
+
+      // Interest only for days beyond the first 30 days
+      const baseInterest = this.renewComputation.principalLoan * dailyRate * additionalDays;
+
+      // Apply discount (discount represents days to waive)
+      const discountDays = this.renewComputation.discount;
+      const discountAmount = this.renewComputation.principalLoan * dailyRate * discountDays;
+
+      this.renewComputation.interest = Math.max(0, baseInterest - discountAmount);
+
+      console.log(`📅 Renew days calculation: Total=${totalDays}, Additional=${additionalDays}, Discount=${discountDays} days`);
+      console.log(`💰 Renew interest: Base=${baseInterest.toFixed(2)}, Discount=${discountAmount.toFixed(2)}, Final=${this.renewComputation.interest.toFixed(2)}`);
     } else {
       this.renewComputation.interest = 0;
     }
@@ -288,7 +340,19 @@ export class Renew implements OnInit {
         maturityDate
       );
 
+      // Apply discount to penalty (only for daily penalty, days 1-3)
       this.renewComputation.penalty = penaltyDetails.penaltyAmount;
+      
+      if (!penaltyDetails.isFullMonthPenalty && this.renewComputation.discount > 0) {
+        // For daily penalty (1-3 days overdue), apply discount
+        const discountDays = Math.min(this.renewComputation.discount, penaltyDetails.daysOverdue);
+        const penaltyDiscountAmount = penaltyDetails.dailyPenaltyRate * this.renewComputation.principalLoan * discountDays;
+        this.renewComputation.penalty = Math.max(0, penaltyDetails.penaltyAmount - penaltyDiscountAmount);
+        
+        console.log(`⚠️ Renew penalty discount: Days=${discountDays}, Discount=${penaltyDiscountAmount.toFixed(2)}, Final=${this.renewComputation.penalty.toFixed(2)}`);
+      } else {
+        console.log(`⚠️ Renew penalty (full month, no discount): ${this.renewComputation.penalty.toFixed(2)}`);
+      }
     } else {
       this.renewComputation.penalty = 0;
     }
@@ -296,29 +360,39 @@ export class Renew implements OnInit {
     // Calculate due amount (interest + penalty that must be paid)
     this.renewComputation.dueAmount = this.renewComputation.interest + this.renewComputation.penalty;
 
+    // Calculate advance interest for the new loan (next 30 days prepaid)
+    const newLoanAmount = this.renewComputation.newLoanAmount > 0 ? 
+      this.renewComputation.newLoanAmount : this.renewComputation.principalLoan;
+    
+    const monthlyRate = this.renewComputation.interestRate / 100;
+    this.renewComputation.advanceInterest = newLoanAmount * monthlyRate;
+
+    // Calculate advance service charge based on new loan amount
+    this.renewComputation.advServiceCharge = await this.calculateServiceCharge(newLoanAmount);
+
     // If new loan amount is specified, calculate service fee
     if (this.renewComputation.newLoanAmount > 0) {
       // Calculate service charge based on new loan amount
-      this.renewComputation.serviceFee = await this.calculateServiceCharge(this.renewComputation.newLoanAmount);
+      this.renewComputation.serviceFee = this.renewComputation.advServiceCharge;
     } else {
       // If no new loan, just renew existing - service fee based on principal
       this.renewComputation.newLoanAmount = this.renewComputation.principalLoan;
-      this.renewComputation.serviceFee = await this.calculateServiceCharge(this.renewComputation.principalLoan);
+      this.renewComputation.serviceFee = this.renewComputation.advServiceCharge;
     }
 
     // Calculate total renew amount customer must pay
-    // Total = Due Amount (interest + penalty) + Service Fee - New Loan Amount (if taking additional cash)
-    // If newLoanAmount > principalLoan, customer gets cash back
-    // If newLoanAmount = principalLoan, customer just pays dues
-    const additionalLoan = this.renewComputation.newLoanAmount - this.renewComputation.principalLoan;
+    // Total = Due Amount (interest + penalty) + Advance Interest + Service Charge
+    this.renewComputation.totalRenewAmount = 
+      this.renewComputation.dueAmount + 
+      this.renewComputation.advanceInterest + 
+      this.renewComputation.serviceFee;
 
-    if (additionalLoan > 0) {
-      // Customer is taking additional loan, so they pay dues + service fee but get additional loan
-      this.renewComputation.totalRenewAmount = this.renewComputation.dueAmount + this.renewComputation.serviceFee - additionalLoan;
-    } else {
-      // Customer is just renewing existing loan
-      this.renewComputation.totalRenewAmount = this.renewComputation.dueAmount + this.renewComputation.serviceFee;
-    }
+    console.log(`💵 Renew total calculation:`, {
+      dueAmount: this.renewComputation.dueAmount,
+      advanceInterest: this.renewComputation.advanceInterest,
+      serviceFee: this.renewComputation.serviceFee,
+      total: this.renewComputation.totalRenewAmount
+    });
 
     this.calculateChange();
   }
