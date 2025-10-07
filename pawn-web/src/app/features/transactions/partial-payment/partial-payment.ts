@@ -27,6 +27,7 @@ interface TransactionInfo {
   transactionDate: string;
   grantedDate: string;
   maturedDate: string;
+  gracePeriodDate?: string; // Maturity date + 3 days (redeem date)
   expiredDate: string;
   loanStatus: string;
 }
@@ -451,6 +452,7 @@ export class PartialPayment implements OnInit {
       transactionDate: this.formatDate(data.transactionDate),
       grantedDate: this.formatDate(data.dateGranted),
       maturedDate: this.formatDate(data.dateMatured),
+      gracePeriodDate: data.gracePeriodDate ? this.formatDate(data.gracePeriodDate) : undefined,
       expiredDate: this.formatDate(data.dateExpired),
       loanStatus: this.getStatusText(data.status)
     };

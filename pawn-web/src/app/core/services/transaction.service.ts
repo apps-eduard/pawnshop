@@ -39,6 +39,13 @@ export interface Transaction {
     notes: string;
     createdBy: number;
     createdAt: Date;
+    // Partial payment specific fields
+    newPrincipalLoan?: number;
+    totalAmount?: number;
+    discountAmount?: number;
+    advanceInterest?: number;
+    advanceServiceCharge?: number;
+    netPayment?: number;
   }>;
 }
 

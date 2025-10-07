@@ -60,6 +60,7 @@ interface LoanForm {
   transactionDate: Date | string;
   loanDate: Date | string;
   maturityDate: Date | string;
+  gracePeriodDate?: Date | string; // Maturity date + 3 days
   expiryDate: Date | string;
   serviceCharge: number;
 }
@@ -236,6 +237,12 @@ export class NewLoan implements OnInit, OnDestroy {
     this.loanForm.loanDate = this.formatDateLocal(today);
     this.loanForm.maturityDate = this.getDefaultMaturityDate();
     this.loanForm.expiryDate = this.getDefaultExpiryDate();
+    
+    // Calculate grace period date (maturity + 3 days)
+    const maturityDate = new Date(this.loanForm.maturityDate);
+    const gracePeriodDate = new Date(maturityDate);
+    gracePeriodDate.setDate(gracePeriodDate.getDate() + 3);
+    this.loanForm.gracePeriodDate = gracePeriodDate.toISOString().split('T')[0];
 
     // Set autofocus on search input after view initialization (unless we have appraisal data)
     if (!navigation?.extras.state?.['fromAppraisal']) {
@@ -864,6 +871,14 @@ export class NewLoan implements OnInit, OnDestroy {
       this.loanForm.loanDate = this.loanForm.transactionDate;
       this.loanForm.maturityDate = this.getDefaultMaturityDate();
       this.loanForm.expiryDate = this.getDefaultExpiryDate();
+      
+      // Calculate grace period date (maturity + 3 days)
+      if (this.loanForm.maturityDate) {
+        const maturityDate = new Date(this.loanForm.maturityDate);
+        const gracePeriodDate = new Date(maturityDate);
+        gracePeriodDate.setDate(gracePeriodDate.getDate() + 3);
+        this.loanForm.gracePeriodDate = gracePeriodDate.toISOString().split('T')[0];
+      }
     }
   }
 
@@ -872,13 +887,28 @@ export class NewLoan implements OnInit, OnDestroy {
     if (this.autoCalculateDates) {
       this.loanForm.maturityDate = this.getDefaultMaturityDate();
       this.loanForm.expiryDate = this.getDefaultExpiryDate();
+      
+      // Calculate grace period date (maturity + 3 days)
+      if (this.loanForm.maturityDate) {
+        const maturityDate = new Date(this.loanForm.maturityDate);
+        const gracePeriodDate = new Date(maturityDate);
+        gracePeriodDate.setDate(gracePeriodDate.getDate() + 3);
+        this.loanForm.gracePeriodDate = gracePeriodDate.toISOString().split('T')[0];
+      }
     }
   }
 
-  // Handle maturity date change - auto-calculate expiry if enabled
+  // Handle maturity date change - auto-calculate expiry and grace period if enabled
   onMaturityDateChange() {
     if (this.autoCalculateDates) {
       this.loanForm.expiryDate = this.getDefaultExpiryDate();
+    }
+    // Always calculate grace period date (maturity + 3 days)
+    if (this.loanForm.maturityDate) {
+      const maturityDate = new Date(this.loanForm.maturityDate);
+      const gracePeriodDate = new Date(maturityDate);
+      gracePeriodDate.setDate(gracePeriodDate.getDate() + 3);
+      this.loanForm.gracePeriodDate = gracePeriodDate.toISOString().split('T')[0];
     }
   }
 

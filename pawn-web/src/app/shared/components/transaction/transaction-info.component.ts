@@ -16,6 +16,7 @@ export interface TransactionInfo {
   transactionDate: string;
   grantedDate: string;
   maturedDate: string;
+  gracePeriodDate?: string; // Maturity date + 3 days (redeem date)
   expiredDate: string;
 }
 

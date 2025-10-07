@@ -51,7 +51,7 @@ router.get('/search/:ticketNumber', async (req, res) => {
       SELECT pt.*, 
              t.transaction_number, t.pawner_id, t.principal_amount, t.interest_rate,
              t.interest_amount, t.penalty_amount, t.service_charge, t.total_amount,
-             t.maturity_date, t.expiry_date, t.transaction_date, t.granted_date, t.status as transaction_status,
+             t.maturity_date, t.grace_period_date, t.expiry_date, t.transaction_date, t.granted_date, t.status as transaction_status,
              t.balance, t.amount_paid, t.days_overdue,
              p.first_name, p.last_name, p.mobile_number, p.email,
              p.city_id, p.barangay_id, p.house_number, p.street,
@@ -152,18 +152,34 @@ router.get('/search/:ticketNumber', async (req, res) => {
     const transactionDateStr = formatDateForResponse(row.transaction_date, false); // TIMESTAMP
     const grantedDateStr = formatDateForResponse(row.granted_date || row.transaction_date, false); // TIMESTAMP
     const maturityDateStr = formatDateForResponse(row.maturity_date, true); // DATE column
+    const gracePeriodDateStr = row.grace_period_date ? formatDateForResponse(row.grace_period_date, true) : null; // DATE column
     const expiryDateStr = formatDateForResponse(row.expiry_date, true); // DATE column
 
     console.log('📅 Search - Formatted dates for frontend:', {
       transactionDateStr,
       grantedDateStr,
       maturityDateStr,
+      gracePeriodDateStr,
       expiryDateStr
     });
     
     // Use balance for remaining amount to pay, fallback to total_amount if balance is not set
     const currentBalance = parseFloat(row.balance || row.total_amount || 0);
     const amountPaid = parseFloat(row.amount_paid || 0);
+    
+    // Calculate current principal loan - use latest partial payment's new principal if exists
+    let currentPrincipal = parseFloat(row.principal_amount || 0);
+    if (historyResult.rows.length > 0) {
+      // Find the latest partial payment transaction with new_principal_loan
+      const latestPartialPayment = historyResult.rows
+        .filter(h => h.transaction_type === 'partial_payment' && h.new_principal_loan != null)
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
+      
+      if (latestPartialPayment) {
+        currentPrincipal = parseFloat(latestPartialPayment.new_principal_loan || 0);
+        console.log(`💰 Using current principal from latest partial payment: ${currentPrincipal} (was ${row.principal_amount})`);
+      }
+    }
 
     res.json({
       success: true,
@@ -181,10 +197,12 @@ router.get('/search/:ticketNumber', async (req, res) => {
         dateGranted: grantedDateStr,
         maturityDate: maturityDateStr,
         dateMatured: maturityDateStr,
+        gracePeriodDate: gracePeriodDateStr, // Grace period end date (maturity + 3 days)
         expiryDate: expiryDateStr,
         dateExpired: expiryDateStr,
-        principalAmount: parseFloat(row.principal_amount || 0), // Original principal
-        principalLoan: parseFloat(row.principal_amount || 0), // Original principal
+        principalAmount: currentPrincipal, // Current principal after partial payments
+        principalLoan: currentPrincipal, // Current principal after partial payments
+        originalPrincipalAmount: parseFloat(row.principal_amount || 0), // Keep original for reference
         interestRate: parseFloat(row.interest_rate || 0) * 100, // Convert decimal to percentage for display
         interestAmount: parseFloat(row.interest_amount || 0),
         serviceCharge: parseFloat(row.service_charge || 0),
@@ -798,14 +816,16 @@ router.post('/new-loan', async (req, res) => {
         INSERT INTO transactions (
           transaction_number, pawner_id, branch_id, transaction_type, status,
           principal_amount, interest_rate, interest_amount, service_charge, 
-          total_amount, balance, transaction_date, granted_date, maturity_date, expiry_date,
+          total_amount, balance, transaction_date, granted_date, maturity_date, grace_period_date, expiry_date,
           notes, created_by, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
         RETURNING *
       `, [
         ticketNumber, pawnerId, req.user.branch_id || 1, 'new_loan', 'active',
         principalAmount, interestRate, interestAmount, serviceCharge, 
-        totalAmount, totalAmount, txnDateStr, grantedDateStr, maturedDateStr, expiredDateStr,
+        totalAmount, totalAmount, txnDateStr, grantedDateStr, maturedDateStr, 
+        new Date(new Date(maturedDateStr).getTime() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // grace_period_date = maturity + 3 days
+        expiredDateStr,
         notes || '', req.user.id, new Date(), new Date()
       ]);
       
@@ -1201,6 +1221,7 @@ router.post('/partial-payment', async (req, res) => {
           transaction_date,
           granted_date,
           maturity_date,
+          grace_period_date,
           expiry_date,
           parent_transaction_id,
           discount_amount,
@@ -1214,7 +1235,7 @@ router.post('/partial-payment', async (req, res) => {
         ) VALUES (
           $1, $2, $3, 'partial_payment', $4,
           $5, $6, 0, 0, $7, $8, $9,
-          CURRENT_TIMESTAMP, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $20
+          CURRENT_TIMESTAMP, $10, $11, $11 + INTERVAL '3 days', $12, $13, $14, $15, $16, $17, $18, $19, $20, $20
         ) RETURNING id
       `, [
         newTransactionNumber,
