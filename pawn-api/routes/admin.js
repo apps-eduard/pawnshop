@@ -542,16 +542,18 @@ router.put('/transactions/:id/status', async (req, res) => {
     try {
       await pool.query(`
         INSERT INTO audit_logs (
-          user_id, action, table_name, record_id, 
-          old_values, new_values, reason, created_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+          user_id, action, entity_type, entity_id, 
+          changes, description, created_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, NOW())
       `, [
         req.user.userId,
         'ADMIN_STATUS_CHANGE',
         'pawn_tickets',
         id,
-        JSON.stringify({ status: oldStatus }),
-        JSON.stringify({ status }),
+        JSON.stringify({ 
+          old_values: { status: oldStatus },
+          new_values: { status }
+        }),
         reason || 'Admin override'
       ]);
     } catch (auditError) {

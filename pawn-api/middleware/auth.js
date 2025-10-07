@@ -36,7 +36,7 @@ const authenticateToken = async (req, res, next) => {
     const userQuery = `
       SELECT id, username, email, first_name, last_name, role, branch_id, is_active 
       FROM employees 
-      WHERE user_id = $1 AND is_active = true
+      WHERE id = $1 AND is_active = true
     `;
     
     const result = await db.query(userQuery, [decoded.userId]);

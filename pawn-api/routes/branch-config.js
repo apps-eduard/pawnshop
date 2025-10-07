@@ -162,20 +162,19 @@ router.put('/', authenticateToken, authorizeRoles('administrator'), async (req, 
 
     // Log the configuration change
     await query(`
-      INSERT INTO audit_logs (user_id, action, table_name, record_id, new_values, branch_id, created_at)
-      VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)
+      INSERT INTO audit_logs (user_id, action, entity_type, changes, description, created_at)
+      VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)
     `, [
       req.user.id,
       'UPDATE_BRANCH_CONFIG',
       'system_config',
-      null,
       JSON.stringify({ 
         currentBranchId, 
         installationType, 
         syncEnabled,
         branchName: branchCheck.rows[0].name 
       }),
-      currentBranchId
+      `Branch configuration updated: ${branchCheck.rows[0].name}`
     ]);
 
     // Get updated configuration to return

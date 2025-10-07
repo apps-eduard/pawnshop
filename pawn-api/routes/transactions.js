@@ -861,14 +861,15 @@ router.post('/new-loan', async (req, res) => {
       // 8. Log audit trail
       await client.query(`
         INSERT INTO audit_logs (
-          table_name, record_id, action, user_id, new_values
-        ) VALUES ($1, $2, $3, $4, $5)
+          entity_type, entity_id, action, user_id, changes, description
+        ) VALUES ($1, $2, $3, $4, $5, $6)
       `, [
         'transactions',
         transaction.id,
         'CREATE',
         req.user.id,
-        JSON.stringify(transaction)
+        JSON.stringify({ new_values: transaction }),
+        'New loan transaction created'
       ]);
       
       await client.query('COMMIT');
@@ -1044,21 +1045,24 @@ router.post('/redeem', async (req, res) => {
       // 5. Log audit trail
       await client.query(`
         INSERT INTO audit_logs (
-          table_name, record_id, action, user_id, old_values, new_values
+          entity_type, entity_id, action, user_id, changes, description
         ) VALUES ($1, $2, $3, $4, $5, $6)
       `, [
         'transactions',
         ticketId,
         'REDEMPTION',
         req.user.id,
-        JSON.stringify({ status: transaction.status }),
         JSON.stringify({ 
-          status: 'redeemed', 
-          redeem_amount: redeemAmount,
-          penalty_amount: penaltyAmount,
-          discount_amount: discountAmount,
-          new_transaction_id: newTransactionId
-        })
+          old_values: { status: transaction.status },
+          new_values: { 
+            status: 'redeemed', 
+            redeem_amount: redeemAmount,
+            penalty_amount: penaltyAmount,
+            discount_amount: discountAmount,
+            new_transaction_id: newTransactionId
+          }
+        }),
+        'Item redeemed'
       ]);
       
       await client.query('COMMIT');
@@ -1255,7 +1259,7 @@ router.post('/partial-payment', async (req, res) => {
       // 6. Log audit trail
       await client.query(`
         INSERT INTO audit_logs (
-          table_name, record_id, action, user_id, old_values, new_values
+          entity_type, entity_id, action, user_id, changes, description
         ) VALUES ($1, $2, $3, $4, $5, $6)
       `, [
         'transactions',
@@ -1263,15 +1267,18 @@ router.post('/partial-payment', async (req, res) => {
         'PARTIAL_PAYMENT',
         req.user.id,
         JSON.stringify({ 
-          balance: currentBalance,
-          principal_amount: ticket.principal_amount
+          old_values: { 
+            balance: currentBalance,
+            principal_amount: ticket.principal_amount
+          },
+          new_values: { 
+            partial_payment: paymentAmt,
+            new_principal_loan: newPrincipal,
+            balance: newBalance,
+            new_transaction_id: newTransactionId
+          }
         }),
-        JSON.stringify({ 
-          partial_payment: paymentAmt,
-          new_principal_loan: newPrincipal,
-          balance: newBalance,
-          new_transaction_id: newTransactionId
-        })
+        'Partial payment applied'
       ]);
       
       await client.query('COMMIT');
@@ -1468,19 +1475,22 @@ router.post('/additional-loan', async (req, res) => {
       // 10. Log audit trail
       await client.query(`
         INSERT INTO audit_logs (
-          table_name, record_id, action, user_id, new_values
-        ) VALUES ($1, $2, $3, $4, $5)
+          entity_type, entity_id, action, user_id, changes, description
+        ) VALUES ($1, $2, $3, $4, $5, $6)
       `, [
         'transactions',
         newTransaction.id,
         'ADDITIONAL_LOAN',
         req.user.id,
         JSON.stringify({ 
-          new_transaction_id: newTransaction.id,
-          previous_principal: currentPrincipal,
-          additional_amount: addAmount,
-          new_principal: newPrincipal
-        })
+          new_values: {
+            new_transaction_id: newTransaction.id,
+            previous_principal: currentPrincipal,
+            additional_amount: addAmount,
+            new_principal: newPrincipal
+          }
+        }),
+        'Additional loan processed'
       ]);
       
       await client.query('COMMIT');
@@ -1615,7 +1625,7 @@ router.post('/renew', async (req, res) => {
       // 5. Log audit trail
       await client.query(`
         INSERT INTO audit_logs (
-          table_name, record_id, action, user_id, old_values, new_values
+          entity_type, entity_id, action, user_id, changes, description
         ) VALUES ($1, $2, $3, $4, $5, $6)
       `, [
         'pawn_tickets',
@@ -1623,16 +1633,19 @@ router.post('/renew', async (req, res) => {
         'UPDATE',
         req.user.id,
         JSON.stringify({ 
-          maturity_date: ticket.maturity_date,
-          expiry_date: ticket.expiry_date,
-          total_amount: ticket.total_amount
+          old_values: { 
+            maturity_date: ticket.maturity_date,
+            expiry_date: ticket.expiry_date,
+            total_amount: ticket.total_amount
+          },
+          new_values: { 
+            maturity_date: maturityDate,
+            expiry_date: expiryDate,
+            renewal_fee: renewFee,
+            total_amount: newTotalAmount
+          }
         }),
-        JSON.stringify({ 
-          maturity_date: maturityDate,
-          expiry_date: expiryDate,
-          renewal_fee: renewFee,
-          total_amount: newTotalAmount
-        })
+        'Ticket renewed'
       ]);
       
       await client.query('COMMIT');

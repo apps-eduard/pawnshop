@@ -61,17 +61,20 @@ const auditLog = async (userId, action, tableName, recordId, oldValues, newValue
 
     await query(`
       INSERT INTO audit_logs (
-        user_id, action, table_name, record_id, 
-        old_values, new_values, branch_id, created_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP)
+        user_id, action, entity_type, entity_id, 
+        changes, description, created_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)
     `, [
       userId,
       action,
       tableName,
       recordId,
-      oldValues ? JSON.stringify(oldValues) : null,
-      newValues ? JSON.stringify(newValues) : null,
-      branchId
+      JSON.stringify({
+        old_values: oldValues || null,
+        new_values: newValues || null,
+        branch_id: branchId
+      }),
+      `Branch ${branchId} - ${action}`
     ]);
 
     console.log(`📝 Audit log created: ${action} on ${tableName} (Branch: ${branchId})`);

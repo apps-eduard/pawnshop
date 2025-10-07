@@ -485,6 +485,17 @@ export class NewLoan implements OnInit, OnDestroy {
         if (response.success && response.data) {
           this.cities = response.data.map(city => ({ id: city.id, name: city.name }));
           console.log('✅ Cities loaded successfully:', this.cities.length, 'cities');
+          
+          // Set Butuan City as default if pawnerForm.cityId is empty
+          if (!this.pawnerForm.cityId && this.cities.length > 0) {
+            const butuanCity = this.cities.find(city => city.name.toLowerCase().includes('butuan'));
+            if (butuanCity) {
+              this.pawnerForm.cityId = butuanCity.id.toString();
+              console.log('✅ Default city set to Butuan City (ID:', butuanCity.id, ')');
+              // Trigger barangay load for Butuan City
+              this.onCityChange();
+            }
+          }
         } else {
           console.warn('⚠️ Cities response not successful:', response);
           this.toastService.showError('Error', 'Failed to load cities - unexpected response format');

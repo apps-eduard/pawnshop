@@ -47,11 +47,11 @@ router.post('/login', [
       // Log failed login attempt (user not found)
       try {
         await pool.query(`
-          INSERT INTO audit_logs (username, action, ip_address, user_agent, created_at)
+          INSERT INTO audit_logs (action, description, ip_address, user_agent, created_at)
           VALUES ($1, $2, $3, $4, NOW())
         `, [
-          username,
           'LOGIN_FAILED_USER_NOT_FOUND',
+          `Failed login attempt for username: ${username}`,
           req.ip || req.connection.remoteAddress || null,
           req.headers['user-agent'] || null
         ]);
@@ -80,12 +80,12 @@ router.post('/login', [
       // Log failed login attempt (invalid password)
       try {
         await pool.query(`
-          INSERT INTO audit_logs (user_id, username, action, ip_address, user_agent, created_at)
+          INSERT INTO audit_logs (user_id, action, description, ip_address, user_agent, created_at)
           VALUES ($1, $2, $3, $4, $5, NOW())
         `, [
-          user.user_id,
-          user.username,
+          user.id,
           'LOGIN_FAILED_INVALID_PASSWORD',
+          `Failed login attempt for user: ${user.username}`,
           req.ip || req.connection.remoteAddress || null,
           req.headers['user-agent'] || null
         ]);
@@ -101,12 +101,12 @@ router.post('/login', [
     }
 
     console.log(`✅ Authentication successful for: ${username}`);
-    console.log(`🎫 Generating JWT tokens for user ID: ${user.user_id}`);
+    console.log(`🎫 Generating JWT tokens for user ID: ${user.id}`);
     
-    // Generate tokens (using user_id for consistency with existing foreign keys)
+    // Generate tokens (using id as the primary key)
     const accessToken = jwt.sign(
       { 
-        userId: user.user_id, 
+        userId: user.id, 
         username: user.username, 
         role: user.role,
         branchId: user.branch_id 
@@ -116,7 +116,7 @@ router.post('/login', [
     );
 
     const refreshToken = jwt.sign(
-      { userId: user.user_id },
+      { userId: user.id },
       process.env.JWT_REFRESH_SECRET,
       { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d' }
     );
@@ -132,12 +132,12 @@ router.post('/login', [
     // Log successful login to audit_logs
     try {
       await pool.query(`
-        INSERT INTO audit_logs (user_id, username, action, ip_address, user_agent, created_at)
+        INSERT INTO audit_logs (user_id, action, description, ip_address, user_agent, created_at)
         VALUES ($1, $2, $3, $4, $5, NOW())
       `, [
-        user.user_id,
-        user.username,
+        user.id,
         'LOGIN_SUCCESS',
+        `User logged in: ${user.username}`,
         req.ip || req.connection.remoteAddress || null,
         req.headers['user-agent'] || null
       ]);
@@ -161,7 +161,7 @@ router.post('/login', [
       message: 'Login successful',
       data: {
         user: {
-          id: user.user_id,
+          id: user.id,
           username: user.username,
           email: user.email,
           firstName: user.first_name,
@@ -227,7 +227,7 @@ router.post('/refresh', [
     // Generate new access token
     const newAccessToken = jwt.sign(
       { 
-        userId: user.user_id, 
+        userId: user.id, 
         username: user.username, 
         role: user.role,
         branchId: user.branch_id 
@@ -266,12 +266,12 @@ router.post('/logout', authenticateToken, async (req, res) => {
   try {
     // Log logout to audit_logs
     await pool.query(`
-      INSERT INTO audit_logs (user_id, username, action, ip_address, user_agent, created_at)
+      INSERT INTO audit_logs (user_id, action, description, ip_address, user_agent, created_at)
       VALUES ($1, $2, $3, $4, $5, NOW())
     `, [
       req.user.userId,
-      req.user.username,
       'LOGOUT',
+      `User logged out: ${req.user.username}`,
       req.ip || req.connection.remoteAddress || null,
       req.headers['user-agent'] || null
     ]);

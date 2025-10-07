@@ -38,9 +38,9 @@ const logAuditTrail = async (req, entity, responseData) => {
 
     const insertQuery = `
       INSERT INTO audit_logs (
-        entity, entity_id, action, performed_by, branch_id, 
-        previous_values, new_values, ip_address, user_agent, timestamp
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
+        entity_type, entity_id, action, user_id, 
+        changes, ip_address, user_agent, created_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
     `;
 
     await db.query(insertQuery, [
@@ -48,9 +48,11 @@ const logAuditTrail = async (req, entity, responseData) => {
       auditData.entityId,
       auditData.action,
       auditData.performedBy,
-      auditData.branchId,
-      JSON.stringify(auditData.previousValues),
-      JSON.stringify(auditData.newValues),
+      JSON.stringify({
+        old_values: auditData.previousValues || null,
+        new_values: auditData.newValues || null,
+        branch_id: auditData.branchId || null
+      }),
       auditData.ipAddress,
       auditData.userAgent
     ]);
