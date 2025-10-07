@@ -277,82 +277,103 @@ export class Renew implements OnInit {
   }
 
   async calculateRenewAmount() {
-    // Calculate days overdue to set automatic discount
-    let autoDiscount = 0;
+    // ===== GRACE PERIOD CALCULATION (LEGACY SYSTEM MATCH) =====
+    // Grace Period: 3 days after maturity date
+    // Within grace period (0-3 days): NO interest, NO penalty
+    // After grace period (4+ days): FULL interest + FULL penalty based on months overdue
+    
+    let isWithinGracePeriod = false;
+    let daysAfterMaturity = 0;
+    
     if (this.transactionInfo.maturedDate) {
       const maturityDate = new Date(this.transactionInfo.maturedDate);
       const now = new Date();
-      const daysOverdue = Math.floor((now.getTime() - maturityDate.getTime()) / (1000 * 60 * 60 * 24));
-
-      // Auto-set discount: Only for days 1-3, 0 if greater than 3 (full month penalty applies)
-      if (daysOverdue === 3) {
-        autoDiscount = 3;
-      } else if (daysOverdue === 2) {
-        autoDiscount = 2;
-      } else if (daysOverdue === 1) {
-        autoDiscount = 1;
-      } else if (daysOverdue > 3) {
-        autoDiscount = 0; // No discount for day 4+ (full month penalty)
-      }
-
-      // Apply auto discount only if user hasn't manually changed it
-      if (this.renewComputation.discount === 0) {
-        this.renewComputation.discount = autoDiscount;
-      }
-
-      console.log(`🎯 Renew auto-discount set: ${autoDiscount} days (overdue: ${daysOverdue} days)`);
+      daysAfterMaturity = Math.floor((now.getTime() - maturityDate.getTime()) / (1000 * 60 * 60 * 24));
+      
+      // Check if within 3-day grace period (days 0, 1, 2, 3 after maturity)
+      isWithinGracePeriod = daysAfterMaturity >= 0 && daysAfterMaturity <= 3;
+      
+      console.log(`🎯 GRACE PERIOD CHECK (Renew):`, {
+        maturityDate: maturityDate.toISOString().split('T')[0],
+        currentDate: now.toISOString().split('T')[0],
+        daysAfterMaturity,
+        isWithinGracePeriod
+      });
     }
 
-    // Calculate interest from grant date to now (EXCLUDING the first 30 days already paid)
-    if (this.transactionInfo.grantedDate) {
+    // Calculate interest based on grace period
+    if (isWithinGracePeriod) {
+      // WITHIN GRACE PERIOD: NO INTEREST
+      this.renewComputation.interest = 0;
+      this.renewComputation.discount = daysAfterMaturity; // Auto-set discount for display
+      
+      console.log(`✅ WITHIN GRACE PERIOD: Interest = ₱0.00 (${daysAfterMaturity} days after maturity)`);
+    } else if (this.transactionInfo.grantedDate && this.transactionInfo.maturedDate) {
+      // AFTER GRACE PERIOD: CALCULATE FULL INTEREST
       const grantDate = new Date(this.transactionInfo.grantedDate);
+      const maturityDate = new Date(this.transactionInfo.maturedDate);
       const now = new Date();
+      
+      // Calculate total days from grant date to now
       const totalDays = Math.floor((now.getTime() - grantDate.getTime()) / (1000 * 60 * 60 * 24));
-
-      // Only count days AFTER the first 30 days (which were already paid in advance)
+      
+      // Days beyond the first 30 days (already paid in advance)
       const additionalDays = Math.max(0, totalDays - 30);
-
-      // Calculate daily interest rate and interest for additional days only
-      const monthlyRate = this.renewComputation.interestRate / 100;
-      const dailyRate = monthlyRate / 30;
-
-      // Interest only for days beyond the first 30 days
-      const baseInterest = this.renewComputation.principalLoan * dailyRate * additionalDays;
-
-      // Apply discount (discount represents days to waive)
-      const discountDays = this.renewComputation.discount;
-      const discountAmount = this.renewComputation.principalLoan * dailyRate * discountDays;
-
-      this.renewComputation.interest = Math.max(0, baseInterest - discountAmount);
-
-      console.log(`📅 Renew days calculation: Total=${totalDays}, Additional=${additionalDays}, Discount=${discountDays} days`);
-      console.log(`💰 Renew interest: Base=${baseInterest.toFixed(2)}, Discount=${discountAmount.toFixed(2)}, Final=${this.renewComputation.interest.toFixed(2)}`);
+      
+      // Calculate monthly interest based on full months
+      const monthlyRate = this.renewComputation.interestRate / 100; // 6% = 0.06
+      const monthsOverdue = Math.floor(additionalDays / 30);
+      
+      // Full month interest calculation (6% × principal × months)
+      this.renewComputation.interest = this.renewComputation.principalLoan * monthlyRate * monthsOverdue;
+      this.renewComputation.discount = 0; // No discount after grace period
+      
+      console.log(`⚠️ AFTER GRACE PERIOD: Interest Calculation (Renew)`, {
+        grantDate: grantDate.toISOString().split('T')[0],
+        maturityDate: maturityDate.toISOString().split('T')[0],
+        currentDate: now.toISOString().split('T')[0],
+        totalDays,
+        additionalDays,
+        monthsOverdue,
+        monthlyRate: (monthlyRate * 100).toFixed(0) + '%',
+        principal: this.renewComputation.principalLoan,
+        interest: this.renewComputation.interest.toFixed(2)
+      });
     } else {
       this.renewComputation.interest = 0;
+      this.renewComputation.discount = 0;
     }
 
-    // Calculate penalty using PenaltyCalculatorService
-    if (this.transactionInfo.maturedDate) {
+    // Calculate penalty based on grace period
+    if (isWithinGracePeriod) {
+      // WITHIN GRACE PERIOD: NO PENALTY
+      this.renewComputation.penalty = 0;
+      
+      console.log(`✅ WITHIN GRACE PERIOD: Penalty = ₱0.00`);
+    } else if (this.transactionInfo.maturedDate) {
+      // AFTER GRACE PERIOD: CALCULATE FULL MONTH PENALTY
       const maturityDate = new Date(this.transactionInfo.maturedDate);
-
-      const penaltyDetails = this.penaltyCalculatorService.calculatePenalty(
-        this.renewComputation.principalLoan,
-        maturityDate
-      );
-
-      // Apply discount to penalty (only for daily penalty, days 1-3)
-      this.renewComputation.penalty = penaltyDetails.penaltyAmount;
-
-      if (!penaltyDetails.isFullMonthPenalty && this.renewComputation.discount > 0) {
-        // For daily penalty (1-3 days overdue), apply discount
-        const discountDays = Math.min(this.renewComputation.discount, penaltyDetails.daysOverdue);
-        const penaltyDiscountAmount = penaltyDetails.dailyPenaltyRate * this.renewComputation.principalLoan * discountDays;
-        this.renewComputation.penalty = Math.max(0, penaltyDetails.penaltyAmount - penaltyDiscountAmount);
-
-        console.log(`⚠️ Renew penalty discount: Days=${discountDays}, Discount=${penaltyDiscountAmount.toFixed(2)}, Final=${this.renewComputation.penalty.toFixed(2)}`);
-      } else {
-        console.log(`⚠️ Renew penalty (full month, no discount): ${this.renewComputation.penalty.toFixed(2)}`);
-      }
+      const now = new Date();
+      
+      // Days after maturity (excluding grace period)
+      const daysAfterGracePeriod = Math.max(0, daysAfterMaturity - 3);
+      
+      // Calculate penalty for full months (2% × principal × ceil(days/30))
+      const penaltyRate = 0.02; // 2% monthly
+      const monthsForPenalty = Math.ceil(daysAfterGracePeriod / 30);
+      
+      this.renewComputation.penalty = this.renewComputation.principalLoan * penaltyRate * monthsForPenalty;
+      
+      console.log(`⚠️ AFTER GRACE PERIOD: Penalty Calculation (Renew)`, {
+        maturityDate: maturityDate.toISOString().split('T')[0],
+        currentDate: now.toISOString().split('T')[0],
+        daysAfterMaturity,
+        daysAfterGracePeriod,
+        monthsForPenalty,
+        penaltyRate: (penaltyRate * 100).toFixed(0) + '%',
+        principal: this.renewComputation.principalLoan,
+        penalty: this.renewComputation.penalty.toFixed(2)
+      });
     } else {
       this.renewComputation.penalty = 0;
     }

@@ -189,26 +189,105 @@ export class AdditionalLoan implements OnInit {
     // Update appraisal value from items
     this.additionalComputation.appraisalValue = this.getTotalAppraisalValue();
 
-    // Calculate interest on existing loan (from grant date to now)
-    if (this.transactionInfo.grantedDate) {
-      const loanDate = new Date(this.transactionInfo.grantedDate);
-      const currentDate = new Date();
-      const loanPeriodDays = Math.ceil((currentDate.getTime() - loanDate.getTime()) / (1000 * 3600 * 24));
-      const monthlyRate = this.additionalComputation.interestRate / 100;
-      const dailyRate = monthlyRate / 30;
-      this.additionalComputation.interest = this.additionalComputation.previousLoan * dailyRate * loanPeriodDays;
-    }
-
-    // Calculate penalty using PenaltyCalculatorService
+    // ===== GRACE PERIOD CALCULATION (LEGACY SYSTEM MATCH) =====
+    // Grace Period: 3 days after maturity date
+    // Within grace period (0-3 days): NO interest, NO penalty
+    // After grace period (4+ days): FULL interest + FULL penalty based on months overdue
+    
+    let isWithinGracePeriod = false;
+    let daysAfterMaturity = 0;
+    
     if (this.transactionInfo.maturedDate) {
       const maturityDate = new Date(this.transactionInfo.maturedDate);
-      const currentDate = new Date();
-      const penaltyDetails = this.penaltyCalculatorService.calculatePenalty(
-        this.additionalComputation.previousLoan,
-        maturityDate,
-        currentDate
-      );
-      this.additionalComputation.penalty = penaltyDetails.penaltyAmount;
+      const now = new Date();
+      daysAfterMaturity = Math.floor((now.getTime() - maturityDate.getTime()) / (1000 * 60 * 60 * 24));
+      
+      // Check if within 3-day grace period (days 0, 1, 2, 3 after maturity)
+      isWithinGracePeriod = daysAfterMaturity >= 0 && daysAfterMaturity <= 3;
+      
+      console.log(`🎯 GRACE PERIOD CHECK (Additional Loan):`, {
+        maturityDate: maturityDate.toISOString().split('T')[0],
+        currentDate: now.toISOString().split('T')[0],
+        daysAfterMaturity,
+        isWithinGracePeriod
+      });
+    }
+
+    // Calculate interest based on grace period
+    if (isWithinGracePeriod) {
+      // WITHIN GRACE PERIOD: NO INTEREST
+      this.additionalComputation.interest = 0;
+      this.additionalComputation.discount = daysAfterMaturity; // Auto-set discount for display
+      
+      console.log(`✅ WITHIN GRACE PERIOD: Interest = ₱0.00 (${daysAfterMaturity} days after maturity)`);
+    } else if (this.transactionInfo.grantedDate && this.transactionInfo.maturedDate) {
+      // AFTER GRACE PERIOD: CALCULATE FULL INTEREST
+      const grantDate = new Date(this.transactionInfo.grantedDate);
+      const maturityDate = new Date(this.transactionInfo.maturedDate);
+      const now = new Date();
+      
+      // Calculate total days from grant date to now
+      const totalDays = Math.floor((now.getTime() - grantDate.getTime()) / (1000 * 60 * 60 * 24));
+      
+      // Days beyond the first 30 days (already paid in advance)
+      const additionalDays = Math.max(0, totalDays - 30);
+      
+      // Calculate monthly interest based on full months
+      const monthlyRate = this.additionalComputation.interestRate / 100; // 6% = 0.06
+      const monthsOverdue = Math.floor(additionalDays / 30);
+      
+      // Full month interest calculation (6% × principal × months)
+      this.additionalComputation.interest = this.additionalComputation.previousLoan * monthlyRate * monthsOverdue;
+      this.additionalComputation.discount = 0; // No discount after grace period
+      
+      console.log(`⚠️ AFTER GRACE PERIOD: Interest Calculation (Additional Loan)`, {
+        grantDate: grantDate.toISOString().split('T')[0],
+        maturityDate: maturityDate.toISOString().split('T')[0],
+        currentDate: now.toISOString().split('T')[0],
+        totalDays,
+        additionalDays,
+        monthsOverdue,
+        monthlyRate: (monthlyRate * 100).toFixed(0) + '%',
+        principal: this.additionalComputation.previousLoan,
+        interest: this.additionalComputation.interest.toFixed(2)
+      });
+    } else {
+      this.additionalComputation.interest = 0;
+      this.additionalComputation.discount = 0;
+    }
+
+    // Calculate penalty based on grace period
+    if (isWithinGracePeriod) {
+      // WITHIN GRACE PERIOD: NO PENALTY
+      this.additionalComputation.penalty = 0;
+      
+      console.log(`✅ WITHIN GRACE PERIOD: Penalty = ₱0.00`);
+    } else if (this.transactionInfo.maturedDate) {
+      // AFTER GRACE PERIOD: CALCULATE FULL MONTH PENALTY
+      const maturityDate = new Date(this.transactionInfo.maturedDate);
+      const now = new Date();
+      
+      // Days after maturity (excluding grace period)
+      const daysAfterGracePeriod = Math.max(0, daysAfterMaturity - 3);
+      
+      // Calculate penalty for full months (2% × principal × ceil(days/30))
+      const penaltyRate = 0.02; // 2% monthly
+      const monthsForPenalty = Math.ceil(daysAfterGracePeriod / 30);
+      
+      this.additionalComputation.penalty = this.additionalComputation.previousLoan * penaltyRate * monthsForPenalty;
+      
+      console.log(`⚠️ AFTER GRACE PERIOD: Penalty Calculation (Additional Loan)`, {
+        maturityDate: maturityDate.toISOString().split('T')[0],
+        currentDate: now.toISOString().split('T')[0],
+        daysAfterMaturity,
+        daysAfterGracePeriod,
+        monthsForPenalty,
+        penaltyRate: (penaltyRate * 100).toFixed(0) + '%',
+        principal: this.additionalComputation.previousLoan,
+        penalty: this.additionalComputation.penalty.toFixed(2)
+      });
+    } else {
+      this.additionalComputation.penalty = 0;
     }
 
     // Calculate available amount (50% of appraisal value minus previous loan, interest, and penalty)

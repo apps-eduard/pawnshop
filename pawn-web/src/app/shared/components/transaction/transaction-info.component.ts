@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TransactionCalculationService } from '../../../core/services/transaction-calculation.service';
@@ -142,6 +142,12 @@ export interface PawnedItem {
                 readonly>
             </div>
             <div class="flex-1 min-w-[140px]">
+              <label class="block text-xs font-medium text-green-700 dark:text-green-400 mb-1">Redeem Date (Grace Period)</label>
+              <input type="date" [(ngModel)]="transactionInfo.gracePeriodDate"
+                class="w-full px-2 py-1 text-sm border-2 border-green-400 dark:border-green-500 rounded focus:outline-none focus:ring-2 focus:ring-green-500 bg-green-50 dark:bg-green-900/20 text-green-900 dark:text-green-300 font-semibold"
+                readonly>
+            </div>
+            <div class="flex-1 min-w-[140px]">
               <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Expired Date</label>
               <input type="date" [(ngModel)]="transactionInfo.expiredDate"
                 class="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
@@ -223,8 +229,15 @@ export interface PawnedItem {
     </div>
   `
 })
-export class TransactionInfoComponent {
+export class TransactionInfoComponent implements OnChanges {
   constructor(private transactionCalcService: TransactionCalculationService) {}
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['transactionInfo']) {
+      console.log('🔄 TRANSACTION-INFO COMPONENT - transactionInfo changed:', this.transactionInfo);
+      console.log('📅 REDEEM DATE in component:', this.transactionInfo.gracePeriodDate);
+    }
+  }
 
   @Input() customerInfo: CustomerInfo = {
     contactNumber: '',

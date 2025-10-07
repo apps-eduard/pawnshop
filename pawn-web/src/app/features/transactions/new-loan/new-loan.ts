@@ -237,7 +237,7 @@ export class NewLoan implements OnInit, OnDestroy {
     this.loanForm.loanDate = this.formatDateLocal(today);
     this.loanForm.maturityDate = this.getDefaultMaturityDate();
     this.loanForm.expiryDate = this.getDefaultExpiryDate();
-    
+
     // Calculate grace period date (maturity + 3 days)
     const maturityDate = new Date(this.loanForm.maturityDate);
     const gracePeriodDate = new Date(maturityDate);
@@ -871,7 +871,7 @@ export class NewLoan implements OnInit, OnDestroy {
       this.loanForm.loanDate = this.loanForm.transactionDate;
       this.loanForm.maturityDate = this.getDefaultMaturityDate();
       this.loanForm.expiryDate = this.getDefaultExpiryDate();
-      
+
       // Calculate grace period date (maturity + 3 days)
       if (this.loanForm.maturityDate) {
         const maturityDate = new Date(this.loanForm.maturityDate);
@@ -887,7 +887,7 @@ export class NewLoan implements OnInit, OnDestroy {
     if (this.autoCalculateDates) {
       this.loanForm.maturityDate = this.getDefaultMaturityDate();
       this.loanForm.expiryDate = this.getDefaultExpiryDate();
-      
+
       // Calculate grace period date (maturity + 3 days)
       if (this.loanForm.maturityDate) {
         const maturityDate = new Date(this.loanForm.maturityDate);

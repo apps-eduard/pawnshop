@@ -3,6 +3,9 @@
 ## Overview
 Successfully implemented automatic calculation of the Redeem Date (Grace Period Date) across all components. The Redeem Date is automatically calculated as **Maturity Date + 3 days** and updates whenever any date changes in the New Loan form.
 
+## CRITICAL DISCOVERY 🔍
+The transaction-info component uses an **INLINE TEMPLATE** (in the .ts file), NOT an external .html file. All changes must be made in `transaction-info.component.ts`, not the .html file!
+
 ---
 
 ## What Was Implemented

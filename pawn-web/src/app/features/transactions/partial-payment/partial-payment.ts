@@ -144,111 +144,103 @@ export class PartialPayment implements OnInit {
     // Update appraisal value from items
     this.partialComputation.appraisalValue = this.getTotalAppraisalValue();
 
-    // Calculate days overdue to set automatic discount
-    let autoDiscount = 0;
+    // ===== GRACE PERIOD CALCULATION (LEGACY SYSTEM MATCH) =====
+    // Grace Period: 3 days after maturity date
+    // Within grace period (0-3 days): NO interest, NO penalty
+    // After grace period (4+ days): FULL interest + FULL penalty based on months overdue
+
+    let isWithinGracePeriod = false;
+    let daysAfterMaturity = 0;
+
     if (this.transactionInfo.maturedDate) {
       const maturityDate = new Date(this.transactionInfo.maturedDate);
       const now = new Date();
-      const daysOverdue = Math.floor((now.getTime() - maturityDate.getTime()) / (1000 * 60 * 60 * 24));
+      daysAfterMaturity = Math.floor((now.getTime() - maturityDate.getTime()) / (1000 * 60 * 60 * 24));
 
-      // Auto-set discount: Only for days 1-3, 0 if greater than 3 (full month penalty applies)
-      if (daysOverdue === 3) {
-        autoDiscount = 3;
-      } else if (daysOverdue === 2) {
-        autoDiscount = 2;
-      } else if (daysOverdue === 1) {
-        autoDiscount = 1;
-      } else if (daysOverdue > 3) {
-        autoDiscount = 0; // No discount for day 4+ (full month penalty)
-      }
+      // Check if within 3-day grace period (days 0, 1, 2, 3 after maturity)
+      isWithinGracePeriod = daysAfterMaturity >= 0 && daysAfterMaturity <= 3;
 
-      // Apply auto discount only if user hasn't manually changed it
-      if (this.partialComputation.discount === 0) {
-        this.partialComputation.discount = autoDiscount;
-      }
-
-      console.log(`🎯 Auto-discount set: ${autoDiscount} days (overdue: ${daysOverdue} days)`);
+      console.log(`🎯 GRACE PERIOD CHECK:`, {
+        maturityDate: maturityDate.toISOString().split('T')[0],
+        currentDate: now.toISOString().split('T')[0],
+        daysAfterMaturity,
+        isWithinGracePeriod
+      });
     }
 
-    // Calculate interest from grant date to now (EXCLUDING the first 30 days already paid)
-    if (this.transactionInfo.grantedDate) {
+    // Calculate interest based on grace period
+    if (isWithinGracePeriod) {
+      // WITHIN GRACE PERIOD: NO INTEREST
+      this.partialComputation.interest = 0;
+      this.partialComputation.discount = daysAfterMaturity; // Auto-set discount for display
+
+      console.log(`✅ WITHIN GRACE PERIOD: Interest = ₱0.00 (${daysAfterMaturity} days after maturity)`);
+    } else if (this.transactionInfo.grantedDate && this.transactionInfo.maturedDate) {
+      // AFTER GRACE PERIOD: CALCULATE FULL INTEREST
       const grantDate = new Date(this.transactionInfo.grantedDate);
+      const maturityDate = new Date(this.transactionInfo.maturedDate);
       const now = new Date();
+
+      // Calculate total days from grant date to now
       const totalDays = Math.floor((now.getTime() - grantDate.getTime()) / (1000 * 60 * 60 * 24));
 
-      // Only count days AFTER the first 30 days (which were already paid in advance)
+      // Days beyond the first 30 days (already paid in advance)
       const additionalDays = Math.max(0, totalDays - 30);
 
-      // Calculate daily interest rate and interest for additional days only
-      const monthlyRate = this.partialComputation.interestRate / 100;
-      const dailyRate = monthlyRate / 30;
+      // Calculate monthly interest based on full months
+      const monthlyRate = this.partialComputation.interestRate / 100; // 6% = 0.06
+      const monthsOverdue = Math.floor(additionalDays / 30);
 
-      // Interest only for days beyond the first 30 days
-      const baseInterest = this.partialComputation.principalLoan * dailyRate * additionalDays;
+      // Full month interest calculation (6% × principal × months)
+      this.partialComputation.interest = this.partialComputation.principalLoan * monthlyRate * monthsOverdue;
+      this.partialComputation.discount = 0; // No discount after grace period
 
-      // Apply discount (discount represents days to waive)
-      const discountDays = this.partialComputation.discount;
-      const discountAmount = this.partialComputation.principalLoan * dailyRate * discountDays;
-
-      this.partialComputation.interest = Math.max(0, baseInterest - discountAmount);
-
-      console.log(`📅 Days calculation: Total=${totalDays}, Additional=${additionalDays}, Discount=${discountDays} days`);
-      console.log(`💰 Interest: Base=${baseInterest.toFixed(2)}, Discount=${discountAmount.toFixed(2)}, Final=${this.partialComputation.interest.toFixed(2)}`);
+      console.log(`⚠️ AFTER GRACE PERIOD: Interest Calculation`, {
+        grantDate: grantDate.toISOString().split('T')[0],
+        maturityDate: maturityDate.toISOString().split('T')[0],
+        currentDate: now.toISOString().split('T')[0],
+        totalDays,
+        additionalDays,
+        monthsOverdue,
+        monthlyRate: (monthlyRate * 100).toFixed(0) + '%',
+        principal: this.partialComputation.principalLoan,
+        interest: this.partialComputation.interest.toFixed(2)
+      });
     } else {
       this.partialComputation.interest = 0;
+      this.partialComputation.discount = 0;
     }
 
-    // Calculate penalty using PenaltyCalculatorService
-    if (this.transactionInfo.maturedDate) {
+    // Calculate penalty based on grace period
+    if (isWithinGracePeriod) {
+      // WITHIN GRACE PERIOD: NO PENALTY
+      this.partialComputation.penalty = 0;
+
+      console.log(`✅ WITHIN GRACE PERIOD: Penalty = ₱0.00`);
+    } else if (this.transactionInfo.maturedDate) {
+      // AFTER GRACE PERIOD: CALCULATE FULL MONTH PENALTY
       const maturityDate = new Date(this.transactionInfo.maturedDate);
       const now = new Date();
 
-      // Use the penalty calculator service to get the base penalty
-      const penaltyDetails = this.penaltyCalculatorService.calculatePenalty(
-        this.partialComputation.principalLoan,
-        maturityDate,
-        now
-      );
+      // Days after maturity (excluding grace period)
+      const daysAfterGracePeriod = Math.max(0, daysAfterMaturity - 3);
 
-      console.log(`⚠️ Penalty Details from Service:`, {
-        daysOverdue: penaltyDetails.daysOverdue,
-        penaltyAmount: penaltyDetails.penaltyAmount,
-        calculationMethod: penaltyDetails.calculationMethod,
-        isFullMonthPenalty: penaltyDetails.isFullMonthPenalty,
-        dailyPenaltyRate: penaltyDetails.dailyPenaltyRate,
-        monthlyPenaltyAmount: penaltyDetails.monthlyPenaltyAmount
+      // Calculate penalty for full months (2% × principal × ceil(days/30))
+      const penaltyRate = 0.02; // 2% monthly
+      const monthsForPenalty = Math.ceil(daysAfterGracePeriod / 30);
+
+      this.partialComputation.penalty = this.partialComputation.principalLoan * penaltyRate * monthsForPenalty;
+
+      console.log(`⚠️ AFTER GRACE PERIOD: Penalty Calculation`, {
+        maturityDate: maturityDate.toISOString().split('T')[0],
+        currentDate: now.toISOString().split('T')[0],
+        daysAfterMaturity,
+        daysAfterGracePeriod,
+        monthsForPenalty,
+        penaltyRate: (penaltyRate * 100).toFixed(0) + '%',
+        principal: this.partialComputation.principalLoan,
+        penalty: this.partialComputation.penalty.toFixed(2)
       });
-
-      if (penaltyDetails.daysOverdue > 0) {
-        let finalPenalty = penaltyDetails.penaltyAmount;
-
-        // Apply discount based on calculation method
-        if (this.partialComputation.discount > 0) {
-          if (penaltyDetails.isFullMonthPenalty) {
-            // For full month penalty (4+ days), discount can't reduce it - user already gets full month
-            // Unless they want to waive it completely, but that's administrative
-            finalPenalty = penaltyDetails.penaltyAmount;
-            console.log(`⚠️ Full month penalty applied (4+ days), discount does not apply`);
-          } else {
-            // For daily penalty (1-3 days), apply discount per day
-            const discountDays = Math.min(this.partialComputation.discount, penaltyDetails.daysOverdue);
-            const penaltyDiscountAmount = penaltyDetails.dailyPenaltyRate * this.partialComputation.principalLoan * discountDays;
-            finalPenalty = Math.max(0, penaltyDetails.penaltyAmount - penaltyDiscountAmount);
-
-            console.log(`⚠️ Daily penalty with discount:`, {
-              basePenalty: penaltyDetails.penaltyAmount.toFixed(2),
-              daysOverdue: penaltyDetails.daysOverdue,
-              discountDays,
-              penaltyDiscountAmount: penaltyDiscountAmount.toFixed(2),
-              finalPenalty: finalPenalty.toFixed(2)
-            });
-          }
-        }
-
-        this.partialComputation.penalty = finalPenalty;
-      } else {
-        this.partialComputation.penalty = 0;
-      }
     } else {
       this.partialComputation.penalty = 0;
     }
@@ -412,6 +404,15 @@ export class PartialPayment implements OnInit {
       const result = await response.json();
 
       if (result.success && result.data) {
+        console.log('🔍 SEARCH RESPONSE - Full data:', result.data);
+        console.log('📅 REDEEM DATE - gracePeriodDate from backend:', result.data.gracePeriodDate);
+        console.log('📅 REDEEM DATE - All date fields:', {
+          transactionDate: result.data.transactionDate,
+          dateGranted: result.data.dateGranted,
+          dateMatured: result.data.dateMatured,
+          gracePeriodDate: result.data.gracePeriodDate,
+          dateExpired: result.data.dateExpired
+        });
         await this.populateForm(result.data); // Await the async populateForm
         this.transactionFound = true;
         this.toastService.showSuccess('Success', 'Transaction found and loaded!');
@@ -456,6 +457,9 @@ export class PartialPayment implements OnInit {
       expiredDate: this.formatDate(data.dateExpired),
       loanStatus: this.getStatusText(data.status)
     };
+
+    console.log('✅ TRANSACTION INFO POPULATED:', this.transactionInfo);
+    console.log('📅 REDEEM DATE - After formatting:', this.transactionInfo.gracePeriodDate);
 
     // Populate items
     this.pawnedItems = (data.items || []).map((item: any, index: number) => ({

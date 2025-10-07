@@ -57,28 +57,30 @@
       </svg>
       <h3 class="text-compact-base font-semibold text-gray-900">Transaction Information</h3>
     </div>
-    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-compact">
-      <div class="flex-1">
+    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7 gap-compact">
+      <div>
         <label class="block text-compact-xs font-medium text-gray-700 mb-0.5">Transaction Date</label>
         <p class="text-compact-xs text-gray-900 bg-gray-50 py-compact px-compact rounded border text-center">{{ transactionInfo.transactionDate | date: 'MMM dd, yyyy' }}</p>
       </div>
-      <div class="flex-1">
+      <div>
         <label class="block text-compact-xs font-medium text-gray-700 mb-0.5">Granted Date</label>
         <p class="text-compact-xs text-gray-900 bg-gray-50 py-compact px-compact rounded border text-center">{{ transactionInfo.grantedDate | date: 'MMM dd, yyyy' }}</p>
       </div>
-      <div class="flex-1">
+      <div>
         <label class="block text-compact-xs font-medium text-gray-700 mb-0.5">Matured Date</label>
         <p class="text-compact-xs text-gray-900 bg-gray-50 py-compact px-compact rounded border text-center">{{ transactionInfo.maturedDate | date: 'MMM dd, yyyy' }}</p>
       </div>
-      <div class="flex-1">
-        <label class="block text-compact-xs font-medium text-green-700 mb-0.5">Redeem Date</label>
-        <p class="text-compact-xs text-green-900 bg-green-50 py-compact px-compact rounded border border-green-200 text-center font-medium">{{ transactionInfo.gracePeriodDate | date: 'MMM dd, yyyy' }}</p>
+      <div class="border-4 border-red-500">
+        <label class="block text-xs font-medium text-green-700 mb-1">Redeem Date</label>
+        <p class="text-xs text-green-900 bg-green-100 py-2 px-3 rounded border-2 border-green-400 text-center font-bold">
+          {{ transactionInfo.gracePeriodDate | date: 'MMM dd, yyyy' }}
+        </p>
       </div>
-      <div class="flex-1">
+      <div>
         <label class="block text-compact-xs font-medium text-gray-700 mb-0.5">Expired Date</label>
         <p class="text-compact-xs text-gray-900 bg-gray-50 py-compact px-compact rounded border text-center">{{ transactionInfo.expiredDate | date: 'MMM dd, yyyy' }}</p>
       </div>
-      <div class="flex-1">
+      <div>
         <label class="block text-compact-xs font-medium text-gray-700 mb-0.5">Status</label>
         <div class="flex justify-center">
           <span [ngClass]="getDurationBadgeClasses(transactionInfo.status, transactionInfo.duration)" class="text-compact-xs">
@@ -86,7 +88,7 @@
           </span>
         </div>
       </div>
-      <div class="flex-1">
+      <div>
         <label class="block text-compact-xs font-medium text-gray-700 mb-0.5">Duration</label>
         <div class="flex justify-center">
           <span [ngClass]="getDurationBadgeClasses(transactionInfo.status, transactionInfo.duration)" class="text-compact-xs">
