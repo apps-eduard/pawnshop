@@ -69,7 +69,7 @@
                   <input id="firstName" type="text" [(ngModel)]="pawnerForm.firstName" placeholder="First Name *" required
                     (blur)="markPawnerFieldTouched('firstName')" (input)="markPawnerFieldTouched('firstName')"
                     [class]="'w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 dark:bg-gray-700 dark:text-white bg-white transition-all ' +
-                            (isPawnerFieldInvalid('firstName') ? 'border-red-500 focus:ring-red-400 focus:border-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:border-blue-500')">
+                            (isPawnerFieldInvalid('firstName') ? 'border-red -500 focus:ring-red-400 focus:border-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:border-blue-500')">
                   <div *ngIf="isPawnerFieldInvalid('firstName')" class="text-xs text-red-500 mt-1">First name is required</div>
                 </div>
                 <div>
@@ -198,61 +198,69 @@
               Item Information
             </h2>
           </div>
-          <div class="p-2 lg:p-3 flex-1 flex flex-col min-h-0 overflow-y-auto custom-scrollbar">
+          <div class="p-2 lg:p-3 flex-1 flex flex-col min-h-0">
 
           <!-- Date Fields Section -->
-          <div class="mb-2 p-2 lg:p-2.5 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg border border-blue-200/60 dark:border-blue-700/60 shadow-sm flex-shrink-0">
-            <div class="flex items-center justify-between mb-1.5 lg:mb-2">
+          <div class="mb-1 p-1 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded border border-blue-200/60 dark:border-blue-700/60 shadow-sm flex-shrink-0">
+            <div class="flex items-center justify-between mb-0.5">
               <div class="flex items-center">
-                <svg class="w-4 h-4 mr-1.5 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-3 h-3 mr-0.5 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                 </svg>
-                <h5 class="text-sm font-semibold text-gray-900 dark:text-gray-100">Transaction Dates</h5>
+                <h5 class="text-xs font-medium text-gray-900 dark:text-gray-100">Dates</h5>
               </div>
               <!-- Auto-calculate toggle -->
               <label class="flex items-center cursor-pointer">
                 <input type="checkbox" [(ngModel)]="autoCalculateDates"
-                  class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
-                <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">Auto-calculate</span>
+                  class="w-2.5 h-2.5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-1 dark:bg-gray-700 dark:border-gray-600">
+                <span class="ml-1 text-xs text-gray-700 dark:text-gray-300">Auto</span>
               </label>
             </div>
-            <div class="grid grid-cols-2 gap-1.5">
-              <!-- Date Transaction -->
-              <div>
-                <label for="dateTransaction" class="block text-xs lg:text-sm font-medium text-gray-700 dark:text-gray-300 mb-0.5">Date Transaction</label>
-                <input id="dateTransaction" type="date" [(ngModel)]="loanForm.transactionDate" name="dateTransaction" tabindex="-1"
-                  (ngModelChange)="onTransactionDateChange()"
-                  class="w-full px-2 py-1 lg:px-3 lg:py-1.5 text-xs lg:text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white bg-white transition-all">
+            <div class="space-y-0.5">
+              <!-- Redeem Date (Grace Period) - Centered at top -->
+              <div class="flex justify-center">
+                <div class="w-2/3">
+                  <label for="redeemDate" class="block text-xs font-medium text-green-700 dark:text-green-400 text-center">Redeem</label>
+                  <input id="redeemDate" type="date" [(ngModel)]="loanForm.gracePeriodDate" name="redeemDate" tabindex="-1" readonly
+                    class="w-full px-1.5 py-0.5 text-xs border border-green-300 dark:border-green-600 rounded bg-green-50 dark:bg-green-900/30 text-green-900 dark:text-green-300 font-medium cursor-not-allowed">
+                </div>
               </div>
 
-              <!-- Date Granted -->
-              <div>
-                <label for="dateGranted" class="block text-xs lg:text-sm font-medium text-gray-700 dark:text-gray-300 mb-0.5">Date Granted</label>
-                <input id="dateGranted" type="date" [(ngModel)]="loanForm.loanDate" name="dateGranted" tabindex="-1"
-                  (ngModelChange)="onLoanDateChange()"
-                  class="w-full px-2 py-1 lg:px-3 lg:py-1.5 text-xs lg:text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white bg-white transition-all">
+              <!-- Row 1: Date Transaction and Date Granted -->
+              <div class="grid grid-cols-2 gap-0.5">
+                <!-- Date Transaction -->
+                <div>
+                  <label for="dateTransaction" class="block text-xs text-gray-700 dark:text-gray-300">Transaction</label>
+                  <input id="dateTransaction" type="date" [(ngModel)]="loanForm.transactionDate" name="dateTransaction" tabindex="-1"
+                    (ngModelChange)="onTransactionDateChange()"
+                    class="w-full px-1.5 py-0.5 text-xs border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white bg-white">
+                </div>
+
+                <!-- Date Granted -->
+                <div>
+                  <label for="dateGranted" class="block text-xs text-gray-700 dark:text-gray-300">Granted</label>
+                  <input id="dateGranted" type="date" [(ngModel)]="loanForm.loanDate" name="dateGranted" tabindex="-1"
+                    (ngModelChange)="onLoanDateChange()"
+                    class="w-full px-1.5 py-0.5 text-xs border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white bg-white">
+                </div>
               </div>
 
-              <!-- Date Mature -->
-              <div>
-                <label for="dateMature" class="block text-xs lg:text-sm font-medium text-gray-700 dark:text-gray-300 mb-0.5">Date Mature</label>
-                <input id="dateMature" type="date" [(ngModel)]="loanForm.maturityDate" name="dateMature" tabindex="-1"
-                  (ngModelChange)="onMaturityDateChange()"
-                  class="w-full px-2 py-1 lg:px-3 lg:py-1.5 text-xs lg:text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white bg-white transition-all">
-              </div>
+              <!-- Row 2: Date Mature and Date Expire -->
+              <div class="grid grid-cols-2 gap-0.5">
+                <!-- Date Mature -->
+                <div>
+                  <label for="dateMature" class="block text-xs text-gray-700 dark:text-gray-300">Mature</label>
+                  <input id="dateMature" type="date" [(ngModel)]="loanForm.maturityDate" name="dateMature" tabindex="-1"
+                    (ngModelChange)="onMaturityDateChange()"
+                    class="w-full px-1.5 py-0.5 text-xs border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:text-white bg-white">
+                </div>
 
-              <!-- Redeem Date (Grace Period) -->
-              <div>
-                <label for="redeemDate" class="block text-xs lg:text-sm font-semibold text-green-700 dark:text-green-400 mb-0.5">Redeem Date</label>
-                <input id="redeemDate" type="date" [(ngModel)]="loanForm.gracePeriodDate" name="redeemDate" tabindex="-1" readonly
-                  class="w-full px-2 py-1 lg:px-3 lg:py-1.5 text-xs lg:text-sm border border-green-300 dark:border-green-600 rounded-lg bg-green-50 dark:bg-green-900/30 text-green-900 dark:text-green-300 font-medium cursor-not-allowed">
-              </div>
-
-              <!-- Date Expire -->
-              <div>
-                <label for="dateExpire" class="block text-xs lg:text-sm font-medium text-gray-700 dark:text-gray-300 mb-0.5">Date Expire</label>
-                <input id="dateExpire" type="date" [(ngModel)]="loanForm.expiryDate" name="dateExpire" tabindex="-1"
-                  class="w-full px-2 py-1 lg:px-3 lg:py-1.5 text-xs lg:text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white bg-white transition-all">
+                <!-- Date Expire -->
+                <div>
+                  <label for="dateExpire" class="block text-xs text-gray-700 dark:text-gray-300">Expire</label>
+                  <input id="dateExpire" type="date" [(ngModel)]="loanForm.expiryDate" name="dateExpire" tabindex="-1"
+                    class="w-full px-1.5 py-0.5 text-xs border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white bg-white">
+                </div>
               </div>
             </div>
           </div>
@@ -270,7 +278,7 @@
               <form (ngSubmit)="addItem()" class="space-y-1 lg:space-y-1.5">
                 <div class="space-y-1 lg:space-y-1.5">
                   <div>
-                    <label class="block text-xs lg:text-sm font-medium text-gray-700 dark:text-gray-300 mb-0.5">
+                    <label class="block text-xs lg:text-sm font-small text-gray-700 dark:text-gray-300 mb-0.5">
                       Category <span *ngIf="areItemFieldsRequired()" class="text-red-500">*</span>
                     </label>
                     <select [(ngModel)]="itemForm.category" name="category" [required]="areItemFieldsRequired()" (change)="onCategoryChange()" [disabled]="isCategoryDisabled()"
@@ -284,7 +292,7 @@
                   </div>
 
                   <div>
-                    <label class="block text-xs lg:text-sm font-medium text-gray-700 dark:text-gray-300 mb-0.5">
+                    <label class="block text-xs lg:text-sm font-small text-gray-700 dark:text-gray-300 mb-0.5">
                       Description <span *ngIf="areItemFieldsRequired()" class="text-red-500">*</span>
                     </label>
                     <div class="flex gap-1.5">
@@ -308,7 +316,7 @@
                   </div>
 
                   <div>
-                    <label class="block text-xs lg:text-sm font-medium text-gray-700 dark:text-gray-300 mb-0.5">
+                    <label class="block text-xs lg:text-sm font-small text-gray-700 dark:text-gray-300 mb-0.5">
                       Notes
                     </label>
                     <input type="text" [(ngModel)]="itemForm.description" name="description"
@@ -317,7 +325,7 @@
                   </div>
 
                   <div>
-                    <label class="block text-xs lg:text-sm font-medium text-gray-700 dark:text-gray-300 mb-0.5">
+                    <label class="block text-xs lg:text-sm font-small text-gray-700 dark:text-gray-300 mb-0.5">
                       Appraisal Value <span *ngIf="areItemFieldsRequired()" class="text-red-500">*</span>
                     </label>
                     <div class="relative">
@@ -366,70 +374,96 @@
           <div class="p-3 space-y-2 flex-1 overflow-y-auto custom-scrollbar">
 
             <!-- Total Appraisal -->
-            <div class="bg-blue-50 dark:bg-blue-900/30 p-2.5 rounded-lg shadow-sm">
+            <div class="bg-slate-50 dark:bg-slate-800/30 p-2.5 rounded shadow-sm border border-slate-200 dark:border-slate-700">
               <div class="flex justify-between items-center">
-                <label class="text-sm font-semibold text-blue-700 dark:text-blue-300">Total Appraisal</label>
-                <div class="text-base font-bold text-blue-600 dark:text-blue-400">
+                <span class="text-sm font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
+                  </svg>
+                  Total Appraisal
+                </span>
+                <div class="text-base font-semibold text-slate-700 dark:text-slate-300">
                   ₱{{ getTotalAppraisalValue() | number:'1.2-2' }}
                 </div>
               </div>
             </div>
 
             <!-- Principal Loan -->
-            <div [class]="'p-2.5 rounded-lg shadow-sm ' + (loanForm.loanAmount > 0 ? 'bg-green-50 dark:bg-green-900/30' : 'bg-red-50 dark:bg-red-900/30')">
+            <div [class]="'p-2.5 rounded shadow-sm border-2 ' + (loanForm.loanAmount > 0 ? 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-200 dark:border-emerald-700' : 'bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-700')">
               <div class="flex justify-between items-center gap-2">
-                <label [class]="'text-sm font-semibold ' + (loanForm.loanAmount > 0 ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300')">
+                <span [class]="'text-sm font-medium flex items-center gap-1 ' + (loanForm.loanAmount > 0 ? 'text-emerald-700 dark:text-emerald-300' : 'text-red-700 dark:text-red-300')">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                  </svg>
                   Principal Loan <span *ngIf="loanForm.loanAmount <= 0" class="text-red-500">*</span>
-                </label>
+                </span>
                 <input type="text"
                   #principalLoanInput
                   appCurrencyInput
                   [maxValue]="getTotalAppraisalValue()"
                   (valueChange)="onPrincipalLoanChange($event)"
                   [class]="'w-[55%] px-3 py-1.5 text-sm border rounded-lg focus:outline-none focus:ring-2 dark:text-white text-right font-semibold ' +
-                          (loanForm.loanAmount > 0 ? 'border-green-300 dark:border-green-600 focus:ring-green-500 dark:bg-green-900/40' : 'border-red-300 dark:border-red-600 focus:ring-red-500 dark:bg-red-900/40')"
+                          (loanForm.loanAmount > 0 ? 'border-emerald-300 dark:border-emerald-600 focus:ring-emerald-500 dark:bg-emerald-900/40 bg-white' : 'border-red-300 dark:border-red-600 focus:ring-red-500 dark:bg-red-900/40 bg-white')"
                   placeholder="0.00"
                   [title]="'Maximum: ₱' + (getTotalAppraisalValue() | number:'1.2-2')">
               </div>
             </div>
 
             <!-- Interest Rate -->
-            <div class="bg-yellow-50 dark:bg-yellow-900/30 p-2.5 rounded-lg shadow-sm">
+            <div class="bg-amber-50 dark:bg-amber-900/30 p-2.5 rounded shadow-sm border border-amber-200 dark:border-amber-700">
               <div class="flex justify-between items-center">
-                <label class="text-sm font-semibold text-yellow-700 dark:text-yellow-300">Rate</label>
-                <div class="text-sm font-bold text-yellow-600 dark:text-yellow-400">
+                <span class="text-sm font-medium text-amber-700 dark:text-amber-300 flex items-center gap-1">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                  </svg>
+                  Rate
+                </span>
+                <div class="text-sm font-semibold text-amber-700 dark:text-amber-400">
                   {{ loanForm.interestRate }}%
                 </div>
               </div>
             </div>
 
             <!-- Interest Amount -->
-            <div class="bg-orange-50 dark:bg-orange-900/30 p-2.5 rounded-lg shadow-sm">
+            <div class="bg-orange-50 dark:bg-orange-900/30 p-2.5 rounded shadow-sm border border-orange-200 dark:border-orange-700">
               <div class="flex justify-between items-center">
-                <label class="text-sm font-semibold text-orange-700 dark:text-orange-300">Interest</label>
-                <div class="text-sm font-bold text-orange-600 dark:text-orange-400">
+                <span class="text-sm font-medium text-orange-700 dark:text-orange-300 flex items-center gap-1">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                  </svg>
+                  Interest
+                </span>
+                <div class="text-sm font-semibold text-orange-700 dark:text-orange-400">
                   ₱{{ getInterestAmount() | number:'1.2-2' }}
                 </div>
               </div>
             </div>
 
             <!-- Service Charge -->
-            <div class="bg-indigo-50 dark:bg-indigo-900/30 p-2.5 rounded-lg shadow-sm">
+            <div class="bg-indigo-50 dark:bg-indigo-900/30 p-2.5 rounded shadow-sm border border-indigo-200 dark:border-indigo-700">
               <div class="flex justify-between items-center">
-                <label class="text-sm font-semibold text-indigo-700 dark:text-indigo-300">Service Charge</label>
-                <div class="text-sm font-bold text-indigo-600 dark:text-indigo-400">
+                <span class="text-sm font-medium text-indigo-700 dark:text-indigo-300 flex items-center gap-1">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                  </svg>
+                  Service Charge
+                </span>
+                <div class="text-sm font-semibold text-indigo-700 dark:text-indigo-400">
                   ₱{{ getServiceCharge() | number:'1.2-2' }}
                 </div>
               </div>
             </div>
 
             <!-- Net Proceeds -->
-            <div [class]="'p-3 rounded-lg shadow-md ' + (getNetProceeds() > 0 ? 'bg-gradient-to-r from-green-500 to-green-600' : 'bg-gradient-to-r from-red-500 to-red-600')">
+            <div [class]="'p-2.5 rounded shadow-sm border-2 ' + (getNetProceeds() > 0 ? 'bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-700' : 'bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-700')">
               <div class="flex justify-between items-center">
-                <label class="text-sm font-bold text-white">
-                  Net Proceeds <span *ngIf="getNetProceeds() <= 0" class="text-yellow-200">*</span>
-                </label>
-                <div class="text-lg font-bold text-white">
+                <span [class]="'text-sm font-medium flex items-center gap-1 ' + (getNetProceeds() > 0 ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300')">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                  </svg>
+                  Net Proceeds <span *ngIf="getNetProceeds() <= 0" class="text-yellow-500">*</span>
+                </span>
+                <div [class]="'text-lg font-bold ' + (getNetProceeds() > 0 ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400')">
                   ₱{{ getNetProceeds() | number:'1.2-2' }}
                 </div>
               </div>
