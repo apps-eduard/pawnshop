@@ -341,7 +341,6 @@ export class NewLoan implements OnInit, OnDestroy {
     this.calculateServiceCharge(this.loanForm.loanAmount);
 
     console.log('✅ Appraisal data loaded successfully for new loan');
-    this.toastService.showSuccess('Success', 'Appraisal data loaded! Please review and complete the loan details.');
     this.barangays = [];
   }
 
@@ -660,7 +659,6 @@ export class NewLoan implements OnInit, OnDestroy {
       // Update loan amount
       this.updateLoanAmount();
 
-      this.toastService.showSuccess('Success', 'Item added to loan');
     } else if (this.canAddItem()) {
       // Add from manual entry
       const newItem: AppraisalItem = {
@@ -691,7 +689,6 @@ export class NewLoan implements OnInit, OnDestroy {
         }
       }, 100);
 
-      this.toastService.showSuccess('Success', 'Item added to loan');
     }
   }
 
@@ -1080,8 +1077,6 @@ export class NewLoan implements OnInit, OnDestroy {
     this.http.post('http://localhost:3000/api/transactions/new-loan', loanData).subscribe({
       next: (response: any) => {
         if (response.success) {
-          this.toastService.showSuccess('Success', `New loan created successfully! Ticket: ${response.data.ticketNumber}`);
-
           // Prepare invoice data
           const user = JSON.parse(localStorage.getItem('user') || '{}');
           const pawnerData = this.selectedPawner || {

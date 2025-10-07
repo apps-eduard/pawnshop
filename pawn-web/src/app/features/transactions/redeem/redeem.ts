@@ -279,7 +279,6 @@ export class Redeem implements OnInit, AfterViewInit {
       if (result.success && result.data) {
         this.populateForm(result.data);
         this.transactionFound = true;
-        this.toastService.showSuccess('Success', 'Transaction found and loaded!');
       } else {
         this.toastService.showError('Not Found', result.message || 'Transaction not found');
         this.transactionFound = false;
@@ -335,7 +334,8 @@ export class Redeem implements OnInit, AfterViewInit {
       transactionDate: this.formatDate(data.transactionDate),
       grantedDate: this.formatDate(data.dateGranted || data.loanDate),
       maturedDate: this.formatDate(data.dateMatured || data.maturityDate),
-      expiredDate: this.formatDate(data.dateExpired || data.expiryDate)
+      expiredDate: this.formatDate(data.dateExpired || data.expiryDate),
+      gracePeriodDate: this.calculateGracePeriodDate(data.dateMatured || data.maturityDate)
     };
 
     console.log('🗓️ Formatted transactionInfo:', this.transactionInfo);
@@ -446,6 +446,14 @@ export class Redeem implements OnInit, AfterViewInit {
     return date.toISOString().split('T')[0];
   }
 
+  private calculateGracePeriodDate(maturityDateString: string): string {
+    if (!maturityDateString) return '';
+    const maturityDate = new Date(maturityDateString);
+    const gracePeriodDate = new Date(maturityDate);
+    gracePeriodDate.setDate(gracePeriodDate.getDate() + 3); // Add 3 days
+    return gracePeriodDate.toISOString().split('T')[0];
+  }
+
   private getStatusText(status: string): string {
     switch (status?.toLowerCase()) {
       case 'active': return 'Active';
@@ -499,8 +507,6 @@ export class Redeem implements OnInit, AfterViewInit {
       const result = await response.json();
 
       if (result.success) {
-        this.toastService.showSuccess('Success', `Item redeemed successfully! Change: ₱${this.redeemComputation.change.toFixed(2)}`);
-
         // Prepare invoice data
         const user = JSON.parse(localStorage.getItem('user') || '{}');
 

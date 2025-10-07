@@ -164,7 +164,6 @@ export class Renew implements OnInit, AfterViewInit {
       if (result.success && result.data) {
         this.populateForm(result.data);
         this.transactionFound = true;
-        this.toastService.showSuccess('Success', 'Transaction found and loaded!');
       } else {
         this.toastService.showError('Not Found', result.message || 'Transaction not found');
         this.transactionFound = false;
@@ -625,8 +624,6 @@ export class Renew implements OnInit, AfterViewInit {
       const result = await response.json();
 
       if (result.success) {
-        this.toastService.showSuccess('Success', 'Loan renewed successfully');
-
         // Prepare invoice data
         const user = JSON.parse(localStorage.getItem('user') || '{}');
 

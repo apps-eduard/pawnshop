@@ -430,7 +430,6 @@ export class AdditionalLoan implements OnInit, AfterViewInit {
       if (result.success && result.data) {
         this.populateForm(result.data);
         this.transactionFound = true;
-        this.toastService.showSuccess('Success', 'Transaction found and loaded!');
       } else {
         this.toastService.showError('Not Found', result.message || 'Transaction not found');
         this.transactionFound = false;
@@ -640,7 +639,6 @@ export class AdditionalLoan implements OnInit, AfterViewInit {
       const result = await response.json();
 
       if (result.success) {
-        this.toastService.showSuccess('Success', `Additional loan processed successfully! Net Proceed: ₱${this.additionalComputation.netProceed.toFixed(2)}`);
         // Redirect to dashboard after successful processing
         setTimeout(() => {
           this.router.navigate(['/cashier-dashboard']);
@@ -658,7 +656,6 @@ export class AdditionalLoan implements OnInit, AfterViewInit {
 
   createAdditionalLoan() {
     // TODO: Implement additional loan logic
-    this.toastService.showSuccess('Success', 'Additional loan created successfully');
     this.goBack();
   }
 }

@@ -392,7 +392,6 @@ export class Appraisal implements OnInit, OnDestroy, AfterViewInit {
 
     this.appraisalItems.push(newItem);
     this.resetItemForm();
-    this.toastService.showSuccess('Success', 'Item added to appraisal');
 
     // Focus on the category select after adding an item
     setTimeout(() => {
@@ -547,7 +546,6 @@ export class Appraisal implements OnInit, OnDestroy, AfterViewInit {
       next: (response) => {
         if (response.success) {
           this.selectedPawner = response.data;
-          this.toastService.showSuccess('Success', 'Pawner created successfully');
 
           // Now that we have the pawner, save the appraisal items
           this.saveAppraisalItems();
@@ -678,7 +676,6 @@ export class Appraisal implements OnInit, OnDestroy, AfterViewInit {
       .then(() => {
         // All items saved successfully
         this.isSaving = false;
-        this.toastService.showSuccess('Success', `Appraisal created with ${totalItems} items`);
         this.resetAll(); // Clear form after successful save
         this.goBack();
       })

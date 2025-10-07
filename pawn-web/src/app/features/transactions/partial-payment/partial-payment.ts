@@ -425,7 +425,6 @@ export class PartialPayment implements OnInit, AfterViewInit {
         });
         await this.populateForm(result.data); // Await the async populateForm
         this.transactionFound = true;
-        this.toastService.showSuccess('Success', 'Transaction found and loaded!');
       } else {
         this.toastService.showError('Not Found', result.message || 'Transaction not found');
         this.transactionFound = false;
@@ -622,8 +621,6 @@ export class PartialPayment implements OnInit, AfterViewInit {
       const result = await response.json();
 
       if (result.success) {
-        this.toastService.showSuccess('Success', 'Partial payment processed successfully');
-
         // Prepare invoice data
         const user = JSON.parse(localStorage.getItem('user') || '{}');
 
