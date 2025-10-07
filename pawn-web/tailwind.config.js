@@ -30,10 +30,22 @@ module.exports = {
           700: '#334155',
           800: '#1e293b',
           900: '#0f172a',
+        },
+        // Professional light theme colors - softer, less harsh
+        slate: {
+          50: '#f8fafc',
+          100: '#f1f5f9',
+        },
+        gray: {
+          50: '#f9fafb',
+          850: '#1a202e', // Custom dark shade
         }
       },
       fontFamily: {
         sans: ['Inter', 'ui-sans-serif', 'system-ui'],
+      },
+      backdropBlur: {
+        xs: '2px',
       }
     },
   },

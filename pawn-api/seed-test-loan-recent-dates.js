@@ -180,34 +180,45 @@ async function seedTestLoans() {
 
       const appraisalResult = await client.query(`
         INSERT INTO item_appraisals (
-          pawner_id, branch_id, category_id, brand, model, specifications,
-          quantity, appraisal_value, status, created_by, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())
+          pawner_id, appraiser_id, category, description, notes,
+          estimated_value, status, created_at, updated_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
         RETURNING id
       `, [
         pawnerId,
-        1,                    // branch_id
-        1,                    // category_id (mobile/electronics)
-        'SAMSUNG',            // brand
-        'GALAXY A11',         // model
-        'Test Item - CP SM-A115M/DS', // specifications
-        1,                    // quantity
-        appraisalValue,       // ₱5,400
-        'completed',          // status (must be completed to use in transactions)
-        1                     // created_by
+        1,                                        // appraiser_id (admin)
+        'Electronics',                            // category
+        'Test Item - SAMSUNG GALAXY A11',        // description
+        `Test appraisal for ${ticketNumber}`,   // notes
+        appraisalValue,                           // estimated_value (₱5,400)
+        'completed'                               // status (must be completed)
       ]);
 
       const appraisalId = appraisalResult.rows[0].id;
 
-      // Link appraisal to transaction via items table
+      // Create pawn_item linking transaction to appraisal
       await client.query(`
-        INSERT INTO items (
-          transaction_id, appraisal_id, quantity, created_at, updated_at
-        ) VALUES ($1, $2, $3, NOW(), NOW())
-      `, [transactionId, appraisalId, 1]);
+        INSERT INTO pawn_items (
+          transaction_id, category_id, brand, model, custom_description,
+          appraised_value, loan_amount, appraisal_notes, status, 
+          appraised_by, created_at, updated_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())
+      `, [
+        transactionId,
+        1,                                      // category_id (electronics/mobile)
+        'SAMSUNG',                              // brand
+        'GALAXY A11',                           // model
+        'Test Item - CP SM-A115M/DS',          // custom_description
+        appraisalValue,                         // appraised_value (₱5,400)
+        principalAmount,                        // loan_amount (₱2,700)
+        `Linked to appraisal ID: ${appraisalId}`, // appraisal_notes
+        'in_vault',                             // status
+        1                                        // appraised_by
+      ]);
 
       console.log(`   ✅ Created transaction ID: ${transactionId}`);
-      console.log(`   ✅ Created appraisal ID: ${appraisalId} (Value: ₱${appraisalValue.toFixed(2)})\n`);
+      console.log(`   ✅ Created appraisal ID: ${appraisalId} (Value: ₱${appraisalValue.toFixed(2)})`);
+      console.log(`   ✅ Created pawn_item (Appraised: ₱${appraisalValue.toFixed(2)}, Loan: ₱${principalAmount.toFixed(2)})\n`);
     }
 
     await client.query('COMMIT');

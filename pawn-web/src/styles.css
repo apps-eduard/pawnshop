@@ -1,18 +1,31 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 @import './app/styles/compact.css';
+@import './app/styles/professional-theme.css';
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Custom global styles */
+/* ================================================================= */
+/* 🎨 PROFESSIONAL GOLDWIN PAWNSHOP - GLOBAL STYLES                 */
+/* ================================================================= */
 
 body {
   font-family: 'Inter', sans-serif;
+  /* Softer background for light mode - easier on eyes */
+  @apply bg-gradient-to-br from-slate-50 via-gray-50 to-blue-50;
 }
 
-/* Dark mode transitions */
+/* Dark mode body background */
+body.dark {
+  @apply bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900;
+}
+
+/* Smooth transitions for all theme changes */
 * {
-  transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out, color 0.2s ease-in-out;
+  transition: background-color 0.2s ease-in-out,
+              border-color 0.2s ease-in-out,
+              color 0.2s ease-in-out,
+              box-shadow 0.2s ease-in-out;
 }
 
 /* Hide scrollbars globally while keeping functionality */

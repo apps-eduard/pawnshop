@@ -24,8 +24,12 @@ interface TransactionInfo {
   transactionDate: string;
   grantedDate: string;
   maturedDate: string;
+  gracePeriodDate?: string;    // Grace period date of CURRENT loan
   expiredDate: string;
   loanStatus: string;
+  newMaturityDate?: string;    // New maturity date after renew
+  newExpiryDate?: string;      // New expiry date after renew
+  newGracePeriodDate?: string; // New grace period (redeem date) after renew
 }
 
 interface PawnedItem {
@@ -83,7 +87,10 @@ export class Renew implements OnInit {
     grantedDate: '',
     maturedDate: '',
     expiredDate: '',
-    loanStatus: ''
+    loanStatus: '',
+    newMaturityDate: '',
+    newExpiryDate: '',
+    newGracePeriodDate: ''
   };
 
   items: PawnedItem[] = [];
@@ -183,7 +190,11 @@ export class Renew implements OnInit {
       grantedDate: this.formatDate(data.dateGranted),
       maturedDate: this.formatDate(data.dateMatured),
       expiredDate: this.formatDate(data.dateExpired),
-      loanStatus: this.getStatusText(data.status)
+      loanStatus: this.getStatusText(data.status),
+      gracePeriodDate: data.gracePeriodDateStr || this.formatDate(data.gracePeriodDate),
+      newMaturityDate: '',
+      newExpiryDate: '',
+      newGracePeriodDate: ''
     };
 
     // Populate items
@@ -281,18 +292,18 @@ export class Renew implements OnInit {
     // Grace Period: 3 days after maturity date
     // Within grace period (0-3 days): NO interest, NO penalty
     // After grace period (4+ days): FULL interest + FULL penalty based on months overdue
-    
+
     let isWithinGracePeriod = false;
     let daysAfterMaturity = 0;
-    
+
     if (this.transactionInfo.maturedDate) {
       const maturityDate = new Date(this.transactionInfo.maturedDate);
       const now = new Date();
       daysAfterMaturity = Math.floor((now.getTime() - maturityDate.getTime()) / (1000 * 60 * 60 * 24));
-      
+
       // Check if within 3-day grace period (days 0, 1, 2, 3 after maturity)
       isWithinGracePeriod = daysAfterMaturity >= 0 && daysAfterMaturity <= 3;
-      
+
       console.log(`🎯 GRACE PERIOD CHECK (Renew):`, {
         maturityDate: maturityDate.toISOString().split('T')[0],
         currentDate: now.toISOString().split('T')[0],
@@ -306,28 +317,28 @@ export class Renew implements OnInit {
       // WITHIN GRACE PERIOD: NO INTEREST
       this.renewComputation.interest = 0;
       this.renewComputation.discount = daysAfterMaturity; // Auto-set discount for display
-      
+
       console.log(`✅ WITHIN GRACE PERIOD: Interest = ₱0.00 (${daysAfterMaturity} days after maturity)`);
     } else if (this.transactionInfo.grantedDate && this.transactionInfo.maturedDate) {
       // AFTER GRACE PERIOD: CALCULATE FULL INTEREST
       const grantDate = new Date(this.transactionInfo.grantedDate);
       const maturityDate = new Date(this.transactionInfo.maturedDate);
       const now = new Date();
-      
+
       // Calculate total days from grant date to now
       const totalDays = Math.floor((now.getTime() - grantDate.getTime()) / (1000 * 60 * 60 * 24));
-      
+
       // Days beyond the first 30 days (already paid in advance)
       const additionalDays = Math.max(0, totalDays - 30);
-      
+
       // Calculate monthly interest based on full months
       const monthlyRate = this.renewComputation.interestRate / 100; // 6% = 0.06
       const monthsOverdue = Math.floor(additionalDays / 30);
-      
+
       // Full month interest calculation (6% × principal × months)
       this.renewComputation.interest = this.renewComputation.principalLoan * monthlyRate * monthsOverdue;
       this.renewComputation.discount = 0; // No discount after grace period
-      
+
       console.log(`⚠️ AFTER GRACE PERIOD: Interest Calculation (Renew)`, {
         grantDate: grantDate.toISOString().split('T')[0],
         maturityDate: maturityDate.toISOString().split('T')[0],
@@ -348,22 +359,22 @@ export class Renew implements OnInit {
     if (isWithinGracePeriod) {
       // WITHIN GRACE PERIOD: NO PENALTY
       this.renewComputation.penalty = 0;
-      
+
       console.log(`✅ WITHIN GRACE PERIOD: Penalty = ₱0.00`);
     } else if (this.transactionInfo.maturedDate) {
       // AFTER GRACE PERIOD: CALCULATE FULL MONTH PENALTY
       const maturityDate = new Date(this.transactionInfo.maturedDate);
       const now = new Date();
-      
+
       // Days after maturity (excluding grace period)
       const daysAfterGracePeriod = Math.max(0, daysAfterMaturity - 3);
-      
+
       // Calculate penalty for full months (2% × principal × ceil(days/30))
       const penaltyRate = 0.02; // 2% monthly
       const monthsForPenalty = Math.ceil(daysAfterGracePeriod / 30);
-      
+
       this.renewComputation.penalty = this.renewComputation.principalLoan * penaltyRate * monthsForPenalty;
-      
+
       console.log(`⚠️ AFTER GRACE PERIOD: Penalty Calculation (Renew)`, {
         maturityDate: maturityDate.toISOString().split('T')[0],
         currentDate: now.toISOString().split('T')[0],
@@ -416,6 +427,34 @@ export class Renew implements OnInit {
     });
 
     this.calculateChange();
+
+    // Calculate new dates for the renewed loan
+    this.calculateNewDates();
+  }
+
+  // Calculate new maturity and expiry dates for the renewed loan
+  calculateNewDates() {
+    const today = new Date();
+
+    // New maturity date = Today + 30 days
+    const newMaturity = new Date(today);
+    newMaturity.setDate(newMaturity.getDate() + 30);
+    this.transactionInfo.newMaturityDate = newMaturity.toISOString().split('T')[0];
+
+    // New grace period = New maturity + 3 days
+    const newGracePeriod = new Date(newMaturity);
+    newGracePeriod.setDate(newGracePeriod.getDate() + 3);
+    this.transactionInfo.newGracePeriodDate = newGracePeriod.toISOString().split('T')[0];
+
+    // New expiry date = New maturity + 90 days
+    const newExpiry = new Date(newMaturity);
+    newExpiry.setDate(newExpiry.getDate() + 90);
+    this.transactionInfo.newExpiryDate = newExpiry.toISOString().split('T')[0];
+
+    console.log('📅 Renew - New Dates Calculated:');
+    console.log('  New Maturity:', this.transactionInfo.newMaturityDate);
+    console.log('  New Grace Period:', this.transactionInfo.newGracePeriodDate);
+    console.log('  New Expiry:', this.transactionInfo.newExpiryDate);
   }
 
   async calculateServiceCharge(amount: number): Promise<number> {

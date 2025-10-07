@@ -20,9 +20,9 @@ async function deleteTestLoans() {
 
     await client.query('BEGIN');
 
-    // Step 1: Delete items (links between transactions and appraisals)
+    // Step 1: Delete pawn_items (links transactions to items/appraisals)
     const deleteItems = await client.query(`
-      DELETE FROM items 
+      DELETE FROM pawn_items 
       WHERE transaction_id IN (
         SELECT id FROM transactions WHERE transaction_number LIKE 'TEST-%'
       )
@@ -30,7 +30,7 @@ async function deleteTestLoans() {
     `);
 
     if (deleteItems.rows.length > 0) {
-      console.log(`✅ Deleted ${deleteItems.rows.length} item links`);
+      console.log(`✅ Deleted ${deleteItems.rows.length} pawn items`);
     }
 
     // Step 2: Delete test pawn tickets
