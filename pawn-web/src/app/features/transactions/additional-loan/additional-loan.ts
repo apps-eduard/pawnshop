@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -6,6 +6,7 @@ import { Location } from '@angular/common';
 import { ToastService } from '../../../core/services/toast.service';
 import { TransactionInfoComponent } from '../../../shared/components/transaction/transaction-info.component';
 import { PenaltyCalculatorService } from '../../../core/services/penalty-calculator.service';
+import { CurrencyInputDirective } from '../../../shared/directives/currency-input.directive';
 
 // Interfaces
 interface CustomerInfo {
@@ -55,11 +56,13 @@ interface AdditionalComputation {
 @Component({
   selector: 'app-additional-loan',
   standalone: true,
-  imports: [CommonModule, FormsModule, TransactionInfoComponent],
+  imports: [CommonModule, FormsModule, TransactionInfoComponent, CurrencyInputDirective],
   templateUrl: './additional-loan.html',
   styleUrl: './additional-loan.css'
 })
-export class AdditionalLoan implements OnInit {
+export class AdditionalLoan implements OnInit, AfterViewInit {
+
+  @ViewChild('searchInput') searchInput?: ElementRef<HTMLInputElement>;
 
   searchTicketNumber: string = '';
   transactionNumber: string = '';
@@ -115,6 +118,13 @@ export class AdditionalLoan implements OnInit {
   ngOnInit() {
     // Start with empty form - no initial calculation
     console.log('Additional Loan page loaded - form cleared');
+  }
+
+  ngAfterViewInit() {
+    // Auto-focus on search input when page loads
+    setTimeout(() => {
+      this.searchInput?.nativeElement.focus();
+    }, 0);
   }
 
   getTotalAppraisalValue(): number {

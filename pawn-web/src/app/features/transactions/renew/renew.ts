@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -8,6 +8,7 @@ import { TransactionInfoComponent } from '../../../shared/components/transaction
 import { PenaltyCalculatorService } from '../../../core/services/penalty-calculator.service';
 import { InvoiceModalComponent } from '../../../shared/modals/invoice-modal/invoice-modal.component';
 import { LoanInvoiceData } from '../../../shared/components/loan-invoice/loan-invoice.component';
+import { CurrencyInputDirective } from '../../../shared/directives/currency-input.directive';
 
 interface CustomerInfo {
   firstName: string;
@@ -60,11 +61,13 @@ interface RenewComputation {
 @Component({
   selector: 'app-renew',
   standalone: true,
-  imports: [CommonModule, FormsModule, TransactionInfoComponent, InvoiceModalComponent],
+  imports: [CommonModule, FormsModule, TransactionInfoComponent, InvoiceModalComponent, CurrencyInputDirective],
   templateUrl: './renew.html',
   styleUrl: './renew.css'
 })
-export class Renew implements OnInit {
+export class Renew implements OnInit, AfterViewInit {
+
+  @ViewChild('searchInput') searchInput?: ElementRef<HTMLInputElement>;
 
   searchTicketNumber: string = '';
   transactionId: number = 0;
@@ -127,6 +130,13 @@ export class Renew implements OnInit {
   ngOnInit() {
     // Start with empty form - no initial calculation
     console.log('Renew page loaded - form cleared');
+  }
+
+  ngAfterViewInit() {
+    // Auto-focus on search input when page loads
+    setTimeout(() => {
+      this.searchInput?.nativeElement.focus();
+    }, 0);
   }
 
   async searchTransaction() {

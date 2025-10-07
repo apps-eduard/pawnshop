@@ -20,6 +20,7 @@
               <!-- Search Box inline with title -->
               <div class="relative">
                 <input
+                  #searchInput
                   type="text"
                   [(ngModel)]="searchTicketNumber"
                   (keydown.enter)="searchTransaction()"
@@ -160,9 +161,12 @@
                   </svg>
                   Partial Pay <span class="text-rose-500">*</span>
                 </span>
-                <input type="number" [(ngModel)]="partialComputation.partialPay" (input)="calculatePartialPayment()"
+                <input type="text"
+                  appCurrencyInput
+                  [minValue]="0.01"
+                  (valueChange)="partialComputation.partialPay = $event; calculatePartialPayment()"
                   class="w-[65%] px-2 py-1 text-xs font-medium border border-violet-300 dark:border-violet-600 rounded focus:outline-none focus:ring-1 focus:ring-violet-500 dark:bg-violet-900/30 text-violet-700 dark:text-violet-400 text-right"
-                  min="0" step="0.01" placeholder="0.00">
+                  placeholder="₱ 0.00">
               </div>
             </div>
 
@@ -233,11 +237,14 @@
                   <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path>
                   </svg>
-                  Received
+                  Received Amount
                 </span>
-                <input type="number" [(ngModel)]="partialComputation.amountReceived" (input)="calculateChange()"
+                <input type="text"
+                  appCurrencyInput
+                  [minValue]="0"
+                  (valueChange)="partialComputation.amountReceived = $event; calculateChange()"
                   class="w-[65%] px-2 py-1 text-xs font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-600 border border-slate-300 dark:border-slate-500 rounded focus:outline-none focus:ring-1 focus:ring-slate-500 text-right"
-                  min="0" step="0.01" placeholder="0.00" title="Enter received amount">
+                  placeholder="₱ 0.00" title="Enter received amount">
               </div>
             </div>
 

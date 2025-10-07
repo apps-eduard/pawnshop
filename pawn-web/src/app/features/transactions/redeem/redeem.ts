@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -9,6 +9,7 @@ import { PenaltyCalculatorService } from '../../../core/services/penalty-calcula
 import { TransactionCalculationService } from '../../../core/services/transaction-calculation.service';
 import { InvoiceModalComponent } from '../../../shared/modals/invoice-modal/invoice-modal.component';
 import { LoanInvoiceData } from '../../../shared/components/loan-invoice/loan-invoice.component';
+import { CurrencyInputDirective } from '../../../shared/directives/currency-input.directive';
 
 interface RedeemComputation {
   principalLoan: number;
@@ -25,11 +26,13 @@ interface RedeemComputation {
 @Component({
   selector: 'app-redeem',
   standalone: true,
-  imports: [CommonModule, FormsModule, TransactionInfoComponent, InvoiceModalComponent],
+  imports: [CommonModule, FormsModule, TransactionInfoComponent, InvoiceModalComponent, CurrencyInputDirective],
   templateUrl: './redeem.html',
   styleUrl: './redeem.css'
 })
-export class Redeem implements OnInit {
+export class Redeem implements OnInit, AfterViewInit {
+  @ViewChild('searchInput') searchInput?: ElementRef<HTMLInputElement>;
+
   searchTicketNumber: string = '';
   transactionNumber: string = '';
   transactionId: number = 0; // Add transaction ID field
@@ -88,6 +91,13 @@ export class Redeem implements OnInit {
   ngOnInit() {
     // Start with empty form - no initial calculation
     console.log('Redeem page loaded - form cleared');
+  }
+
+  ngAfterViewInit() {
+    // Auto-focus on search input when page loads
+    setTimeout(() => {
+      this.searchInput?.nativeElement.focus();
+    }, 0);
   }
 
   getTotalAppraisalValue(): number {

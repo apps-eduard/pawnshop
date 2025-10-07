@@ -22,6 +22,7 @@
               <!-- Search Box inline with title -->
               <div class="relative">
                 <input
+                  #searchInput
                   type="text"
                   [(ngModel)]="searchTicketNumber"
                   (keydown.enter)="searchTransaction()"
@@ -147,14 +148,13 @@
                   </svg>
                   Additional Amount
                 </span>
-                <input type="number"
-                  [(ngModel)]="additionalComputation.additionalAmount"
-                  (ngModelChange)="onAdditionalAmountChange()"
+                <input type="text"
+                  appCurrencyInput
+                  [minValue]="0"
+                  [maxValue]="additionalComputation.availableAmount"
+                  (valueChange)="additionalComputation.additionalAmount = $event; onAdditionalAmountChange()"
                   class="w-[65%] px-2 py-1 text-xs font-bold border border-yellow-300 dark:border-yellow-600 rounded focus:outline-none focus:ring-1 focus:ring-yellow-500 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 text-right"
-                  [max]="additionalComputation.availableAmount"
-                  min="0"
-                  step="0.01"
-                  placeholder="0.00">
+                  placeholder="₱ 0.00">
               </div>
             </div>
 

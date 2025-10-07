@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -8,6 +8,7 @@ import { TransactionInfoComponent } from '../../../shared/components/transaction
 import { PenaltyCalculatorService } from '../../../core/services/penalty-calculator.service';
 import { InvoiceModalComponent } from '../../../shared/modals/invoice-modal/invoice-modal.component';
 import { LoanInvoiceData } from '../../../shared/components/loan-invoice/loan-invoice.component';
+import { CurrencyInputDirective } from '../../../shared/directives/currency-input.directive';
 
 // Interfaces
 interface CustomerInfo {
@@ -62,17 +63,19 @@ interface PartialComputation {
 @Component({
   selector: 'app-partial-payment',
   standalone: true,
-  imports: [CommonModule, FormsModule, TransactionInfoComponent, InvoiceModalComponent],
+  imports: [CommonModule, FormsModule, TransactionInfoComponent, InvoiceModalComponent, CurrencyInputDirective],
   templateUrl: './partial-payment.html',
   styleUrl: './partial-payment.css'
 })
-export class PartialPayment implements OnInit {
+export class PartialPayment implements OnInit, AfterViewInit {
 
-  searchTicketNumber: string = '';
-  transactionNumber: string = '';
-  transactionId: number = 0;
-  isLoading: boolean = false;
-  transactionFound: boolean = false;
+  @ViewChild('searchInput') searchInput!: ElementRef<HTMLInputElement>;
+
+  searchTicketNumber = '';
+  transactionNumber = '';
+  transactionId = 0;
+  isLoading = false;
+  transactionFound = false;
 
   customerInfo: CustomerInfo = {
     contactNumber: '',
@@ -128,6 +131,13 @@ export class PartialPayment implements OnInit {
   ngOnInit() {
     // Start with empty form - no initial calculation
     console.log('Partial Payment page loaded - form cleared');
+  }
+
+  ngAfterViewInit() {
+    // Auto-focus the search input field after view initialization
+    setTimeout(() => {
+      this.searchInput?.nativeElement?.focus();
+    }, 0);
   }
 
   getTotalAppraisalValue(): number {
