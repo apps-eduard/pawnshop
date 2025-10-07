@@ -1,0 +1,95 @@
+/* Responsive adjustments for smaller screens */
+/* Base design is optimized for 1920x1080 (Full HD) */
+/* For smaller screens, we make elements more compact while keeping text readable */
+
+/* For 1366x768 screens - Make layout more compact without zooming */
+@media (max-width: 1366px) {
+  /* Reduce padding and gaps */
+  .new-loan-container > div {
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+    padding-top: 0.5rem !important;
+    padding-bottom: 0.5rem !important;
+  }
+  
+  /* Reduce column gap */
+  .new-loan-container > div > div > div[class*="grid"] {
+    gap: 0.5rem !important;
+  }
+  
+  /* Make column headers more compact */
+  .new-loan-container [class*="bg-gradient-to-r"] {
+    padding-top: 0.5rem !important;
+    padding-bottom: 0.5rem !important;
+  }
+  
+  /* Reduce spacing in forms */
+  .new-loan-container [class*="space-y"] {
+    row-gap: 0.5rem !important;
+  }
+  
+  /* Make inputs more compact */
+  .new-loan-container input,
+  .new-loan-container select,
+  .new-loan-container textarea {
+    padding-top: 0.375rem !important;
+    padding-bottom: 0.375rem !important;
+    font-size: 0.813rem !important; /* 13px */
+  }
+  
+  /* Reduce card padding */
+  .new-loan-container > div > div > div > div[class*="p-3"] {
+    padding: 0.5rem !important;
+  }
+  
+  /* Make computation items more compact */
+  .new-loan-container [class*="bg-blue-50"],
+  .new-loan-container [class*="bg-green-50"],
+  .new-loan-container [class*="bg-red-50"],
+  .new-loan-container [class*="bg-yellow-50"],
+  .new-loan-container [class*="bg-orange-50"],
+  .new-loan-container [class*="bg-indigo-50"] {
+    padding: 0.5rem !important;
+    margin-bottom: 0.25rem !important;
+  }
+  
+  /* Reduce button padding */
+  .new-loan-container button {
+    padding-top: 0.5rem !important;
+    padding-bottom: 0.5rem !important;
+    font-size: 0.813rem !important;
+  }
+}
+
+/* Custom scrollbar for better appearance at all zoom levels */
+:host ::ng-deep .custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+:host ::ng-deep .custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 3px;
+}
+
+:host ::ng-deep .custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+}
+
+:host ::ng-deep .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* Dark mode scrollbar */
+:host ::ng-deep .dark .custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+:host ::ng-deep .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+:host ::ng-deep .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
