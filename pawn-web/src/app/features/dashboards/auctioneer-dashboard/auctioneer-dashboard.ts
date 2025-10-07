@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
+import { StatusColorService } from '../../../core/services/status-color.service';
 
 interface DashboardCard {
   title: string;
@@ -53,6 +54,8 @@ export class AuctioneerDashboard implements OnInit {
     avg_sale_price: 0,
     success_rate: 0
   };
+
+  constructor(public statusColorService: StatusColorService) {}
 
   ngOnInit() {
     this.loadDashboardData();
@@ -199,14 +202,7 @@ export class AuctioneerDashboard implements OnInit {
   }
 
   getStatusColor(status: string): string {
-    const colorMap: { [key: string]: string } = {
-      scheduled: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-      active: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-      sold: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
-      unsold: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-    };
-
-    return colorMap[status] || colorMap['scheduled'];
+    return this.statusColorService.getStatusColor(status);
   }
 
   getTimeUntilAuction(auctionDate: Date): string {

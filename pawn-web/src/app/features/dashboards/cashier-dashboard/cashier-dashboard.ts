@@ -11,6 +11,7 @@ import { AddressService } from '../../../core/services/address.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { CategoriesService, Category } from '../../../core/services/categories.service';
 import { TransactionService, Transaction } from '../../../core/services/transaction.service';
+import { StatusColorService } from '../../../core/services/status-color.service';
 import { Appraisal, CreateAppraisalRequest } from '../../../core/models/interfaces';
 
 
@@ -283,7 +284,8 @@ export class CashierDashboard implements OnInit, OnDestroy {
     private transactionService: TransactionService,
     private http: HttpClient,
     private router: Router,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    public statusColorService: StatusColorService
   ) {}
 
   ngOnInit() {
@@ -512,24 +514,11 @@ export class CashierDashboard implements OnInit, OnDestroy {
   }
 
   getTransactionTypeColor(type: string): string {
-    const colorMap: { [key: string]: string } = {
-      new_loan: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-      payment: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-      renewal: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
-      redemption: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
-    };
-
-    return colorMap[type] || colorMap['new_loan'];
+    return this.statusColorService.getTransactionTypeColor(type);
   }
 
   getStatusColor(status: string): string {
-    const colorMap: { [key: string]: string } = {
-      completed: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-      pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
-      failed: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-    };
-
-    return colorMap[status] || colorMap['pending'];
+    return this.statusColorService.getStatusColor(status);
   }
 
   getTimeAgo(date: Date | string): string {
@@ -650,7 +639,7 @@ export class CashierDashboard implements OnInit, OnDestroy {
               pawner_name: transaction.pawnerName || transaction.pawner_name || `${transaction.pawnerFirstName || transaction.pawner_first_name || ''} ${transaction.pawnerLastName || transaction.pawner_last_name || ''}`.trim(),
               amount: parseFloat(transaction.principalAmount || transaction.principal_amount || transaction.totalAmount || transaction.total_amount || 0),
               principal_amount: parseFloat(transaction.principalAmount || transaction.principal_amount || 0),
-              status: transaction.status === 'active' ? 'completed' : transaction.status,
+              status: transaction.status || 'active',
               created_at: new Date(transaction.createdAt || transaction.created_at || transaction.loanDate || transaction.loan_date),
               loan_date: new Date(transaction.loanDate || transaction.loan_date || transaction.createdAt || transaction.created_at),
               maturity_date: new Date(transaction.maturityDate || transaction.maturity_date),
@@ -675,7 +664,7 @@ export class CashierDashboard implements OnInit, OnDestroy {
               pawner_name: transaction.pawnerName || transaction.pawner_name || `${transaction.pawnerFirstName || transaction.pawner_first_name || ''} ${transaction.pawnerLastName || transaction.pawner_last_name || ''}`.trim(),
               amount: parseFloat(transaction.principalAmount || transaction.principal_amount || transaction.totalAmount || transaction.total_amount || 0),
               principal_amount: parseFloat(transaction.principalAmount || transaction.principal_amount || 0),
-              status: transaction.status === 'active' ? 'completed' : transaction.status,
+              status: transaction.status || 'active',
               created_at: new Date(transaction.createdAt || transaction.created_at || transaction.loanDate || transaction.loan_date),
               loan_date: new Date(transaction.loanDate || transaction.loan_date || transaction.createdAt || transaction.created_at),
               maturity_date: new Date(transaction.maturityDate || transaction.maturity_date),
