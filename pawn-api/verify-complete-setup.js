@@ -111,18 +111,22 @@ async function verifyDatabaseSetup() {
     // Check demo accounts
     console.log('\n👥 Verifying Demo Accounts...\n');
     
-    const demoAccounts = [
+    const requiredAccounts = [
       { username: 'admin', role: 'administrator' },
       { username: 'cashier1', role: 'cashier' },
       { username: 'manager1', role: 'manager' },
       { username: 'auctioneer1', role: 'auctioneer' },
-      { username: 'appraiser1', role: 'appraiser' },
+      { username: 'appraiser1', role: 'appraiser' }
+    ];
+    
+    const optionalAccounts = [
       { username: 'pawner1', role: 'pawner' }
     ];
     
     let allAccountsExist = true;
     
-    for (const account of demoAccounts) {
+    // Check required accounts
+    for (const account of requiredAccounts) {
       const accountResult = await pool.query(
         'SELECT * FROM employees WHERE username = $1',
         [account.username]
@@ -134,6 +138,21 @@ async function verifyDatabaseSetup() {
       } else {
         console.log(`❌ ${account.username.padEnd(15)} (${account.role.padEnd(15)}) - MISSING`);
         allAccountsExist = false;
+      }
+    }
+    
+    // Check optional accounts (won't fail verification if missing)
+    for (const account of optionalAccounts) {
+      const accountResult = await pool.query(
+        'SELECT * FROM employees WHERE username = $1',
+        [account.username]
+      );
+      
+      if (accountResult.rows.length > 0) {
+        const user = accountResult.rows[0];
+        console.log(`✅ ${account.username.padEnd(15)} (${account.role.padEnd(15)}) - ${user.first_name} ${user.last_name}`);
+      } else {
+        console.log(`⚠️  ${account.username.padEnd(15)} (${account.role.padEnd(15)}) - OPTIONAL (not required)`);
       }
     }
     

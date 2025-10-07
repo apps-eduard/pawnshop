@@ -19,12 +19,12 @@ start "Pawnshop API" cmd /k "cd /d %~dp0pawn-api && npm start"
 timeout /t 3 /nobreak >nul
 
 echo Starting Web application...
-start "Pawnshop Web" cmd /k "cd /d %~dp0pawn-web && npm start"
+start "Pawnshop Web" cmd /k "cd /d %~dp0pawn-web && ng serve"
 
 echo.
-echo ✓ Both servers are starting...
-echo ✓ API Server: http://localhost:3000
-echo ✓ Web App: http://localhost:4200
+echo Both servers are starting...
+echo API Server: http://localhost:3000
+echo Web App: http://localhost:4200
 echo.
 echo Wait a moment for both servers to fully start, then open:
 echo http://localhost:4200

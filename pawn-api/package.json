@@ -14,7 +14,8 @@
     "db:seed": "knex seed:run",
     "db:seed:make": "knex seed:make",
     "setup-db": "npm run db:migrate && npm run db:seed",
-    "reset-db": "npm run db:migrate:rollback && npm run db:migrate && npm run db:seed"
+    "reset-db": "npm run db:migrate:rollback && npm run db:migrate && npm run db:seed",
+    "verify-tables": "node verify-complete-setup.js"
   },
   "keywords": [],
   "author": "",
