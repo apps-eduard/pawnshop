@@ -1,6 +1,7 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { TransactionCalculationService } from '../../../core/services/transaction-calculation.service';
 
 export interface CustomerInfo {
   contactNumber: string;
@@ -222,6 +223,8 @@ export interface PawnedItem {
   `
 })
 export class TransactionInfoComponent {
+  constructor(private transactionCalcService: TransactionCalculationService) {}
+
   @Input() customerInfo: CustomerInfo = {
     contactNumber: '',
     firstName: '',
@@ -250,104 +253,41 @@ export class TransactionInfoComponent {
     this.search.emit(this.searchTicketNumber);
   }
 
-  // Add methods that the template needs - these should call parent component methods
+  // Use global transaction calculation service
   getLoanStatus(): string {
-    if (!this.transactionInfo.maturedDate || !this.transactionInfo.expiredDate) {
-      return 'Unknown';
-    }
-
-    const now = new Date();
-    const maturedDate = new Date(this.transactionInfo.maturedDate);
-    const expiredDate = new Date(this.transactionInfo.expiredDate);
-
-    now.setHours(0, 0, 0, 0);
-    maturedDate.setHours(0, 0, 0, 0);
-    expiredDate.setHours(0, 0, 0, 0);
-
-    if (now > expiredDate) {
-      return 'Expired';
-    } else if (now > maturedDate) {
-      return 'Matured';
-    } else {
-      return 'Premature';
-    }
+    return this.transactionCalcService.getLoanStatus(
+      this.transactionInfo.maturedDate,
+      this.transactionInfo.expiredDate
+    );
   }
 
   getLoanStatusClass(): string {
-    const status = this.getLoanStatus().toLowerCase();
-    switch (status) {
-      case 'premature':
-        return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
-      case 'matured':
-        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
-      case 'expired':
-        return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
-      default:
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
-    }
+    const status = this.getLoanStatus();
+    return this.transactionCalcService.getStatusClass(status);
   }
 
   getDurationBadgeColors(): {years: string, months: string, days: string} {
-    const status = this.getLoanStatus().toLowerCase();
-    switch (status) {
-      case 'premature':
-        return {
-          years: 'from-blue-500 to-blue-600',
-          months: 'from-indigo-500 to-indigo-600',
-          days: 'from-cyan-500 to-cyan-600'
-        };
-      case 'matured':
-        return {
-          years: 'from-yellow-500 to-yellow-600',
-          months: 'from-orange-500 to-orange-600',
-          days: 'from-amber-500 to-amber-600'
-        };
-      case 'expired':
-        return {
-          years: 'from-red-500 to-red-600',
-          months: 'from-rose-500 to-rose-600',
-          days: 'from-pink-500 to-pink-600'
-        };
-      default:
-        return {
-          years: 'from-gray-500 to-gray-600',
-          months: 'from-slate-500 to-slate-600',
-          days: 'from-zinc-500 to-zinc-600'
-        };
-    }
+    const status = this.getLoanStatus();
+    return this.transactionCalcService.getDurationBadgeColors(status);
   }
 
   getDurationAnimationClass(): string {
-    const status = this.getLoanStatus().toLowerCase();
-    return status === 'expired' ? 'animate-pulse' : '';
+    const status = this.getLoanStatus();
+    return this.transactionCalcService.getDurationAnimationClass(status);
   }
 
   getYearsDifference(): number {
-    if (!this.transactionInfo.transactionDate) return 0;
-    const transactionDate = new Date(this.transactionInfo.transactionDate);
-    const now = new Date();
-    const diffTime = now.getTime() - transactionDate.getTime();
-    return Math.floor(diffTime / (1000 * 60 * 60 * 24 * 365.25));
+    const duration = this.transactionCalcService.getDuration(this.transactionInfo.maturedDate);
+    return duration.years;
   }
 
   getMonthsDifference(): number {
-    if (!this.transactionInfo.transactionDate) return 0;
-    const transactionDate = new Date(this.transactionInfo.transactionDate);
-    const now = new Date();
-
-    const years = this.getYearsDifference();
-    const totalMonths = Math.floor((now.getTime() - transactionDate.getTime()) / (1000 * 60 * 60 * 24 * 30.44));
-    return totalMonths - (years * 12);
+    const duration = this.transactionCalcService.getDuration(this.transactionInfo.maturedDate);
+    return duration.months;
   }
 
   getDaysDifference(): number {
-    if (!this.transactionInfo.transactionDate) return 0;
-    const transactionDate = new Date(this.transactionInfo.transactionDate);
-    const now = new Date();
-
-    const years = this.getYearsDifference();
-    const months = this.getMonthsDifference();
-    const totalDays = Math.floor((now.getTime() - transactionDate.getTime()) / (1000 * 60 * 60 * 24));
-    return totalDays - (years * 365) - (months * 30);
+    const duration = this.transactionCalcService.getDuration(this.transactionInfo.maturedDate);
+    return duration.days;
   }
 }

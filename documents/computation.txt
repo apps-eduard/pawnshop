@@ -1,6 +1,14 @@
 Jewely 3%
 Appliance 6%
 
+*** 3 days grace period condition ***
+ex. Days from mature 3days 
+from mature date there will be automatic discount of penalty and interest will be 0 
+
+ex. Days from mature 4days
+the panalty will be full month.
+the Interest will be daily
+
 
 *************START PENALTY COMPUTAION*************
 penalty 2% permonth -> formula  (principalLoan * 0.02)
