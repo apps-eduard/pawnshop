@@ -1,7 +1,54 @@
 # Global Transaction Calculation Service
 
 ## Overview
-Centralized service for calculating transaction status and duration across all transaction types in the pawnshop system.
+Centralized services for calculating transaction status, duration, interest, and penalty across all transaction types in the pawnshop system.
+
+## Services
+
+### 1. TransactionCalculationService
+**Location:** `pawn-web/src/app/core/services/transaction-calculation.service.ts`
+
+**Purpose:** Calculate loan status and duration
+
+### 2. PenaltyCalculatorService  
+**Location:** `pawn-web/src/app/core/services/penalty-calculator.service.ts`
+
+**Purpose:** Calculate interest and penalty with business rules
+
+---
+
+## PenaltyCalculatorService Methods
+
+### calculatePenalty()
+**Used by:** Redeem transactions
+
+**Purpose:** Calculate penalty based on days overdue
+- ≤ 3 days: Daily penalty = (Principal × 2%) / 30 × days
+- > 3 days: Full month penalty = Principal × 2%
+
+### calculateInterestAndPenaltyWithGracePeriod()
+**Used by:** Additional Loan, Renew transactions
+
+**Purpose:** Calculate both interest and penalty with 3-day grace period
+
+**Grace Period Rules:**
+- Days 0-3 after maturity: NO interest, NO penalty
+- Day 4+: Calculate full interest and penalty
+
+**Returns:**
+```typescript
+{
+  interest: number;
+  penalty: number;
+  discount: number;
+  isWithinGracePeriod: boolean;
+  daysAfterMaturity: number;
+}
+```
+
+---
+
+## TransactionCalculationService
 
 ## Service Location
 `pawn-web/src/app/core/services/transaction-calculation.service.ts`

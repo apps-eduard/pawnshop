@@ -163,12 +163,14 @@ router.get('/search/:ticketNumber', async (req, res) => {
       expiryDateStr
     });
     
-    // Use balance for remaining amount to pay, fallback to total_amount if balance is not set
-    const currentBalance = parseFloat(row.balance || row.total_amount || 0);
-    const amountPaid = parseFloat(row.amount_paid || 0);
-    
     // Calculate current principal loan - use latest partial payment's new principal if exists
     let currentPrincipal = parseFloat(row.principal_amount || 0);
+    let currentMaturityDate = maturityDateStr;
+    let currentGracePeriodDate = gracePeriodDateStr;
+    let currentExpiryDate = expiryDateStr;
+    let currentGrantedDate = grantedDateStr;
+    let currentTransactionDate = transactionDateStr;
+    
     if (historyResult.rows.length > 0) {
       // Find the latest partial payment transaction with new_principal_loan
       const latestPartialPayment = historyResult.rows
@@ -179,7 +181,44 @@ router.get('/search/:ticketNumber', async (req, res) => {
         currentPrincipal = parseFloat(latestPartialPayment.new_principal_loan || 0);
         console.log(`💰 Using current principal from latest partial payment: ${currentPrincipal} (was ${row.principal_amount})`);
       }
+      
+      // Find the most recent additional loan or renewal transaction with updated dates
+      const latestDateUpdate = historyResult.rows
+        .filter(h => (h.transaction_type === 'additional_loan' || h.transaction_type === 'renewal') && h.status === 'active')
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
+      
+      if (latestDateUpdate) {
+        // Get the dates from the child transaction
+        const childDatesResult = await pool.query(`
+          SELECT transaction_date, granted_date, maturity_date, grace_period_date, expiry_date, principal_amount
+          FROM transactions
+          WHERE id = $1
+        `, [latestDateUpdate.id]);
+        
+        if (childDatesResult.rows.length > 0) {
+          const childRow = childDatesResult.rows[0];
+          currentTransactionDate = formatDateForResponse(childRow.transaction_date, false);
+          currentGrantedDate = formatDateForResponse(childRow.granted_date || childRow.transaction_date, false);
+          currentMaturityDate = formatDateForResponse(childRow.maturity_date, true);
+          currentGracePeriodDate = childRow.grace_period_date ? formatDateForResponse(childRow.grace_period_date, true) : null;
+          currentExpiryDate = formatDateForResponse(childRow.expiry_date, true);
+          currentPrincipal = parseFloat(childRow.principal_amount || currentPrincipal);
+          
+          console.log(`📅 Using updated dates from latest ${latestDateUpdate.transaction_type}:`, {
+            transactionDate: currentTransactionDate,
+            grantedDate: currentGrantedDate,
+            maturityDate: currentMaturityDate,
+            gracePeriodDate: currentGracePeriodDate,
+            expiryDate: currentExpiryDate,
+            principal: currentPrincipal
+          });
+        }
+      }
     }
+    
+    // Use balance for remaining amount to pay, fallback to total_amount if balance is not set
+    const currentBalance = parseFloat(row.balance || row.total_amount || 0);
+    const amountPaid = parseFloat(row.amount_paid || 0);
 
     res.json({
       success: true,
@@ -192,14 +231,14 @@ router.get('/search/:ticketNumber', async (req, res) => {
         branchId: row.branch_id,
         createdBy: row.created_by,
         transactionType: row.transaction_type,
-        transactionDate: transactionDateStr,
-        loanDate: grantedDateStr,
-        dateGranted: grantedDateStr,
-        maturityDate: maturityDateStr,
-        dateMatured: maturityDateStr,
-        gracePeriodDate: gracePeriodDateStr, // Grace period end date (maturity + 3 days)
-        expiryDate: expiryDateStr,
-        dateExpired: expiryDateStr,
+        transactionDate: currentTransactionDate,
+        loanDate: currentGrantedDate,
+        dateGranted: currentGrantedDate,
+        maturityDate: currentMaturityDate,
+        dateMatured: currentMaturityDate,
+        gracePeriodDate: currentGracePeriodDate, // Grace period end date (maturity + 3 days)
+        expiryDate: currentExpiryDate,
+        dateExpired: currentExpiryDate,
         principalAmount: currentPrincipal, // Current principal after partial payments
         principalLoan: currentPrincipal, // Current principal after partial payments
         originalPrincipalAmount: parseFloat(row.principal_amount || 0), // Keep original for reference

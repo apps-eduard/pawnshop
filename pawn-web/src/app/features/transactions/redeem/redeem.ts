@@ -216,63 +216,25 @@ export class Redeem implements OnInit, AfterViewInit {
       });
     }
 
-    // Calculate interest based on grace period and additional days
-    if (isWithinGracePeriod) {
-      // WITHIN GRACE PERIOD: NO INTEREST
-      this.redeemComputation.interest = 0;
-      this.redeemComputation.discount = daysAfterMaturity; // Auto-set discount for display
-
-      console.log(`✅ WITHIN GRACE PERIOD: Interest = ₱0.00 (${daysAfterMaturity} days after maturity)`);
-    } else {
-      // AFTER GRACE PERIOD OR BEFORE MATURITY: Calculate interest for additional days only
-      const totalDays = Math.floor((currentDate.getTime() - grantDate.getTime()) / (1000 * 60 * 60 * 24));
-
-      // Days beyond the first 30 days (already paid in advance)
-      const additionalDays = Math.max(0, totalDays - 30);
-
-      if (additionalDays > 0) {
-        // Calculate interest PER DAY for additional days only
-        const monthlyRate = this.redeemComputation.interestRate / 100; // 6% = 0.06
-        const dailyRate = monthlyRate / 30; // Daily rate = 6% / 30 = 0.002
-
-        // Interest = Principal × Daily Rate × Additional Days
-        this.redeemComputation.interest = this.redeemComputation.principalLoan * dailyRate * additionalDays;
-        this.redeemComputation.discount = 0;
-
-        console.log(`⚠️ INTEREST CALCULATION (Additional Days):`, {
-          grantDate: grantDate.toISOString().split('T')[0],
-          maturityDate: maturityDate.toISOString().split('T')[0],
-          currentDate: currentDate.toISOString().split('T')[0],
-          totalDays,
-          additionalDays,
-          monthlyRate: (monthlyRate * 100).toFixed(0) + '%',
-          dailyRate: (dailyRate * 100).toFixed(4) + '%',
-          principal: this.redeemComputation.principalLoan,
-          interestPerDay: (this.redeemComputation.principalLoan * dailyRate).toFixed(2),
-          totalInterest: this.redeemComputation.interest.toFixed(2)
-        });
-      } else {
-        // Within first 30 days: NO INTEREST (already paid in advance)
-        this.redeemComputation.interest = 0;
-        this.redeemComputation.discount = 0;
-
-        console.log(`✅ WITHIN FIRST 30 DAYS: Interest = ₱0.00 (day ${totalDays} of first month)`);
-      }
-    }
-
-    // Calculate penalty using the PenaltyCalculatorService
-    const penaltyDetails = this.penaltyCalculatorService.calculatePenalty(
+    // Use PenaltyCalculatorService for interest and penalty calculation (DAILY interest)
+    const calculation = this.penaltyCalculatorService.calculateDailyInterestAndPenaltyWithGracePeriod(
       this.redeemComputation.principalLoan,
+      this.redeemComputation.interestRate,
+      grantDate,
       maturityDate,
       currentDate
     );
 
-    this.redeemComputation.penalty = penaltyDetails.penaltyAmount;
+    this.redeemComputation.interest = calculation.interest;
+    this.redeemComputation.penalty = calculation.penalty;
+    this.redeemComputation.discount = calculation.discount;
 
-    console.log('Penalty calculation:', {
-      daysOverdue: penaltyDetails.daysOverdue,
-      calculationMethod: penaltyDetails.calculationMethod,
-      penaltyAmount: penaltyDetails.penaltyAmount
+    console.log(`💰 Interest & Penalty Calculation (Redeem - DAILY):`, {
+      isWithinGracePeriod: calculation.isWithinGracePeriod,
+      daysAfterMaturity: calculation.daysAfterMaturity,
+      interest: calculation.interest.toFixed(2),
+      penalty: calculation.penalty.toFixed(2),
+      discount: calculation.discount
     });
 
     // Calculate due amount

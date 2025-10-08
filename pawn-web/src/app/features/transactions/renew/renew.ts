@@ -6,6 +6,7 @@ import { Location } from '@angular/common';
 import { ToastService } from '../../../core/services/toast.service';
 import { TransactionInfoComponent } from '../../../shared/components/transaction/transaction-info.component';
 import { PenaltyCalculatorService } from '../../../core/services/penalty-calculator.service';
+import { TransactionDateService } from '../../../core/services/transaction-date.service';
 import { InvoiceModalComponent } from '../../../shared/modals/invoice-modal/invoice-modal.component';
 import { LoanInvoiceData } from '../../../shared/components/loan-invoice/loan-invoice.component';
 import { CurrencyInputDirective } from '../../../shared/directives/currency-input.directive';
@@ -125,7 +126,8 @@ export class Renew implements OnInit, AfterViewInit {
     private router: Router,
     private location: Location,
     private toastService: ToastService,
-    private penaltyCalculatorService: PenaltyCalculatorService
+    private penaltyCalculatorService: PenaltyCalculatorService,
+    private transactionDateService: TransactionDateService
   ) {}
 
   ngOnInit() {
@@ -322,81 +324,31 @@ export class Renew implements OnInit, AfterViewInit {
       });
     }
 
-    // Calculate interest based on grace period
-    if (isWithinGracePeriod) {
-      // WITHIN GRACE PERIOD: NO INTEREST
-      this.renewComputation.interest = 0;
-      this.renewComputation.discount = daysAfterMaturity; // Auto-set discount for display
+    // Use PenaltyCalculatorService for interest and penalty calculation (DAILY interest)
+    if (this.transactionInfo.grantedDate && this.transactionInfo.maturedDate) {
+      const calculation = this.penaltyCalculatorService.calculateDailyInterestAndPenaltyWithGracePeriod(
+        this.renewComputation.principalLoan,
+        this.renewComputation.interestRate,
+        new Date(this.transactionInfo.grantedDate),
+        new Date(this.transactionInfo.maturedDate),
+        new Date()
+      );
 
-      console.log(`✅ WITHIN GRACE PERIOD: Interest = ₱0.00 (${daysAfterMaturity} days after maturity)`);
-    } else if (this.transactionInfo.grantedDate && this.transactionInfo.maturedDate) {
-      // AFTER GRACE PERIOD: CALCULATE FULL INTEREST
-      const grantDate = new Date(this.transactionInfo.grantedDate);
-      const maturityDate = new Date(this.transactionInfo.maturedDate);
-      const now = new Date();
+      this.renewComputation.interest = calculation.interest;
+      this.renewComputation.penalty = calculation.penalty;
+      this.renewComputation.discount = calculation.discount;
 
-      // Calculate total days from grant date to now
-      const totalDays = Math.floor((now.getTime() - grantDate.getTime()) / (1000 * 60 * 60 * 24));
-
-      // Days beyond the first 30 days (already paid in advance)
-      const additionalDays = Math.max(0, totalDays - 30);
-
-      // Calculate monthly interest based on full months
-      const monthlyRate = this.renewComputation.interestRate / 100; // 6% = 0.06
-      const monthsOverdue = Math.floor(additionalDays / 30);
-
-      // Full month interest calculation (6% × principal × months)
-      this.renewComputation.interest = this.renewComputation.principalLoan * monthlyRate * monthsOverdue;
-      this.renewComputation.discount = 0; // No discount after grace period
-
-      console.log(`⚠️ AFTER GRACE PERIOD: Interest Calculation (Renew)`, {
-        grantDate: grantDate.toISOString().split('T')[0],
-        maturityDate: maturityDate.toISOString().split('T')[0],
-        currentDate: now.toISOString().split('T')[0],
-        totalDays,
-        additionalDays,
-        monthsOverdue,
-        monthlyRate: (monthlyRate * 100).toFixed(0) + '%',
-        principal: this.renewComputation.principalLoan,
-        interest: this.renewComputation.interest.toFixed(2)
+      console.log(`💰 Interest & Penalty Calculation (Renew - DAILY):`, {
+        isWithinGracePeriod: calculation.isWithinGracePeriod,
+        daysAfterMaturity: calculation.daysAfterMaturity,
+        interest: calculation.interest.toFixed(2),
+        penalty: calculation.penalty.toFixed(2),
+        discount: calculation.discount
       });
     } else {
       this.renewComputation.interest = 0;
+      this.renewComputation.penalty = 0;
       this.renewComputation.discount = 0;
-    }
-
-    // Calculate penalty based on grace period
-    if (isWithinGracePeriod) {
-      // WITHIN GRACE PERIOD: NO PENALTY
-      this.renewComputation.penalty = 0;
-
-      console.log(`✅ WITHIN GRACE PERIOD: Penalty = ₱0.00`);
-    } else if (this.transactionInfo.maturedDate) {
-      // AFTER GRACE PERIOD: CALCULATE FULL MONTH PENALTY
-      const maturityDate = new Date(this.transactionInfo.maturedDate);
-      const now = new Date();
-
-      // Days after maturity (excluding grace period)
-      const daysAfterGracePeriod = Math.max(0, daysAfterMaturity - 3);
-
-      // Calculate penalty for full months (2% × principal × ceil(days/30))
-      const penaltyRate = 0.02; // 2% monthly
-      const monthsForPenalty = Math.ceil(daysAfterGracePeriod / 30);
-
-      this.renewComputation.penalty = this.renewComputation.principalLoan * penaltyRate * monthsForPenalty;
-
-      console.log(`⚠️ AFTER GRACE PERIOD: Penalty Calculation (Renew)`, {
-        maturityDate: maturityDate.toISOString().split('T')[0],
-        currentDate: now.toISOString().split('T')[0],
-        daysAfterMaturity,
-        daysAfterGracePeriod,
-        monthsForPenalty,
-        penaltyRate: (penaltyRate * 100).toFixed(0) + '%',
-        principal: this.renewComputation.principalLoan,
-        penalty: this.renewComputation.penalty.toFixed(2)
-      });
-    } else {
-      this.renewComputation.penalty = 0;
     }
 
     // Calculate due amount (interest + penalty that must be paid)
@@ -444,22 +396,12 @@ export class Renew implements OnInit, AfterViewInit {
 
   // Calculate new maturity and expiry dates for the renewed loan
   calculateNewDates() {
-    const today = new Date();
-
-    // New maturity date = Today + 30 days
-    const newMaturity = new Date(today);
-    newMaturity.setDate(newMaturity.getDate() + 30);
-    this.transactionInfo.newMaturityDate = newMaturity.toISOString().split('T')[0];
-
-    // New grace period = New maturity + 3 days
-    const newGracePeriod = new Date(newMaturity);
-    newGracePeriod.setDate(newGracePeriod.getDate() + 3);
-    this.transactionInfo.newGracePeriodDate = newGracePeriod.toISOString().split('T')[0];
-
-    // New expiry date = New maturity + 90 days
-    const newExpiry = new Date(newMaturity);
-    newExpiry.setDate(newExpiry.getDate() + 90);
-    this.transactionInfo.newExpiryDate = newExpiry.toISOString().split('T')[0];
+    // Use TransactionDateService for consistent date calculations
+    const newDates = this.transactionDateService.calculateRenewDates(1); // 1 month extension
+    
+    this.transactionInfo.newMaturityDate = newDates.newMaturityDate;
+    this.transactionInfo.newGracePeriodDate = newDates.newGracePeriodDate;
+    this.transactionInfo.newExpiryDate = newDates.newExpiryDate;
 
     console.log('📅 Renew - New Dates Calculated:');
     console.log('  New Maturity:', this.transactionInfo.newMaturityDate);
@@ -596,14 +538,12 @@ export class Renew implements OnInit, AfterViewInit {
 
     try {
       const renewData = {
-        transactionId: this.transactionId,
-        interestPaid: this.renewComputation.interest,
-        penaltyPaid: this.renewComputation.penalty,
-        newPrincipal: this.renewComputation.newLoanAmount,
-        serviceCharge: this.renewComputation.serviceFee,
-        amountReceived: this.renewComputation.receivedAmount,
-        change: this.renewComputation.change,
-        totalPaid: this.renewComputation.totalRenewAmount
+        ticketId: this.transactionId,
+        renewalFee: this.renewComputation.totalRenewAmount,
+        newInterestRate: this.renewComputation.interestRate,
+        newMaturityDate: this.transactionInfo.newMaturityDate,
+        newExpiryDate: this.transactionInfo.newExpiryDate,
+        notes: `Renewal - Change: ₱${this.renewComputation.change.toFixed(2)}`
       };
 
       const response = await fetch('http://localhost:3000/api/transactions/renew', {

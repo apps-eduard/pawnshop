@@ -6,6 +6,7 @@ import { Location } from '@angular/common';
 import { ToastService } from '../../../core/services/toast.service';
 import { TransactionInfoComponent } from '../../../shared/components/transaction/transaction-info.component';
 import { PenaltyCalculatorService } from '../../../core/services/penalty-calculator.service';
+import { TransactionDateService } from '../../../core/services/transaction-date.service';
 import { InvoiceModalComponent } from '../../../shared/modals/invoice-modal/invoice-modal.component';
 import { LoanInvoiceData } from '../../../shared/components/loan-invoice/loan-invoice.component';
 import { CurrencyInputDirective } from '../../../shared/directives/currency-input.directive';
@@ -133,7 +134,8 @@ export class PartialPayment implements OnInit, AfterViewInit {
     private router: Router,
     private location: Location,
     private toastService: ToastService,
-    private penaltyCalculatorService: PenaltyCalculatorService
+    private penaltyCalculatorService: PenaltyCalculatorService,
+    private transactionDateService: TransactionDateService
   ) {}
 
   ngOnInit() {
@@ -186,82 +188,31 @@ export class PartialPayment implements OnInit, AfterViewInit {
       });
     }
 
-    // Calculate interest based on grace period
-    if (isWithinGracePeriod) {
-      // WITHIN GRACE PERIOD: NO INTEREST
-      this.partialComputation.interest = 0;
-      this.partialComputation.discount = daysAfterMaturity; // Auto-set discount for display
+    // Use PenaltyCalculatorService for interest and penalty calculation (DAILY interest)
+    if (this.transactionInfo.grantedDate && this.transactionInfo.maturedDate) {
+      const calculation = this.penaltyCalculatorService.calculateDailyInterestAndPenaltyWithGracePeriod(
+        this.partialComputation.principalLoan,
+        this.partialComputation.interestRate,
+        new Date(this.transactionInfo.grantedDate),
+        new Date(this.transactionInfo.maturedDate),
+        new Date()
+      );
 
-      console.log(`✅ WITHIN GRACE PERIOD: Interest = ₱0.00 (${daysAfterMaturity} days after maturity)`);
-    } else if (this.transactionInfo.grantedDate && this.transactionInfo.maturedDate) {
-      // AFTER GRACE PERIOD: CALCULATE INTEREST PER DAY
-      const grantDate = new Date(this.transactionInfo.grantedDate);
-      const maturityDate = new Date(this.transactionInfo.maturedDate);
-      const now = new Date();
+      this.partialComputation.interest = calculation.interest;
+      this.partialComputation.penalty = calculation.penalty;
+      this.partialComputation.discount = calculation.discount;
 
-      // Calculate total days from grant date to now
-      const totalDays = Math.floor((now.getTime() - grantDate.getTime()) / (1000 * 60 * 60 * 24));
-
-      // Days beyond the first 30 days (already paid in advance)
-      const additionalDays = Math.max(0, totalDays - 30);
-
-      // Calculate interest PER DAY (Monthly rate / 30 days × additional days)
-      const monthlyRate = this.partialComputation.interestRate / 100; // 6% = 0.06
-      const dailyRate = monthlyRate / 30; // Daily rate = 6% / 30 = 0.002
-
-      // Interest = Principal × Daily Rate × Additional Days
-      this.partialComputation.interest = this.partialComputation.principalLoan * dailyRate * additionalDays;
-      this.partialComputation.discount = 0; // No discount after grace period
-
-      console.log(`⚠️ AFTER GRACE PERIOD: Interest Calculation (Per Day)`, {
-        grantDate: grantDate.toISOString().split('T')[0],
-        maturityDate: maturityDate.toISOString().split('T')[0],
-        currentDate: now.toISOString().split('T')[0],
-        totalDays,
-        additionalDays,
-        monthlyRate: (monthlyRate * 100).toFixed(0) + '%',
-        dailyRate: (dailyRate * 100).toFixed(4) + '%',
-        principal: this.partialComputation.principalLoan,
-        interestPerDay: (this.partialComputation.principalLoan * dailyRate).toFixed(2),
-        totalInterest: this.partialComputation.interest.toFixed(2)
+      console.log(`💰 Interest & Penalty Calculation (Partial Payment - DAILY):`, {
+        isWithinGracePeriod: calculation.isWithinGracePeriod,
+        daysAfterMaturity: calculation.daysAfterMaturity,
+        interest: calculation.interest.toFixed(2),
+        penalty: calculation.penalty.toFixed(2),
+        discount: calculation.discount
       });
     } else {
       this.partialComputation.interest = 0;
+      this.partialComputation.penalty = 0;
       this.partialComputation.discount = 0;
-    }
-
-    // Calculate penalty based on grace period
-    if (isWithinGracePeriod) {
-      // WITHIN GRACE PERIOD: NO PENALTY
-      this.partialComputation.penalty = 0;
-
-      console.log(`✅ WITHIN GRACE PERIOD: Penalty = ₱0.00`);
-    } else if (this.transactionInfo.maturedDate) {
-      // AFTER GRACE PERIOD: CALCULATE FULL MONTH PENALTY
-      const maturityDate = new Date(this.transactionInfo.maturedDate);
-      const now = new Date();
-
-      // Days after maturity (excluding grace period)
-      const daysAfterGracePeriod = Math.max(0, daysAfterMaturity - 3);
-
-      // Calculate penalty for full months (2% × principal × ceil(days/30))
-      const penaltyRate = 0.02; // 2% monthly
-      const monthsForPenalty = Math.ceil(daysAfterGracePeriod / 30);
-
-      this.partialComputation.penalty = this.partialComputation.principalLoan * penaltyRate * monthsForPenalty;
-
-      console.log(`⚠️ AFTER GRACE PERIOD: Penalty Calculation`, {
-        maturityDate: maturityDate.toISOString().split('T')[0],
-        currentDate: now.toISOString().split('T')[0],
-        daysAfterMaturity,
-        daysAfterGracePeriod,
-        monthsForPenalty,
-        penaltyRate: (penaltyRate * 100).toFixed(0) + '%',
-        principal: this.partialComputation.principalLoan,
-        penalty: this.partialComputation.penalty.toFixed(2)
-      });
-    } else {
-      this.partialComputation.penalty = 0;
     }
 
     // Calculate total obligation (principal + interest + penalty)
@@ -319,22 +270,12 @@ export class PartialPayment implements OnInit, AfterViewInit {
   // Calculate new maturity and expiry dates for the partial payment
   calculateNewDates() {
     if (this.partialComputation.partialPay > 0) {
-      const today = new Date();
-
-      // New maturity date = Today + 30 days
-      const newMaturity = new Date(today);
-      newMaturity.setDate(newMaturity.getDate() + 30);
-      this.transactionInfo.newMaturityDate = newMaturity.toISOString().split('T')[0];
-
-      // New grace period = New maturity + 3 days
-      const newGracePeriod = new Date(newMaturity);
-      newGracePeriod.setDate(newGracePeriod.getDate() + 3);
-      this.transactionInfo.newGracePeriodDate = newGracePeriod.toISOString().split('T')[0];
-
-      // New expiry date = New maturity + 90 days
-      const newExpiry = new Date(newMaturity);
-      newExpiry.setDate(newExpiry.getDate() + 90);
-      this.transactionInfo.newExpiryDate = newExpiry.toISOString().split('T')[0];
+      // Use TransactionDateService for consistent date calculations
+      const newDates = this.transactionDateService.calculatePartialPaymentDates();
+      
+      this.transactionInfo.newMaturityDate = newDates.newMaturityDate;
+      this.transactionInfo.newGracePeriodDate = newDates.newGracePeriodDate;
+      this.transactionInfo.newExpiryDate = newDates.newExpiryDate;
 
       console.log('📅 New Dates Calculated for Partial Payment:');
       console.log('  New Maturity:', this.transactionInfo.newMaturityDate);

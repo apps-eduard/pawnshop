@@ -219,4 +219,134 @@ export class PenaltyCalculatorService {
     const timeDifference = new Date(maturityDate).getTime() - currentDate.getTime();
     return Math.ceil(timeDifference / (1000 * 3600 * 24));
   }
+
+  /**
+   * Calculate interest and penalty with grace period support
+   * Used by Additional Loan and Renew transactions
+   * Uses MONTHLY interest calculation (full months only)
+   */
+  calculateInterestAndPenaltyWithGracePeriod(
+    principalAmount: number,
+    interestRate: number,
+    grantedDate: Date,
+    maturityDate: Date,
+    currentDate: Date = new Date()
+  ): {
+    interest: number;
+    penalty: number;
+    discount: number;
+    isWithinGracePeriod: boolean;
+    daysAfterMaturity: number;
+  } {
+    const maturity = new Date(maturityDate);
+    const current = new Date(currentDate);
+    const granted = new Date(grantedDate);
+
+    // Calculate days after maturity
+    const daysAfterMaturity = Math.floor((current.getTime() - maturity.getTime()) / (1000 * 60 * 60 * 24));
+
+    // Check if within 3-day grace period (days 0, 1, 2, 3 after maturity)
+    const isWithinGracePeriod = daysAfterMaturity >= 0 && daysAfterMaturity <= 3;
+
+    let interest = 0;
+    let penalty = 0;
+    let discount = 0;
+
+    if (isWithinGracePeriod) {
+      // WITHIN GRACE PERIOD: NO INTEREST, NO PENALTY
+      interest = 0;
+      penalty = 0;
+      discount = daysAfterMaturity; // Auto-set discount for display
+    } else {
+      // AFTER GRACE PERIOD: CALCULATE INTEREST AND PENALTY
+
+      // Calculate interest: full months from grant date to now
+      const totalDays = Math.floor((current.getTime() - granted.getTime()) / (1000 * 60 * 60 * 24));
+      const additionalDays = Math.max(0, totalDays - 30); // Days beyond the first 30 (already paid in advance)
+      const monthsOverdue = Math.floor(additionalDays / 30);
+      const monthlyRate = interestRate / 100;
+      interest = principalAmount * monthlyRate * monthsOverdue;
+
+      // Calculate penalty: full months after grace period
+      const daysAfterGracePeriod = Math.max(0, daysAfterMaturity - 3);
+      const monthsForPenalty = Math.ceil(daysAfterGracePeriod / 30);
+      const penaltyRate = 0.02; // 2% monthly
+      penalty = principalAmount * penaltyRate * monthsForPenalty;
+
+      discount = 0; // No discount after grace period
+    }
+
+    return {
+      interest: Math.round(interest * 100) / 100,
+      penalty: Math.round(penalty * 100) / 100,
+      discount,
+      isWithinGracePeriod,
+      daysAfterMaturity
+    };
+  }
+
+  /**
+   * Calculate interest and penalty with grace period support - DAILY INTEREST
+   * Used by Partial Payment transactions
+   * Uses DAILY interest calculation (prorated per day)
+   */
+  calculateDailyInterestAndPenaltyWithGracePeriod(
+    principalAmount: number,
+    interestRate: number,
+    grantedDate: Date,
+    maturityDate: Date,
+    currentDate: Date = new Date()
+  ): {
+    interest: number;
+    penalty: number;
+    discount: number;
+    isWithinGracePeriod: boolean;
+    daysAfterMaturity: number;
+  } {
+    const maturity = new Date(maturityDate);
+    const current = new Date(currentDate);
+    const granted = new Date(grantedDate);
+
+    // Calculate days after maturity
+    const daysAfterMaturity = Math.floor((current.getTime() - maturity.getTime()) / (1000 * 60 * 60 * 24));
+
+    // Check if within 3-day grace period (days 0, 1, 2, 3 after maturity)
+    const isWithinGracePeriod = daysAfterMaturity >= 0 && daysAfterMaturity <= 3;
+
+    let interest = 0;
+    let penalty = 0;
+    let discount = 0;
+
+    if (isWithinGracePeriod) {
+      // WITHIN GRACE PERIOD: NO INTEREST, NO PENALTY
+      interest = 0;
+      penalty = 0;
+      discount = daysAfterMaturity; // Auto-set discount for display
+    } else {
+      // AFTER GRACE PERIOD: CALCULATE INTEREST AND PENALTY
+
+      // Calculate interest: DAILY rate from grant date to now
+      const totalDays = Math.floor((current.getTime() - granted.getTime()) / (1000 * 60 * 60 * 24));
+      const additionalDays = Math.max(0, totalDays - 30); // Days beyond the first 30 (already paid in advance)
+      const monthlyRate = interestRate / 100;
+      const dailyRate = monthlyRate / 30; // Daily rate = monthly / 30
+      interest = principalAmount * dailyRate * additionalDays;
+
+      // Calculate penalty: full months after grace period
+      const daysAfterGracePeriod = Math.max(0, daysAfterMaturity - 3);
+      const monthsForPenalty = Math.ceil(daysAfterGracePeriod / 30);
+      const penaltyRate = 0.02; // 2% monthly
+      penalty = principalAmount * penaltyRate * monthsForPenalty;
+
+      discount = 0; // No discount after grace period
+    }
+
+    return {
+      interest: Math.round(interest * 100) / 100,
+      penalty: Math.round(penalty * 100) / 100,
+      discount,
+      isWithinGracePeriod,
+      daysAfterMaturity
+    };
+  }
 }

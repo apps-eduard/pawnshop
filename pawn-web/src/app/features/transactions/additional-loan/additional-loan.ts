@@ -6,6 +6,7 @@ import { Location } from '@angular/common';
 import { ToastService } from '../../../core/services/toast.service';
 import { TransactionInfoComponent } from '../../../shared/components/transaction/transaction-info.component';
 import { PenaltyCalculatorService } from '../../../core/services/penalty-calculator.service';
+import { TransactionDateService } from '../../../core/services/transaction-date.service';
 import { CurrencyInputDirective } from '../../../shared/directives/currency-input.directive';
 import { NewLoanDatesComponent } from '../../../shared/components/new-loan-dates/new-loan-dates.component';
 
@@ -115,7 +116,8 @@ export class AdditionalLoan implements OnInit, AfterViewInit {
     private router: Router,
     private location: Location,
     private toastService: ToastService,
-    private penaltyCalculatorService: PenaltyCalculatorService
+    private penaltyCalculatorService: PenaltyCalculatorService,
+    private transactionDateService: TransactionDateService
   ) {}
 
   ngOnInit() {
@@ -142,14 +144,17 @@ export class AdditionalLoan implements OnInit, AfterViewInit {
     // Convert to number if it's a string
     this.additionalComputation.additionalAmount = Number(this.additionalComputation.additionalAmount) || 0;
 
-    // NOTE: We allow additional amount even if available is negative
-    // Customer will need to pay the deficit (negative net proceed)
-    // No capping to available amount - let them borrow more if needed
-
     // Ensure it's not negative (directive should handle this, but double-check)
     if (this.additionalComputation.additionalAmount < 0) {
       console.warn('⚠️ Additional amount is negative, setting to 0');
       this.additionalComputation.additionalAmount = 0;
+    }
+
+    // Cap additional amount to available amount if it exceeds (silent capping)
+    if (this.additionalComputation.additionalAmount > this.additionalComputation.availableAmount) {
+      const requestedAmount = this.additionalComputation.additionalAmount;
+      this.additionalComputation.additionalAmount = this.additionalComputation.availableAmount;
+      console.warn(`⚠️ Additional amount (₱${requestedAmount}) exceeds available (₱${this.additionalComputation.availableAmount}), capping to available`);
     }
 
     // Prevent redundant recalculations if value hasn't actually changed
@@ -171,24 +176,14 @@ export class AdditionalLoan implements OnInit, AfterViewInit {
   // Calculate new maturity and expiry dates for the additional loan
   calculateNewDates() {
     if (this.additionalComputation.additionalAmount > 0) {
-      const today = new Date();
+      // Use TransactionDateService for consistent date calculation
+      const newDates = this.transactionDateService.calculateAdditionalLoanDates();
+      
+      this.transactionInfo.newMaturityDate = newDates.newMaturityDate;
+      this.transactionInfo.newGracePeriodDate = newDates.newGracePeriodDate;
+      this.transactionInfo.newExpiryDate = newDates.newExpiryDate;
 
-      // New maturity date = Today + 30 days
-      const newMaturity = new Date(today);
-      newMaturity.setDate(newMaturity.getDate() + 30);
-      this.transactionInfo.newMaturityDate = newMaturity.toISOString().split('T')[0];
-
-      // New grace period = New maturity + 3 days
-      const newGracePeriod = new Date(newMaturity);
-      newGracePeriod.setDate(newGracePeriod.getDate() + 3);
-      this.transactionInfo.newGracePeriodDate = newGracePeriod.toISOString().split('T')[0];
-
-      // New expiry date = New maturity + 90 days
-      const newExpiry = new Date(newMaturity);
-      newExpiry.setDate(newExpiry.getDate() + 90);
-      this.transactionInfo.newExpiryDate = newExpiry.toISOString().split('T')[0];
-
-      console.log('📅 New Dates Calculated:');
+      console.log('📅 New Dates Calculated (via TransactionDateService):');
       console.log('  New Maturity:', this.transactionInfo.newMaturityDate);
       console.log('  New Grace Period:', this.transactionInfo.newGracePeriodDate);
       console.log('  New Expiry:', this.transactionInfo.newExpiryDate);
@@ -230,6 +225,11 @@ export class AdditionalLoan implements OnInit, AfterViewInit {
       this.additionalComputation.advServiceCharge -
       this.additionalComputation.interest -
       this.additionalComputation.penalty;
+
+    // Force net proceed to 0 if additional amount is 0 or empty
+    if (!this.additionalComputation.additionalAmount || this.additionalComputation.additionalAmount === 0) {
+      this.additionalComputation.netProceed = 0;
+    }
 
     console.log('  Net Proceed:', this.additionalComputation.netProceed);
 
@@ -273,89 +273,39 @@ export class AdditionalLoan implements OnInit, AfterViewInit {
       });
     }
 
-    // Calculate interest based on grace period
-    if (isWithinGracePeriod) {
-      // WITHIN GRACE PERIOD: NO INTEREST
-      this.additionalComputation.interest = 0;
-      this.additionalComputation.discount = daysAfterMaturity; // Auto-set discount for display
+    // Use PenaltyCalculatorService for interest and penalty calculation (DAILY interest)
+    if (this.transactionInfo.grantedDate && this.transactionInfo.maturedDate) {
+      const calculation = this.penaltyCalculatorService.calculateDailyInterestAndPenaltyWithGracePeriod(
+        this.additionalComputation.previousLoan,
+        this.additionalComputation.interestRate,
+        new Date(this.transactionInfo.grantedDate),
+        new Date(this.transactionInfo.maturedDate),
+        new Date()
+      );
 
-      console.log(`✅ WITHIN GRACE PERIOD: Interest = ₱0.00 (${daysAfterMaturity} days after maturity)`);
-    } else if (this.transactionInfo.grantedDate && this.transactionInfo.maturedDate) {
-      // AFTER GRACE PERIOD: CALCULATE FULL INTEREST
-      const grantDate = new Date(this.transactionInfo.grantedDate);
-      const maturityDate = new Date(this.transactionInfo.maturedDate);
-      const now = new Date();
+      this.additionalComputation.interest = calculation.interest;
+      this.additionalComputation.penalty = calculation.penalty;
+      this.additionalComputation.discount = calculation.discount;
 
-      // Calculate total days from grant date to now
-      const totalDays = Math.floor((now.getTime() - grantDate.getTime()) / (1000 * 60 * 60 * 24));
-
-      // Days beyond the first 30 days (already paid in advance)
-      const additionalDays = Math.max(0, totalDays - 30);
-
-      // Calculate monthly interest based on full months
-      const monthlyRate = this.additionalComputation.interestRate / 100; // 6% = 0.06
-      const monthsOverdue = Math.floor(additionalDays / 30);
-
-      // Full month interest calculation (6% × principal × months)
-      this.additionalComputation.interest = this.additionalComputation.previousLoan * monthlyRate * monthsOverdue;
-      this.additionalComputation.discount = 0; // No discount after grace period
-
-      console.log(`⚠️ AFTER GRACE PERIOD: Interest Calculation (Additional Loan)`, {
-        grantDate: grantDate.toISOString().split('T')[0],
-        maturityDate: maturityDate.toISOString().split('T')[0],
-        currentDate: now.toISOString().split('T')[0],
-        totalDays,
-        additionalDays,
-        monthsOverdue,
-        monthlyRate: (monthlyRate * 100).toFixed(0) + '%',
-        principal: this.additionalComputation.previousLoan,
-        interest: this.additionalComputation.interest.toFixed(2)
+      console.log(`💰 Interest & Penalty Calculation (Additional Loan - DAILY):`, {
+        isWithinGracePeriod: calculation.isWithinGracePeriod,
+        daysAfterMaturity: calculation.daysAfterMaturity,
+        interest: calculation.interest.toFixed(2),
+        penalty: calculation.penalty.toFixed(2),
+        discount: calculation.discount
       });
     } else {
       this.additionalComputation.interest = 0;
+      this.additionalComputation.penalty = 0;
       this.additionalComputation.discount = 0;
     }
 
-    // Calculate penalty based on grace period
-    if (isWithinGracePeriod) {
-      // WITHIN GRACE PERIOD: NO PENALTY
-      this.additionalComputation.penalty = 0;
-
-      console.log(`✅ WITHIN GRACE PERIOD: Penalty = ₱0.00`);
-    } else if (this.transactionInfo.maturedDate) {
-      // AFTER GRACE PERIOD: CALCULATE FULL MONTH PENALTY
-      const maturityDate = new Date(this.transactionInfo.maturedDate);
-      const now = new Date();
-
-      // Days after maturity (excluding grace period)
-      const daysAfterGracePeriod = Math.max(0, daysAfterMaturity - 3);
-
-      // Calculate penalty for full months (2% × principal × ceil(days/30))
-      const penaltyRate = 0.02; // 2% monthly
-      const monthsForPenalty = Math.ceil(daysAfterGracePeriod / 30);
-
-      this.additionalComputation.penalty = this.additionalComputation.previousLoan * penaltyRate * monthsForPenalty;
-
-      console.log(`⚠️ AFTER GRACE PERIOD: Penalty Calculation (Additional Loan)`, {
-        maturityDate: maturityDate.toISOString().split('T')[0],
-        currentDate: now.toISOString().split('T')[0],
-        daysAfterMaturity,
-        daysAfterGracePeriod,
-        monthsForPenalty,
-        penaltyRate: (penaltyRate * 100).toFixed(0) + '%',
-        principal: this.additionalComputation.previousLoan,
-        penalty: this.additionalComputation.penalty.toFixed(2)
-      });
-    } else {
-      this.additionalComputation.penalty = 0;
-    }
-
-    // Calculate available amount (50% of appraisal value minus previous loan, interest, and penalty)
-    const totalObligation = this.additionalComputation.previousLoan +
-                           this.additionalComputation.interest +
-                           this.additionalComputation.penalty;
-    this.additionalComputation.availableAmount =
-      (this.additionalComputation.appraisalValue * 0.5) - totalObligation;
+    // Calculate available amount (Appraisal Value - Principal Loan)
+    // Ensure it's not negative (minimum 0)
+    this.additionalComputation.availableAmount = Math.max(
+      0,
+      this.additionalComputation.appraisalValue - this.additionalComputation.previousLoan
+    );
 
     // Keep additionalAmount at 0 or user-entered value (don't auto-calculate)
     // User will manually enter the additional amount they want
@@ -622,29 +572,27 @@ export class AdditionalLoan implements OnInit, AfterViewInit {
     this.isLoading = true;
 
     try {
-      const response = await fetch('http://localhost:3000/api/transactions/additional', {
+      const response = await fetch('http://localhost:3000/api/transactions/additional-loan', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
         body: JSON.stringify({
-          transactionId: this.transactionId,
-          transactionNumber: this.transactionNumber,
+          originalTicketId: this.transactionId,
           additionalAmount: this.additionalComputation.additionalAmount,
-          interest: this.additionalComputation.interest,
-          penalty: this.additionalComputation.penalty,
-          newPrincipalLoan: this.additionalComputation.newPrincipalLoan,
-          advanceInterest: this.additionalComputation.advanceInterest,
-          serviceCharge: this.additionalComputation.advServiceCharge,
-          netProceed: this.additionalComputation.netProceed,
-          discount: this.additionalComputation.discount
+          newInterestRate: this.additionalComputation.interestRate,
+          newMaturityDate: this.transactionInfo.newMaturityDate,
+          newExpiryDate: this.transactionInfo.newExpiryDate,
+          notes: `Additional loan of ₱${this.additionalComputation.additionalAmount.toFixed(2)}`
         })
       });
 
       const result = await response.json();
 
       if (result.success) {
+        this.toastService.showSuccess('Success', 'Additional loan processed successfully');
+        
         // Redirect to dashboard after successful processing
         setTimeout(() => {
           this.router.navigate(['/cashier-dashboard']);
