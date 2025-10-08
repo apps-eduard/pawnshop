@@ -398,7 +398,7 @@ export class Renew implements OnInit, AfterViewInit {
   calculateNewDates() {
     // Use TransactionDateService for consistent date calculations
     const newDates = this.transactionDateService.calculateRenewDates(1); // 1 month extension
-    
+
     this.transactionInfo.newMaturityDate = newDates.newMaturityDate;
     this.transactionInfo.newGracePeriodDate = newDates.newGracePeriodDate;
     this.transactionInfo.newExpiryDate = newDates.newExpiryDate;

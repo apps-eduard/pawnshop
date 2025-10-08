@@ -178,7 +178,7 @@ export class AdditionalLoan implements OnInit, AfterViewInit {
     if (this.additionalComputation.additionalAmount > 0) {
       // Use TransactionDateService for consistent date calculation
       const newDates = this.transactionDateService.calculateAdditionalLoanDates();
-      
+
       this.transactionInfo.newMaturityDate = newDates.newMaturityDate;
       this.transactionInfo.newGracePeriodDate = newDates.newGracePeriodDate;
       this.transactionInfo.newExpiryDate = newDates.newExpiryDate;
@@ -583,6 +583,7 @@ export class AdditionalLoan implements OnInit, AfterViewInit {
           additionalAmount: this.additionalComputation.additionalAmount,
           newInterestRate: this.additionalComputation.interestRate,
           newMaturityDate: this.transactionInfo.newMaturityDate,
+          newGracePeriodDate: this.transactionInfo.newGracePeriodDate,
           newExpiryDate: this.transactionInfo.newExpiryDate,
           notes: `Additional loan of ₱${this.additionalComputation.additionalAmount.toFixed(2)}`
         })
@@ -592,7 +593,7 @@ export class AdditionalLoan implements OnInit, AfterViewInit {
 
       if (result.success) {
         this.toastService.showSuccess('Success', 'Additional loan processed successfully');
-        
+
         // Redirect to dashboard after successful processing
         setTimeout(() => {
           this.router.navigate(['/cashier-dashboard']);

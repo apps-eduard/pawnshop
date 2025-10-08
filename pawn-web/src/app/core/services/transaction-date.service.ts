@@ -16,7 +16,7 @@ export class TransactionDateService {
   /**
    * Calculate new transaction dates based on business rules
    * Used by: Additional Loan, Partial Payment, Renew, Redeem (when applicable)
-   * 
+   *
    * @param baseDate - The starting date for calculation (default: today)
    * @param maturityDays - Days until maturity (default: 30 days)
    * @param gracePeriodDays - Grace period after maturity (default: 3 days)

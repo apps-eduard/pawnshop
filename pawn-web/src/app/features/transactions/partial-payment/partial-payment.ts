@@ -272,7 +272,7 @@ export class PartialPayment implements OnInit, AfterViewInit {
     if (this.partialComputation.partialPay > 0) {
       // Use TransactionDateService for consistent date calculations
       const newDates = this.transactionDateService.calculatePartialPaymentDates();
-      
+
       this.transactionInfo.newMaturityDate = newDates.newMaturityDate;
       this.transactionInfo.newGracePeriodDate = newDates.newGracePeriodDate;
       this.transactionInfo.newExpiryDate = newDates.newExpiryDate;

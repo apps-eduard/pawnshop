@@ -21,25 +21,27 @@ router.get('/search/:ticketNumber', async (req, res) => {
     
     console.log(`🔍 [${new Date().toISOString()}] Searching for ticket ${ticketNumber} - User: ${req.user.username}`);
     
-    // First, check if ticket exists and get its status
-    const statusCheck = await pool.query(`
-      SELECT pt.status, pt.ticket_number, t.transaction_number
-      FROM pawn_tickets pt
-      JOIN transactions t ON pt.transaction_id = t.id
-      WHERE pt.ticket_number = $1
+    // Step 1: Find the transaction by ticket number to get tracking_number
+    const ticketQuery = await pool.query(`
+      SELECT t.tracking_number, t.transaction_number, t.status
+      FROM transactions t
+      WHERE t.transaction_number = $1
       LIMIT 1
     `, [ticketNumber]);
     
-    // If ticket doesn't exist at all
-    if (statusCheck.rows.length === 0) {
+    if (ticketQuery.rows.length === 0) {
       return res.status(404).json({
         success: false,
         message: 'Transaction not found'
       });
     }
     
-    // If ticket exists but is closed/redeemed/expired
-    const ticketStatus = statusCheck.rows[0].status;
+    const trackingNumber = ticketQuery.rows[0].tracking_number;
+    const ticketStatus = ticketQuery.rows[0].status;
+    
+    console.log(`🔗 Found tracking number: ${trackingNumber} for ticket: ${ticketNumber}`);
+    
+    // Check if ticket can be processed
     if (!['active', 'matured'].includes(ticketStatus)) {
       return res.status(400).json({
         success: false,
@@ -47,36 +49,76 @@ router.get('/search/:ticketNumber', async (req, res) => {
       });
     }
     
+    // Step 2: Get ALL transactions in the chain using tracking_number
+    const chainQuery = await pool.query(`
+      SELECT 
+        t.id,
+        t.transaction_number,
+        t.tracking_number,
+        t.previous_transaction_number,
+        t.transaction_type,
+        t.status,
+        t.principal_amount,
+        t.interest_rate,
+        t.interest_amount,
+        t.penalty_amount,
+        t.service_charge,
+        t.total_amount,
+        t.balance,
+        t.amount_paid,
+        t.transaction_date,
+        t.granted_date,
+        t.maturity_date,
+        t.grace_period_date,
+        t.expiry_date,
+        t.discount_amount,
+        t.advance_interest,
+        t.advance_service_charge,
+        t.net_payment,
+        t.new_principal_loan,
+        t.notes,
+        t.created_at,
+        t.updated_at
+      FROM transactions t
+      WHERE t.tracking_number = $1
+      ORDER BY t.created_at ASC
+    `, [trackingNumber]);
+    
+    if (chainQuery.rows.length === 0) {
+      return res.status(500).json({
+        success: false,
+        message: 'Unexpected error: tracking number found but no transactions'
+      });
+    }
+    
+    // Step 3: Get the LATEST transaction (current state)
+    const currentTransaction = chainQuery.rows[chainQuery.rows.length - 1];
+    
+    console.log(`📊 Transaction chain: ${chainQuery.rows.length} transactions, current: ${currentTransaction.transaction_number}`);
+    
+    // Step 4: Get customer/pawner info from the latest transaction
     const result = await pool.query(`
-      SELECT pt.*, 
-             t.transaction_number, t.pawner_id, t.principal_amount, t.interest_rate,
-             t.interest_amount, t.penalty_amount, t.service_charge, t.total_amount,
-             t.maturity_date, t.grace_period_date, t.expiry_date, t.transaction_date, t.granted_date, t.status as transaction_status,
-             t.balance, t.amount_paid, t.days_overdue,
-             p.first_name, p.last_name, p.mobile_number, p.email,
-             p.city_id, p.barangay_id, p.house_number, p.street,
-             c.name as city_name, b.name as barangay_name,
-             e.first_name as cashier_first_name, e.last_name as cashier_last_name,
-             br.name as branch_name
-      FROM pawn_tickets pt
-      JOIN transactions t ON pt.transaction_id = t.id
+      SELECT 
+        t.*,
+        p.first_name, p.last_name, p.mobile_number, p.email,
+        p.city_id, p.barangay_id, p.house_number, p.street,
+        c.name as city_name, 
+        b.name as barangay_name,
+        e.first_name as cashier_first_name, 
+        e.last_name as cashier_last_name,
+        br.name as branch_name
+      FROM transactions t
       JOIN pawners p ON t.pawner_id = p.id
       LEFT JOIN cities c ON p.city_id = c.id
       LEFT JOIN barangays b ON p.barangay_id = b.id
       LEFT JOIN branches br ON t.branch_id = br.id
       LEFT JOIN employees e ON t.created_by = e.id
-      WHERE pt.ticket_number = $1 AND pt.status IN ('active', 'matured')
-    `, [ticketNumber]);
+      WHERE t.id = $1
+    `, [currentTransaction.id]);
     
-    // This should not happen since we already checked, but just in case
-    if (result.rows.length === 0) {
-      return res.status(500).json({
-        success: false,
-        message: 'Unexpected error: ticket status check passed but data retrieval failed'
-      });
-    }
+    const row = result.rows[0];
     
-    // Get items for this ticket with category and description details
+    // Step 5: Get items for the current transaction
     const itemsResult = await pool.query(`
       SELECT pi.*,
              cat.name as category_name,
@@ -87,42 +129,13 @@ router.get('/search/:ticketNumber', async (req, res) => {
       LEFT JOIN descriptions d ON pi.description_id = d.id
       WHERE pi.transaction_id = $1 
       ORDER BY pi.id
-    `, [result.rows[0].transaction_id]);
-    
-    // Get transaction history (partial payments, additional loans, etc.)
-    const historyResult = await pool.query(`
-      SELECT 
-        ct.id,
-        ct.transaction_number,
-        ct.transaction_type,
-        ct.transaction_date,
-        ct.principal_amount,
-        ct.interest_rate,
-        ct.interest_amount,
-        ct.penalty_amount,
-        ct.service_charge,
-        ct.total_amount,
-        ct.amount_paid,
-        ct.balance,
-        ct.discount_amount,
-        ct.advance_interest,
-        ct.advance_service_charge,
-        ct.net_payment,
-        ct.new_principal_loan,
-        ct.status,
-        ct.notes,
-        ct.created_at
-      FROM transactions ct
-      WHERE ct.parent_transaction_id = $1
-      ORDER BY ct.created_at ASC
-    `, [result.rows[0].transaction_id]);
-
-    const row = result.rows[0];
+    `, [currentTransaction.id]);
     
     console.log('📅 Search - Raw dates from DB:', {
       transaction_date: row.transaction_date,
       granted_date: row.granted_date,
       maturity_date: row.maturity_date,
+      grace_period_date: row.grace_period_date,
       expiry_date: row.expiry_date
     });
 
@@ -163,58 +176,21 @@ router.get('/search/:ticketNumber', async (req, res) => {
       expiryDateStr
     });
     
-    // Calculate current principal loan - use latest partial payment's new principal if exists
-    let currentPrincipal = parseFloat(row.principal_amount || 0);
-    let currentMaturityDate = maturityDateStr;
-    let currentGracePeriodDate = gracePeriodDateStr;
-    let currentExpiryDate = expiryDateStr;
-    let currentGrantedDate = grantedDateStr;
-    let currentTransactionDate = transactionDateStr;
+    // With tracking number chain, the current transaction already has the latest data
+    // No need to look for child transactions - we ARE the current transaction!
+    const currentPrincipal = parseFloat(row.principal_amount || 0);
+    const currentMaturityDate = maturityDateStr;
+    const currentGracePeriodDate = gracePeriodDateStr;
+    const currentExpiryDate = expiryDateStr;
+    const currentGrantedDate = grantedDateStr;
+    const currentTransactionDate = transactionDateStr;
     
-    if (historyResult.rows.length > 0) {
-      // Find the latest partial payment transaction with new_principal_loan
-      const latestPartialPayment = historyResult.rows
-        .filter(h => h.transaction_type === 'partial_payment' && h.new_principal_loan != null)
-        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
-      
-      if (latestPartialPayment) {
-        currentPrincipal = parseFloat(latestPartialPayment.new_principal_loan || 0);
-        console.log(`💰 Using current principal from latest partial payment: ${currentPrincipal} (was ${row.principal_amount})`);
-      }
-      
-      // Find the most recent additional loan or renewal transaction with updated dates
-      const latestDateUpdate = historyResult.rows
-        .filter(h => (h.transaction_type === 'additional_loan' || h.transaction_type === 'renewal') && h.status === 'active')
-        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
-      
-      if (latestDateUpdate) {
-        // Get the dates from the child transaction
-        const childDatesResult = await pool.query(`
-          SELECT transaction_date, granted_date, maturity_date, grace_period_date, expiry_date, principal_amount
-          FROM transactions
-          WHERE id = $1
-        `, [latestDateUpdate.id]);
-        
-        if (childDatesResult.rows.length > 0) {
-          const childRow = childDatesResult.rows[0];
-          currentTransactionDate = formatDateForResponse(childRow.transaction_date, false);
-          currentGrantedDate = formatDateForResponse(childRow.granted_date || childRow.transaction_date, false);
-          currentMaturityDate = formatDateForResponse(childRow.maturity_date, true);
-          currentGracePeriodDate = childRow.grace_period_date ? formatDateForResponse(childRow.grace_period_date, true) : null;
-          currentExpiryDate = formatDateForResponse(childRow.expiry_date, true);
-          currentPrincipal = parseFloat(childRow.principal_amount || currentPrincipal);
-          
-          console.log(`📅 Using updated dates from latest ${latestDateUpdate.transaction_type}:`, {
-            transactionDate: currentTransactionDate,
-            grantedDate: currentGrantedDate,
-            maturityDate: currentMaturityDate,
-            gracePeriodDate: currentGracePeriodDate,
-            expiryDate: currentExpiryDate,
-            principal: currentPrincipal
-          });
-        }
-      }
-    }
+    console.log(`� Current transaction state (ticket: ${currentTransaction.transaction_number}):`, {
+      principal: currentPrincipal,
+      maturityDate: currentMaturityDate,
+      gracePeriodDate: currentGracePeriodDate,
+      expiryDate: currentExpiryDate
+    });
     
     // Use balance for remaining amount to pay, fallback to total_amount if balance is not set
     const currentBalance = parseFloat(row.balance || row.total_amount || 0);
@@ -224,9 +200,10 @@ router.get('/search/:ticketNumber', async (req, res) => {
       success: true,
       message: 'Transaction found successfully',
       data: {
-        id: row.transaction_id, // Use transaction_id from the JOIN, not pawn_tickets.id
-        ticketNumber: row.ticket_number,
-        transactionNumber: row.ticket_number,
+        id: currentTransaction.id,
+        ticketNumber: currentTransaction.transaction_number,
+        transactionNumber: currentTransaction.transaction_number,
+        trackingNumber: trackingNumber, // NEW: Original tracking number
         pawnerId: row.pawner_id,
         branchId: row.branch_id,
         createdBy: row.created_by,
@@ -299,14 +276,19 @@ router.get('/search/:ticketNumber', async (req, res) => {
           createdAt: item.created_at,
           updatedAt: item.updated_at
         })),
-        // Transaction history (partial payments, additional loans, etc.)
-        transactionHistory: historyResult.rows.map(history => ({
+        // Transaction history - the complete chain using tracking_number
+        transactionHistory: chainQuery.rows.map(history => ({
           id: history.id,
           transactionNumber: history.transaction_number,
+          trackingNumber: history.tracking_number,
+          previousTransactionNumber: history.previous_transaction_number,
           transactionType: history.transaction_type,
-          transactionDate: history.transaction_date,
+          transactionDate: formatDateForResponse(history.transaction_date, false),
+          maturityDate: history.maturity_date ? formatDateForResponse(history.maturity_date, true) : null,
+          gracePeriodDate: history.grace_period_date ? formatDateForResponse(history.grace_period_date, true) : null,
+          expiryDate: history.expiry_date ? formatDateForResponse(history.expiry_date, true) : null,
           principalAmount: parseFloat(history.principal_amount || 0),
-          interestRate: parseFloat(history.interest_rate || 0),
+          interestRate: parseFloat(history.interest_rate || 0) * 100, // Convert to percentage
           interestAmount: parseFloat(history.interest_amount || 0),
           penaltyAmount: parseFloat(history.penalty_amount || 0),
           serviceCharge: parseFloat(history.service_charge || 0),
@@ -850,17 +832,21 @@ router.post('/new-loan', async (req, res) => {
       const netProceeds = parseFloat(loanData.netProceeds || 0);
       const totalAmount = principalAmount + interestAmount + serviceCharge;
       
-      // 5. Insert transaction record
+      // 5. Insert transaction record with tracking number chain
       const transactionResult = await client.query(`
         INSERT INTO transactions (
-          transaction_number, pawner_id, branch_id, transaction_type, status,
+          transaction_number, tracking_number, previous_transaction_number,
+          pawner_id, branch_id, transaction_type, status,
           principal_amount, interest_rate, interest_amount, service_charge, 
           total_amount, balance, transaction_date, granted_date, maturity_date, grace_period_date, expiry_date,
           notes, created_by, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
         RETURNING *
       `, [
-        ticketNumber, pawnerId, req.user.branch_id || 1, 'new_loan', 'active',
+        ticketNumber, 
+        ticketNumber, // tracking_number = own transaction_number for new loans
+        null,         // previous_transaction_number = NULL (first in chain)
+        pawnerId, req.user.branch_id || 1, 'new_loan', 'active',
         principalAmount, interestRate, interestAmount, serviceCharge, 
         totalAmount, totalAmount, txnDateStr, grantedDateStr, maturedDateStr, 
         new Date(new Date(maturedDateStr).getTime() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // grace_period_date = maturity + 3 days
@@ -870,6 +856,7 @@ router.post('/new-loan', async (req, res) => {
       
       const transaction = transactionResult.rows[0];
       console.log(`✅ Created transaction: ${ticketNumber}`);
+      console.log(`🔗 Tracking chain initialized: tracking_number=${ticketNumber}, previous=NULL`);
       
       // 6. Insert pawn ticket (for printing management)
       const ticketResult = await client.query(`
@@ -1411,12 +1398,13 @@ router.post('/additional-loan', async (req, res) => {
       newInterestRate,
       newServiceCharge,
       newMaturityDate,
+      newGracePeriodDate,
       newExpiryDate,
       notes 
     } = req.body;
     
     console.log(`➕ [${new Date().toISOString()}] Processing additional loan - User: ${req.user.username}`);
-    console.log('📋 Additional loan data:', { originalTicketId, additionalAmount, newInterestRate });
+    console.log('📋 Additional loan data:', { originalTicketId, additionalAmount, newInterestRate, newMaturityDate, newGracePeriodDate, newExpiryDate });
     
     // Validate required fields
     if (!originalTicketId || !additionalAmount) {
@@ -1431,20 +1419,10 @@ router.post('/additional-loan', async (req, res) => {
     try {
       await client.query('BEGIN');
       
-      // 1. Get original transaction details and the most recent new_principal_loan
+      // 1. Find previous transaction by ticket_number (originalTicketId is ticket number, not ID!)
       const transactionResult = await client.query(`
-        SELECT t.*, 
-               COALESCE(
-                 (SELECT ct.new_principal_loan 
-                  FROM transactions ct 
-                  WHERE ct.parent_transaction_id = t.id 
-                    AND ct.new_principal_loan IS NOT NULL
-                  ORDER BY ct.created_at DESC 
-                  LIMIT 1),
-                 t.principal_amount
-               ) as current_principal
-        FROM transactions t 
-        WHERE t.id = $1 AND t.status = 'active'
+        SELECT * FROM transactions 
+        WHERE transaction_number = $1 AND status = 'active'
       `, [originalTicketId]);
       
       if (transactionResult.rows.length === 0) {
@@ -1454,28 +1432,30 @@ router.post('/additional-loan', async (req, res) => {
         });
       }
       
-      const originalTransaction = transactionResult.rows[0];
+      const previousTransaction = transactionResult.rows[0];
+      
+      console.log(`🔗 Found previous transaction: ${previousTransaction.transaction_number}, tracking: ${previousTransaction.tracking_number}`);
       
       // 2. Generate new ticket number for additional loan
-      const branchId = originalTransaction.branch_id;
-      
+      const branchId = previousTransaction.branch_id;
       const newTicketNumber = await generateTicketNumber(branchId);
       
-      // 3. Calculate new amounts - use current_principal (which includes partial payment adjustments)
+      // 3. Calculate new amounts - use current principal from previous transaction
       const addAmount = parseFloat(additionalAmount);
-      const currentPrincipal = parseFloat(originalTransaction.current_principal);
+      const currentPrincipal = parseFloat(previousTransaction.principal_amount);
       const newPrincipal = currentPrincipal + addAmount;
-      const interestRateDecimal = newInterestRate ? parseFloat(newInterestRate) / 100 : parseFloat(originalTransaction.interest_rate);
+      const interestRateDecimal = newInterestRate ? parseFloat(newInterestRate) / 100 : parseFloat(previousTransaction.interest_rate);
       const serviceCharge = parseFloat(newServiceCharge || 0);
       const interestAmount = newPrincipal * interestRateDecimal;
       const totalAmount = newPrincipal + interestAmount + serviceCharge;
       const netProceeds = addAmount - serviceCharge;
       
       console.log(`📊 Additional Loan Calculation:
-        - Original Principal: ${originalTransaction.principal_amount}
-        - Current Principal (after partial payments): ${currentPrincipal}
+        - Previous Transaction: ${previousTransaction.transaction_number}
+        - Previous Principal: ${currentPrincipal}
         - Additional Amount: ${addAmount}
         - New Principal: ${newPrincipal}
+        - Tracking Number: ${previousTransaction.tracking_number}
       `);
       
       // 4. Calculate new dates
@@ -1484,30 +1464,51 @@ router.post('/additional-loan', async (req, res) => {
         date.setMonth(date.getMonth() + 4);
         return date;
       })();
+      const gracePeriodDate = newGracePeriodDate ? new Date(newGracePeriodDate) : (() => {
+        const date = new Date(maturityDate);
+        date.setDate(date.getDate() + 3);
+        return date;
+      })();
       const expiryDate = newExpiryDate ? new Date(newExpiryDate) : (() => {
         const date = new Date(maturityDate);
         date.setMonth(date.getMonth() + 1);
         return date;
       })();
       
-      // 5. Create new transaction for additional loan with new_principal_loan saved
+      console.log(`📅 Additional Loan - New Dates:
+        - Maturity Date: ${maturityDate.toISOString().split('T')[0]}
+        - Grace Period Date: ${gracePeriodDate.toISOString().split('T')[0]}
+        - Expiry Date: ${expiryDate.toISOString().split('T')[0]}
+      `);
+      
+      // 5. Create new transaction in the chain (DO NOT MODIFY PREVIOUS!)
       const newTransactionResult = await client.query(`
         INSERT INTO transactions (
-          transaction_number, pawner_id, branch_id, transaction_type, status,
+          transaction_number, tracking_number, previous_transaction_number,
+          pawner_id, branch_id, transaction_type, status,
           principal_amount, interest_rate, interest_amount, service_charge, 
-          total_amount, balance, transaction_date, granted_date, maturity_date, expiry_date,
-          parent_transaction_id, new_principal_loan, notes, created_by, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
+          total_amount, balance, transaction_date, granted_date, maturity_date, grace_period_date, expiry_date,
+          new_principal_loan, notes, created_by, created_at, updated_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
         RETURNING *
       `, [
-        newTicketNumber, originalTransaction.pawner_id, originalTransaction.branch_id, 'additional_loan', 'active',
+        newTicketNumber,
+        previousTransaction.tracking_number,          // SAME tracking number as previous
+        previousTransaction.transaction_number,       // Link to previous transaction
+        previousTransaction.pawner_id, previousTransaction.branch_id, 'additional_loan', 'active',
         newPrincipal, interestRateDecimal, interestAmount, serviceCharge,
-        totalAmount, totalAmount, new Date(), originalTransaction.granted_date, maturityDate, expiryDate,
-        originalTransaction.id, newPrincipal, notes || `Additional loan of ${addAmount} on ticket ${originalTransaction.transaction_number}. Previous principal: ${currentPrincipal}, New principal: ${newPrincipal}`,
+        totalAmount, totalAmount, new Date(), previousTransaction.granted_date, maturityDate, gracePeriodDate, expiryDate,
+        newPrincipal, notes || `Additional loan of ${addAmount} on ticket ${previousTransaction.transaction_number}. Previous principal: ${currentPrincipal}, New principal: ${newPrincipal}`,
         req.user.id, new Date(), new Date()
       ]);
       
       const newTransaction = newTransactionResult.rows[0];
+      
+      console.log(`🔗 Created new transaction in chain:
+        - New Ticket: ${newTicketNumber}
+        - Tracking Number: ${previousTransaction.tracking_number}
+        - Previous Ticket: ${previousTransaction.transaction_number}
+      `);
       
       // 6. Create new pawn ticket (for printing)
       const newTicketResult = await client.query(`
@@ -1521,39 +1522,18 @@ router.post('/additional-loan', async (req, res) => {
       
       const newTicket = newTicketResult.rows[0];
       
-      // 7. Copy items from original transaction to new transaction
+      // 7. Copy items from previous transaction to new transaction
       await client.query(`
         INSERT INTO pawn_items (transaction_id, category_id, description_id, appraisal_notes, appraised_value, loan_amount, status)
         SELECT $1, category_id, description_id, appraisal_notes, appraised_value, loan_amount, status
         FROM pawn_items WHERE transaction_id = $2
-      `, [newTransaction.id, originalTransaction.id]);
+      `, [newTransaction.id, previousTransaction.id]);
       
-      // 8. Update original transaction principal_amount and balance to reflect new loan
-      await client.query(`
-        UPDATE transactions SET
-          principal_amount = $1,
-          balance = $2,
-          total_amount = $3,
-          updated_at = CURRENT_TIMESTAMP,
-          updated_by = $4
-        WHERE id = $5
-      `, [
-        newPrincipal,
-        totalAmount,
-        totalAmount,
-        req.user.id,
-        originalTransaction.id
-      ]);
       
-      // 9. Update pawn ticket status
-      await client.query(`
-        UPDATE pawn_tickets SET
-          status = 'active',
-          updated_at = CURRENT_TIMESTAMP
-        WHERE transaction_id = $1
-      `, [originalTransaction.id]);
+      // 8. REMOVED: Do NOT update previous transaction! (immutable in tracking chain)
+      // Previous transaction stays as-is for perfect audit trail
       
-      // 10. Log audit trail
+      // 9. Log audit trail
       await client.query(`
         INSERT INTO audit_logs (
           entity_type, entity_id, action, user_id, changes, description
@@ -1577,16 +1557,23 @@ router.post('/additional-loan', async (req, res) => {
       await client.query('COMMIT');
       
       console.log(`✅ Additional loan completed - New transaction: ${newTicketNumber}`);
-      console.log(`   Previous principal: ${currentPrincipal}, Added: ${addAmount}, New principal: ${newPrincipal}`);
+      console.log(`   Previous ticket: ${previousTransaction.transaction_number}, Previous principal: ${currentPrincipal}`);
+      console.log(`   Additional amount: ${addAmount}, New principal: ${newPrincipal}`);
+      console.log(`   Tracking number: ${previousTransaction.tracking_number}`);
       
       res.json({
         success: true,
         message: 'Additional loan processed successfully',
         data: {
-          originalTransactionId: originalTransaction.id,
-          originalTicketNumber: originalTransaction.transaction_number,
+          // OLD system data (for backward compatibility)
+          originalTransactionId: previousTransaction.id,
+          originalTicketNumber: previousTransaction.transaction_number,
+          // NEW system data
           newTransactionId: newTransaction.id,
           newTicketNumber,
+          trackingNumber: previousTransaction.tracking_number,
+          previousTicketNumber: previousTransaction.transaction_number,
+          // Financial data
           previousPrincipal: currentPrincipal,
           additionalAmount: addAmount,
           newPrincipalAmount: newPrincipal,

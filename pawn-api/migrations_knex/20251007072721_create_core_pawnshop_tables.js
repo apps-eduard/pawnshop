@@ -101,7 +101,11 @@ exports.up = async function(knex) {
     table.date('expiry_date').notNullable();
     table.timestamp('last_payment_date');
     
-    // Parent Transaction (for renewals, partial payments, additional loans)
+    // **Tracking Number Chain** (NEW ARCHITECTURE)
+    table.string('tracking_number', 50); // Original ticket number linking all related transactions
+    table.string('previous_transaction_number', 50); // Previous transaction in chain
+    
+    // Parent Transaction (DEPRECATED - kept for backward compatibility)
     table.integer('parent_transaction_id').unsigned().references('id').inTable('transactions');
     
     // Status Tracking
@@ -119,6 +123,10 @@ exports.up = async function(knex) {
     table.integer('approved_by').unsigned().references('id').inTable('employees');
     table.timestamp('created_at').defaultTo(knex.fn.now());
     table.timestamp('updated_at').defaultTo(knex.fn.now());
+    
+    // Indexes for tracking number chain
+    table.index('tracking_number', 'idx_transactions_tracking_number');
+    table.index('previous_transaction_number', 'idx_transactions_previous_transaction');
   });
 
   // 4. Create pawn_tickets table

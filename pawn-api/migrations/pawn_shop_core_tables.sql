@@ -119,11 +119,16 @@ CREATE TABLE IF NOT EXISTS transactions (
     transaction_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     granted_date TIMESTAMP, -- Date when loan was originally granted (for new_loan, or copied from parent)
     maturity_date DATE NOT NULL,
+    grace_period_date DATE, -- Grace period end date (maturity_date + 3 days)
     expiry_date DATE NOT NULL,
     last_payment_date TIMESTAMP,
     
-    -- Parent Transaction (for renewals)
+    -- Parent Transaction (for renewals) - DEPRECATED, use tracking_number instead
     parent_transaction_id INTEGER REFERENCES transactions(id),
+    
+    -- Tracking Number Chain Architecture (NEW)
+    tracking_number VARCHAR(50), -- Original ticket number that links all related transactions
+    previous_transaction_number VARCHAR(50), -- Previous transaction in the chain
     
     -- Status Tracking
     is_active BOOLEAN DEFAULT true,
@@ -353,6 +358,8 @@ CREATE INDEX IF NOT EXISTS idx_transactions_pawner ON transactions(pawner_id);
 CREATE INDEX IF NOT EXISTS idx_transactions_status ON transactions(status);
 CREATE INDEX IF NOT EXISTS idx_transactions_maturity ON transactions(maturity_date);
 CREATE INDEX IF NOT EXISTS idx_transactions_branch ON transactions(branch_id);
+CREATE INDEX IF NOT EXISTS idx_transactions_tracking_number ON transactions(tracking_number);
+CREATE INDEX IF NOT EXISTS idx_transactions_previous_transaction ON transactions(previous_transaction_number);
 
 CREATE INDEX IF NOT EXISTS idx_pawn_items_transaction ON pawn_items(transaction_id);
 CREATE INDEX IF NOT EXISTS idx_pawn_items_category ON pawn_items(category_id);
