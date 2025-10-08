@@ -9,6 +9,7 @@ import { PenaltyCalculatorService } from '../../../core/services/penalty-calcula
 import { InvoiceModalComponent } from '../../../shared/modals/invoice-modal/invoice-modal.component';
 import { LoanInvoiceData } from '../../../shared/components/loan-invoice/loan-invoice.component';
 import { CurrencyInputDirective } from '../../../shared/directives/currency-input.directive';
+import { NewLoanDatesComponent } from '../../../shared/components/new-loan-dates/new-loan-dates.component';
 
 // Interfaces
 interface CustomerInfo {
@@ -31,6 +32,9 @@ interface TransactionInfo {
   gracePeriodDate?: string; // Maturity date + 3 days (redeem date)
   expiredDate: string;
   loanStatus: string;
+  newMaturityDate?: string;      // New maturity date after partial payment
+  newGracePeriodDate?: string;   // New redeem date after partial payment
+  newExpiryDate?: string;        // New expiry date after partial payment
 }
 
 interface PawnedItem {
@@ -63,13 +67,14 @@ interface PartialComputation {
 @Component({
   selector: 'app-partial-payment',
   standalone: true,
-  imports: [CommonModule, FormsModule, TransactionInfoComponent, InvoiceModalComponent, CurrencyInputDirective],
+  imports: [CommonModule, FormsModule, TransactionInfoComponent, InvoiceModalComponent, CurrencyInputDirective, NewLoanDatesComponent],
   templateUrl: './partial-payment.html',
   styleUrl: './partial-payment.css'
 })
 export class PartialPayment implements OnInit, AfterViewInit {
 
   @ViewChild('searchInput') searchInput!: ElementRef<HTMLInputElement>;
+  @ViewChild('partialPayInput') partialPayInput?: ElementRef<HTMLInputElement>;
 
   searchTicketNumber = '';
   transactionNumber = '';
@@ -95,7 +100,10 @@ export class PartialPayment implements OnInit, AfterViewInit {
     grantedDate: '',
     maturedDate: '',
     expiredDate: '',
-    loanStatus: ''
+    loanStatus: '',
+    newMaturityDate: '',
+    newGracePeriodDate: '',
+    newExpiryDate: ''
   };
 
   pawnedItems: PawnedItem[] = [];
@@ -186,7 +194,7 @@ export class PartialPayment implements OnInit, AfterViewInit {
 
       console.log(`✅ WITHIN GRACE PERIOD: Interest = ₱0.00 (${daysAfterMaturity} days after maturity)`);
     } else if (this.transactionInfo.grantedDate && this.transactionInfo.maturedDate) {
-      // AFTER GRACE PERIOD: CALCULATE FULL INTEREST
+      // AFTER GRACE PERIOD: CALCULATE INTEREST PER DAY
       const grantDate = new Date(this.transactionInfo.grantedDate);
       const maturityDate = new Date(this.transactionInfo.maturedDate);
       const now = new Date();
@@ -197,24 +205,25 @@ export class PartialPayment implements OnInit, AfterViewInit {
       // Days beyond the first 30 days (already paid in advance)
       const additionalDays = Math.max(0, totalDays - 30);
 
-      // Calculate monthly interest based on full months
+      // Calculate interest PER DAY (Monthly rate / 30 days × additional days)
       const monthlyRate = this.partialComputation.interestRate / 100; // 6% = 0.06
-      const monthsOverdue = Math.floor(additionalDays / 30);
-
-      // Full month interest calculation (6% × principal × months)
-      this.partialComputation.interest = this.partialComputation.principalLoan * monthlyRate * monthsOverdue;
+      const dailyRate = monthlyRate / 30; // Daily rate = 6% / 30 = 0.002
+      
+      // Interest = Principal × Daily Rate × Additional Days
+      this.partialComputation.interest = this.partialComputation.principalLoan * dailyRate * additionalDays;
       this.partialComputation.discount = 0; // No discount after grace period
 
-      console.log(`⚠️ AFTER GRACE PERIOD: Interest Calculation`, {
+      console.log(`⚠️ AFTER GRACE PERIOD: Interest Calculation (Per Day)`, {
         grantDate: grantDate.toISOString().split('T')[0],
         maturityDate: maturityDate.toISOString().split('T')[0],
         currentDate: now.toISOString().split('T')[0],
         totalDays,
         additionalDays,
-        monthsOverdue,
         monthlyRate: (monthlyRate * 100).toFixed(0) + '%',
+        dailyRate: (dailyRate * 100).toFixed(4) + '%',
         principal: this.partialComputation.principalLoan,
-        interest: this.partialComputation.interest.toFixed(2)
+        interestPerDay: (this.partialComputation.principalLoan * dailyRate).toFixed(2),
+        totalInterest: this.partialComputation.interest.toFixed(2)
       });
     } else {
       this.partialComputation.interest = 0;
@@ -304,42 +313,66 @@ export class PartialPayment implements OnInit, AfterViewInit {
     }
 
     this.calculateChange();
+    this.calculateNewDates(); // Calculate new dates after partial payment
   }
 
-  async calculateServiceCharge(amount: number): Promise<number> {
-    try {
-      const response = await fetch('http://localhost:3000/api/service-charge-config/calculate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({ principalAmount: amount }) // Backend expects 'principalAmount', not 'amount'
-      });
+  // Calculate new maturity and expiry dates for the partial payment
+  calculateNewDates() {
+    if (this.partialComputation.partialPay > 0) {
+      const today = new Date();
 
-      const result = await response.json();
+      // New maturity date = Today + 30 days
+      const newMaturity = new Date(today);
+      newMaturity.setDate(newMaturity.getDate() + 30);
+      this.transactionInfo.newMaturityDate = newMaturity.toISOString().split('T')[0];
 
-      console.log('📥 Service charge API response:', result);
+      // New grace period = New maturity + 3 days
+      const newGracePeriod = new Date(newMaturity);
+      newGracePeriod.setDate(newGracePeriod.getDate() + 3);
+      this.transactionInfo.newGracePeriodDate = newGracePeriod.toISOString().split('T')[0];
 
-      if (result.success) {
-        return result.data.serviceChargeAmount; // Backend returns 'serviceChargeAmount', not 'serviceCharge'
-      } else {
-        console.warn('Service charge API returned error, using fallback:', result.message);
-        return this.calculateFallbackServiceCharge(amount);
-      }
-    } catch (error) {
-      console.error('Error calculating service charge, using fallback:', error);
-      return this.calculateFallbackServiceCharge(amount);
+      // New expiry date = New maturity + 90 days
+      const newExpiry = new Date(newMaturity);
+      newExpiry.setDate(newExpiry.getDate() + 90);
+      this.transactionInfo.newExpiryDate = newExpiry.toISOString().split('T')[0];
+
+      console.log('📅 New Dates Calculated for Partial Payment:');
+      console.log('  New Maturity:', this.transactionInfo.newMaturityDate);
+      console.log('  New Grace Period:', this.transactionInfo.newGracePeriodDate);
+      console.log('  New Expiry:', this.transactionInfo.newExpiryDate);
+    } else {
+      // Clear new dates if no partial payment
+      this.transactionInfo.newMaturityDate = '';
+      this.transactionInfo.newGracePeriodDate = '';
+      this.transactionInfo.newExpiryDate = '';
     }
   }
 
+  async calculateServiceCharge(amount: number): Promise<number> {
+    // Use fixed tier-based service charge calculation
+    return this.calculateTierBasedServiceCharge(amount);
+  }
+
+  calculateTierBasedServiceCharge(amount: number): number {
+    // Fixed tier-based service charge:
+    // 1-100 = ₱1
+    // 101-299 = ₱2
+    // 300-399 = ₱3
+    // 400-499 = ₱4
+    // 500+ = ₱5
+    
+    if (amount >= 1 && amount <= 100) return 1;
+    if (amount >= 101 && amount <= 299) return 2;
+    if (amount >= 300 && amount <= 399) return 3;
+    if (amount >= 400 && amount <= 499) return 4;
+    if (amount >= 500) return 5;
+    
+    return 0; // For amounts less than 1
+  }
+
   calculateFallbackServiceCharge(amount: number): number {
-    if (amount <= 500) return 10;
-    if (amount <= 1000) return 15;
-    if (amount <= 5000) return 20;
-    if (amount <= 10000) return 30;
-    if (amount <= 20000) return 40;
-    return 50;
+    // Kept for backward compatibility, but now uses tier-based calculation
+    return this.calculateTierBasedServiceCharge(amount);
   }
 
   getPenaltyInfo(): string {
@@ -376,8 +409,13 @@ export class PartialPayment implements OnInit, AfterViewInit {
   }
 
   calculateChange() {
-    this.partialComputation.change =
-      this.partialComputation.amountReceived - this.partialComputation.netPayment;
+    // Keep change at 0 when no amount received
+    if (this.partialComputation.amountReceived === 0) {
+      this.partialComputation.change = 0;
+    } else {
+      this.partialComputation.change =
+        this.partialComputation.amountReceived - this.partialComputation.netPayment;
+    }
   }
 
   canProcessPayment(): boolean {
@@ -425,14 +463,26 @@ export class PartialPayment implements OnInit, AfterViewInit {
         });
         await this.populateForm(result.data); // Await the async populateForm
         this.transactionFound = true;
+        // Focus on partial pay input after successful search
+        setTimeout(() => {
+          this.partialPayInput?.nativeElement.focus();
+        }, 100);
       } else {
         this.toastService.showError('Not Found', result.message || 'Transaction not found');
         this.transactionFound = false;
+        // Keep focus on search input for retry
+        setTimeout(() => {
+          this.searchInput?.nativeElement.focus();
+        }, 100);
       }
     } catch (error) {
       console.error('Error searching transaction:', error);
       this.toastService.showError('Error', 'Failed to search transaction');
       this.transactionFound = false;
+      // Keep focus on search input for retry
+      setTimeout(() => {
+        this.searchInput?.nativeElement.focus();
+      }, 100);
     } finally {
       this.isLoading = false;
     }
@@ -533,7 +583,10 @@ export class PartialPayment implements OnInit, AfterViewInit {
       grantedDate: '',
       maturedDate: '',
       expiredDate: '',
-      loanStatus: ''
+      loanStatus: '',
+      newMaturityDate: '',
+      newGracePeriodDate: '',
+      newExpiryDate: ''
     };
 
     this.pawnedItems = [];

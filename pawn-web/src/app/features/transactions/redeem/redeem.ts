@@ -187,25 +187,78 @@ export class Redeem implements OnInit, AfterViewInit {
     });
 
     // Use granted date or transaction date for interest calculation
-    const loanDate = this.transactionInfo.grantedDate
+    const grantDate = this.transactionInfo.grantedDate
       ? new Date(this.transactionInfo.grantedDate)
       : new Date(this.transactionInfo.transactionDate);
 
     const maturityDate = new Date(this.transactionInfo.maturedDate);
     const currentDate = new Date();
 
-    // Calculate interest based on the loan period (from loan date to current date)
-    const loanPeriodDays = Math.ceil((currentDate.getTime() - loanDate.getTime()) / (1000 * 3600 * 24));
-    const monthlyRate = this.redeemComputation.interestRate / 100;
-    const dailyRate = monthlyRate / 30;
-    this.redeemComputation.interest = this.redeemComputation.principalLoan * dailyRate * loanPeriodDays;
+    // ===== GRACE PERIOD CALCULATION (SAME AS PARTIAL PAYMENT) =====
+    // Grace Period: 3 days after maturity date
+    // Within grace period (0-3 days): NO interest, NO penalty
+    // After grace period (4+ days): Interest based on days beyond first 30 days + penalty
 
-    console.log('Interest calculation:', {
-      loanPeriodDays,
-      monthlyRate,
-      dailyRate,
-      calculatedInterest: this.redeemComputation.interest
-    });
+    let isWithinGracePeriod = false;
+    let daysAfterMaturity = 0;
+
+    if (this.transactionInfo.maturedDate) {
+      daysAfterMaturity = Math.floor((currentDate.getTime() - maturityDate.getTime()) / (1000 * 60 * 60 * 24));
+      
+      // Check if within 3-day grace period (days 0, 1, 2, 3 after maturity)
+      isWithinGracePeriod = daysAfterMaturity >= 0 && daysAfterMaturity <= 3;
+
+      console.log(`🎯 GRACE PERIOD CHECK:`, {
+        maturityDate: maturityDate.toISOString().split('T')[0],
+        currentDate: currentDate.toISOString().split('T')[0],
+        daysAfterMaturity,
+        isWithinGracePeriod
+      });
+    }
+
+    // Calculate interest based on grace period and additional days
+    if (isWithinGracePeriod) {
+      // WITHIN GRACE PERIOD: NO INTEREST
+      this.redeemComputation.interest = 0;
+      this.redeemComputation.discount = daysAfterMaturity; // Auto-set discount for display
+
+      console.log(`✅ WITHIN GRACE PERIOD: Interest = ₱0.00 (${daysAfterMaturity} days after maturity)`);
+    } else {
+      // AFTER GRACE PERIOD OR BEFORE MATURITY: Calculate interest for additional days only
+      const totalDays = Math.floor((currentDate.getTime() - grantDate.getTime()) / (1000 * 60 * 60 * 24));
+      
+      // Days beyond the first 30 days (already paid in advance)
+      const additionalDays = Math.max(0, totalDays - 30);
+
+      if (additionalDays > 0) {
+        // Calculate interest PER DAY for additional days only
+        const monthlyRate = this.redeemComputation.interestRate / 100; // 6% = 0.06
+        const dailyRate = monthlyRate / 30; // Daily rate = 6% / 30 = 0.002
+        
+        // Interest = Principal × Daily Rate × Additional Days
+        this.redeemComputation.interest = this.redeemComputation.principalLoan * dailyRate * additionalDays;
+        this.redeemComputation.discount = 0;
+
+        console.log(`⚠️ INTEREST CALCULATION (Additional Days):`, {
+          grantDate: grantDate.toISOString().split('T')[0],
+          maturityDate: maturityDate.toISOString().split('T')[0],
+          currentDate: currentDate.toISOString().split('T')[0],
+          totalDays,
+          additionalDays,
+          monthlyRate: (monthlyRate * 100).toFixed(0) + '%',
+          dailyRate: (dailyRate * 100).toFixed(4) + '%',
+          principal: this.redeemComputation.principalLoan,
+          interestPerDay: (this.redeemComputation.principalLoan * dailyRate).toFixed(2),
+          totalInterest: this.redeemComputation.interest.toFixed(2)
+        });
+      } else {
+        // Within first 30 days: NO INTEREST (already paid in advance)
+        this.redeemComputation.interest = 0;
+        this.redeemComputation.discount = 0;
+
+        console.log(`✅ WITHIN FIRST 30 DAYS: Interest = ₱0.00 (day ${totalDays} of first month)`);
+      }
+    }
 
     // Calculate penalty using the PenaltyCalculatorService
     const penaltyDetails = this.penaltyCalculatorService.calculatePenalty(
@@ -243,9 +296,16 @@ export class Redeem implements OnInit, AfterViewInit {
 
     // Calculate change if received amount is set
     this.calculateChange();
-  }  calculateChange() {
-    this.redeemComputation.change =
-      this.redeemComputation.receivedAmount - this.redeemComputation.redeemAmount;
+  }
+
+  calculateChange() {
+    // Keep change at 0 when no amount received or received amount is 0
+    if (!this.redeemComputation.receivedAmount || this.redeemComputation.receivedAmount === 0) {
+      this.redeemComputation.change = 0;
+    } else {
+      this.redeemComputation.change =
+        this.redeemComputation.receivedAmount - this.redeemComputation.redeemAmount;
+    }
   }
 
   canProcessRedeem(): boolean {
@@ -280,7 +340,7 @@ export class Redeem implements OnInit, AfterViewInit {
       if (result.success && result.data) {
         this.populateForm(result.data);
         this.transactionFound = true;
-        
+
         // Focus on received amount input after successful search
         setTimeout(() => {
           this.receivedAmountInput?.nativeElement.focus();
@@ -288,7 +348,7 @@ export class Redeem implements OnInit, AfterViewInit {
       } else {
         this.toastService.showError('Not Found', result.message || 'Transaction not found');
         this.transactionFound = false;
-        
+
         // Keep focus on search input if not found
         setTimeout(() => {
           this.searchInput?.nativeElement.focus();
@@ -298,7 +358,7 @@ export class Redeem implements OnInit, AfterViewInit {
       console.error('Error searching transaction:', error);
       this.toastService.showError('Error', 'Failed to search transaction');
       this.transactionFound = false;
-      
+
       // Keep focus on search input on error
       setTimeout(() => {
         this.searchInput?.nativeElement.focus();

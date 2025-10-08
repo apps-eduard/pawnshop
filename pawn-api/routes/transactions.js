@@ -1204,6 +1204,16 @@ router.post('/partial-payment', async (req, res) => {
       // 4. Create a new transaction record for the partial payment
       const newTransactionNumber = await generateTicketNumber('TXN');
       
+      // Calculate new dates for the partial payment
+      const today = new Date();
+      const newGrantedDate = today;
+      const newMaturityDate = new Date(today);
+      newMaturityDate.setDate(newMaturityDate.getDate() + 30);
+      const newGracePeriodDate = new Date(newMaturityDate);
+      newGracePeriodDate.setDate(newGracePeriodDate.getDate() + 3);
+      const newExpiryDate = new Date(newMaturityDate);
+      newExpiryDate.setDate(newExpiryDate.getDate() + 90);
+      
       const newTransactionResult = await client.query(`
         INSERT INTO transactions (
           transaction_number,
@@ -1235,7 +1245,7 @@ router.post('/partial-payment', async (req, res) => {
         ) VALUES (
           $1, $2, $3, 'partial_payment', $4,
           $5, $6, 0, 0, $7, $8, $9,
-          CURRENT_TIMESTAMP, $10, $11, $11 + INTERVAL '3 days', $12, $13, $14, $15, $16, $17, $18, $19, $20, $20
+          CURRENT_TIMESTAMP, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $21
         ) RETURNING id
       `, [
         newTransactionNumber,
@@ -1247,9 +1257,10 @@ router.post('/partial-payment', async (req, res) => {
         newBalance,
         paymentAmt,
         newBalance,
-        ticket.granted_date,
-        ticket.maturity_date,
-        ticket.expiry_date,
+        newGrantedDate,
+        newMaturityDate,
+        newGracePeriodDate,
+        newExpiryDate,
         ticket.transaction_id, // Link to original transaction
         discount,
         advance,
@@ -1262,17 +1273,27 @@ router.post('/partial-payment', async (req, res) => {
       
       const newTransactionId = newTransactionResult.rows[0].id;
       
-      // 5. Update original transaction with new balance
+      // 5. Update original transaction with new principal, balance, and dates
       await client.query(`
         UPDATE transactions SET
-          balance = $1,
-          amount_paid = COALESCE(amount_paid, 0) + $2,
+          principal_amount = $1,
+          balance = $2,
+          amount_paid = COALESCE(amount_paid, 0) + $3,
+          granted_date = $4,
+          maturity_date = $5,
+          grace_period_date = $6,
+          expiry_date = $7,
           updated_at = CURRENT_TIMESTAMP,
-          updated_by = $3
-        WHERE id = $4
+          updated_by = $8
+        WHERE id = $9
       `, [
+        newPrincipal,
         newBalance,
         paymentAmt,
+        newGrantedDate,
+        newMaturityDate,
+        newGracePeriodDate,
+        newExpiryDate,
         req.user.id,
         ticket.transaction_id
       ]);

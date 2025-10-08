@@ -7,6 +7,7 @@ import { ToastService } from '../../../core/services/toast.service';
 import { TransactionInfoComponent } from '../../../shared/components/transaction/transaction-info.component';
 import { PenaltyCalculatorService } from '../../../core/services/penalty-calculator.service';
 import { CurrencyInputDirective } from '../../../shared/directives/currency-input.directive';
+import { NewLoanDatesComponent } from '../../../shared/components/new-loan-dates/new-loan-dates.component';
 
 // Interfaces
 interface CustomerInfo {
@@ -56,7 +57,7 @@ interface AdditionalComputation {
 @Component({
   selector: 'app-additional-loan',
   standalone: true,
-  imports: [CommonModule, FormsModule, TransactionInfoComponent, CurrencyInputDirective],
+  imports: [CommonModule, FormsModule, TransactionInfoComponent, CurrencyInputDirective, NewLoanDatesComponent],
   templateUrl: './additional-loan.html',
   styleUrl: './additional-loan.css'
 })
@@ -370,41 +371,32 @@ export class AdditionalLoan implements OnInit, AfterViewInit {
   }
 
   async calculateServiceCharge() {
-    try {
-      const response = await fetch('http://localhost:3000/api/service-charge-config/calculate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
-          principalAmount: this.additionalComputation.newPrincipalLoan
-        })
-      });
+    // Use fixed tier-based service charge calculation
+    this.additionalComputation.advServiceCharge = this.calculateTierBasedServiceCharge(
+      this.additionalComputation.newPrincipalLoan
+    );
+  }
 
-      const result = await response.json();
-      if (result.success && result.data) {
-        this.additionalComputation.advServiceCharge = result.data.serviceCharge || 0;
-        console.log('Service charge calculated:', this.additionalComputation.advServiceCharge);
-      } else {
-        // Fallback calculation if API fails
-        this.additionalComputation.advServiceCharge = this.calculateFallbackServiceCharge();
-      }
-    } catch (error) {
-      console.error('Error calculating service charge:', error);
-      // Fallback calculation
-      this.additionalComputation.advServiceCharge = this.calculateFallbackServiceCharge();
-    }
+  private calculateTierBasedServiceCharge(amount: number): number {
+    // Fixed tier-based service charge:
+    // 1-100 = ₱1
+    // 101-299 = ₱2
+    // 300-399 = ₱3
+    // 400-499 = ₱4
+    // 500+ = ₱5
+    
+    if (amount >= 1 && amount <= 100) return 1;
+    if (amount >= 101 && amount <= 299) return 2;
+    if (amount >= 300 && amount <= 399) return 3;
+    if (amount >= 400 && amount <= 499) return 4;
+    if (amount >= 500) return 5;
+    
+    return 0; // For amounts less than 1
   }
 
   private calculateFallbackServiceCharge(): number {
-    const principal = this.additionalComputation.newPrincipalLoan;
-    if (principal <= 500) return 10;
-    if (principal <= 1000) return 15;
-    if (principal <= 5000) return 20;
-    if (principal <= 10000) return 30;
-    if (principal <= 20000) return 40;
-    return 50;
+    // Kept for backward compatibility, but now uses tier-based calculation
+    return this.calculateTierBasedServiceCharge(this.additionalComputation.newPrincipalLoan);
   }
 
   async searchTransaction() {

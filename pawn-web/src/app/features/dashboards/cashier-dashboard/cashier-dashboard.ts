@@ -293,7 +293,7 @@ export class CashierDashboard implements OnInit, OnDestroy {
     this.loadDashboardData();
     this.loadRecentTransactions();
     this.loadPendingAppraisals();
-    
+
     // Update clock every second
     this.clockUpdateInterval = setInterval(() => {
       this.currentDateTime = new Date();

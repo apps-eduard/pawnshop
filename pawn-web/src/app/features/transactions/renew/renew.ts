@@ -9,6 +9,7 @@ import { PenaltyCalculatorService } from '../../../core/services/penalty-calcula
 import { InvoiceModalComponent } from '../../../shared/modals/invoice-modal/invoice-modal.component';
 import { LoanInvoiceData } from '../../../shared/components/loan-invoice/loan-invoice.component';
 import { CurrencyInputDirective } from '../../../shared/directives/currency-input.directive';
+import { NewLoanDatesComponent } from '../../../shared/components/new-loan-dates/new-loan-dates.component';
 
 interface CustomerInfo {
   firstName: string;
@@ -61,7 +62,7 @@ interface RenewComputation {
 @Component({
   selector: 'app-renew',
   standalone: true,
-  imports: [CommonModule, FormsModule, TransactionInfoComponent, InvoiceModalComponent, CurrencyInputDirective],
+  imports: [CommonModule, FormsModule, TransactionInfoComponent, InvoiceModalComponent, CurrencyInputDirective, NewLoanDatesComponent],
   templateUrl: './renew.html',
   styleUrl: './renew.css'
 })
@@ -467,37 +468,30 @@ export class Renew implements OnInit, AfterViewInit {
   }
 
   async calculateServiceCharge(amount: number): Promise<number> {
-    try {
-      const response = await fetch('http://localhost:3000/api/service-charge-config/calculate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({ principalAmount: amount }) // Backend expects 'principalAmount', not 'amount'
-      });
+    // Use fixed tier-based service charge calculation
+    return this.calculateTierBasedServiceCharge(amount);
+  }
 
-      const result = await response.json();
-
-      if (result.success) {
-        return result.data.serviceChargeAmount; // Backend returns 'serviceChargeAmount', not 'serviceCharge'
-      } else {
-        console.warn('Service charge API returned error, using fallback:', result.message);
-        return this.calculateFallbackServiceCharge(amount);
-      }
-    } catch (error) {
-      console.error('Error calculating service charge, using fallback:', error);
-      return this.calculateFallbackServiceCharge(amount);
-    }
+  calculateTierBasedServiceCharge(amount: number): number {
+    // Fixed tier-based service charge:
+    // 1-100 = ₱1
+    // 101-299 = ₱2
+    // 300-399 = ₱3
+    // 400-499 = ₱4
+    // 500+ = ₱5
+    
+    if (amount >= 1 && amount <= 100) return 1;
+    if (amount >= 101 && amount <= 299) return 2;
+    if (amount >= 300 && amount <= 399) return 3;
+    if (amount >= 400 && amount <= 499) return 4;
+    if (amount >= 500) return 5;
+    
+    return 0; // For amounts less than 1
   }
 
   calculateFallbackServiceCharge(amount: number): number {
-    if (amount <= 500) return 10;
-    if (amount <= 1000) return 15;
-    if (amount <= 5000) return 20;
-    if (amount <= 10000) return 30;
-    if (amount <= 20000) return 40;
-    return 50;
+    // Kept for backward compatibility, but now uses tier-based calculation
+    return this.calculateTierBasedServiceCharge(amount);
   }
 
   getPenaltyInfo(): string {
