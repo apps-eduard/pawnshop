@@ -338,8 +338,15 @@ router.get('/', async (req, res) => {
     let params = [];
     let paramIndex = 1;
     
-    // Only show parent transactions (new_loan, renewal) - hide child transactions (partial_payment, redemption)
-    whereConditions.push(`(t.parent_transaction_id IS NULL OR t.transaction_type IN ('new_loan', 'renewal'))`);
+    // **NEW TRACKING CHAIN LOGIC**
+    // Only show the LATEST transaction in each tracking chain
+    // This ensures we only see the current state of each loan
+    whereConditions.push(`t.id IN (
+      SELECT MAX(id) 
+      FROM transactions 
+      WHERE tracking_number IS NOT NULL 
+      GROUP BY tracking_number
+    )`);
     
     // Search by ticket number or pawner name
     if (search) {
@@ -427,9 +434,14 @@ router.get('/', async (req, res) => {
                  json_build_object(
                    'id', ct.id,
                    'transactionNumber', ct.transaction_number,
+                   'trackingNumber', ct.tracking_number,
+                   'previousTransactionNumber', ct.previous_transaction_number,
                    'transactionType', ct.transaction_type,
                    'transactionDate', ct.transaction_date,
-                   'dateGranted', parent_t.granted_date,
+                   'grantedDate', ct.granted_date,
+                   'maturityDate', ct.maturity_date,
+                   'expiryDate', ct.expiry_date,
+                   'gracePeriodDate', ct.grace_period_date,
                    'principalAmount', ct.principal_amount,
                    'interestRate', ct.interest_rate,
                    'interestAmount', ct.interest_amount,
@@ -457,8 +469,7 @@ router.get('/', async (req, res) => {
                  ) ORDER BY ct.created_at ASC
                )
                FROM transactions ct
-               LEFT JOIN transactions parent_t ON ct.parent_transaction_id = parent_t.id
-               WHERE ct.parent_transaction_id = t.id
+               WHERE ct.tracking_number = t.tracking_number
              ) as transaction_history
       FROM transactions t
       JOIN pawners p ON t.pawner_id = p.id
@@ -487,6 +498,11 @@ router.get('/', async (req, res) => {
       message: 'Transactions retrieved successfully',
       data: result.rows.map(row => ({
         id: row.id,
+        // Tracking chain fields
+        tracking_number: row.tracking_number,
+        trackingNumber: row.tracking_number,
+        previous_transaction_number: row.previous_transaction_number,
+        previousTransactionNumber: row.previous_transaction_number,
         // Snake case for frontend compatibility
         ticket_number: row.transaction_number,
         transaction_type: row.transaction_type,
@@ -496,6 +512,7 @@ router.get('/', async (req, res) => {
         status: row.status,
         loan_date: row.granted_date || row.transaction_date,
         maturity_date: row.maturity_date,
+        grace_period_date: row.grace_period_date,
         first_name: row.first_name,
         last_name: row.last_name,
         branch_name: row.branch_name || 'N/A',
@@ -512,6 +529,7 @@ router.get('/', async (req, res) => {
         dateGranted: row.granted_date || row.transaction_date,
         maturityDate: row.maturity_date,
         dateMatured: row.maturity_date,
+        gracePeriodDate: row.grace_period_date,
         expiryDate: row.expiry_date,
         dateExpired: row.expiry_date,
         principalAmount: parseFloat(row.principal_amount || 0),
@@ -762,7 +780,7 @@ router.post('/new-loan', async (req, res) => {
       }
       
       // 2. Generate ticket number using configuration
-      const branchId = req.user.branch_id || 1;
+      const branchId = parseInt(req.user.branch_id) || 1;
       
       const ticketNumber = await generateTicketNumber(branchId);
       
@@ -980,31 +998,53 @@ router.post('/redeem', async (req, res) => {
     try {
       await client.query('BEGIN');
       
-      // 1. Get current transaction details using transaction ID
-      const transactionResult = await client.query(`
-        SELECT t.*, pt.ticket_number, t.granted_date, t.pawner_id, t.branch_id, t.interest_rate,
-               t.maturity_date, t.expiry_date
-        FROM transactions t
-        LEFT JOIN pawn_tickets pt ON pt.transaction_id = t.id
-        WHERE t.id = $1 AND t.status IN ('active', 'matured')
+      // **TRACKING CHAIN ARCHITECTURE**
+      // 1. Find previous transaction by ticket number OR ID
+      console.log(`🔍 Looking for transaction with identifier: ${ticketId}`);
+      
+      // Check if ticketId is a number (ID) or string (transaction number)
+      const isNumericId = !isNaN(ticketId);
+      
+      const previousTxnResult = await client.query(`
+        SELECT * FROM transactions 
+        WHERE ${isNumericId ? 'id = $1' : 'transaction_number = $1'}
       `, [ticketId]);
       
-      if (transactionResult.rows.length === 0) {
+      if (previousTxnResult.rows.length === 0) {
         await client.query('ROLLBACK');
         return res.status(404).json({
           success: false,
-          message: 'Active transaction not found or not available for redemption'
+          message: 'Transaction not found'
         });
       }
       
-      const transaction = transactionResult.rows[0];
+      const previousTransaction = previousTxnResult.rows[0];
+      console.log(`✅ Found previous transaction: ${previousTransaction.transaction_number}`);
       
-      // 2. Create a new transaction record for the redemption
-      const newTransactionNumber = await generateTicketNumber('TXN');
+      // 2. Generate NEW transaction number for redemption
+      const branchId = parseInt(previousTransaction.branch_id) || 1;
+      const newTransactionNumber = await generateTicketNumber(branchId);
       
+      console.log(`📝 Creating redemption transaction: ${newTransactionNumber}`);
+      console.log(`🔗 Tracking Number: ${previousTransaction.tracking_number || previousTransaction.transaction_number}`);
+      console.log(`⬅️  Previous Transaction: ${previousTransaction.transaction_number}`);
+      
+      // 3. Format dates for DB
+      const formatDateForDB = (date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      };
+      
+      const transactionDateStr = formatDateForDB(new Date());
+      
+      // 4. Create NEW transaction (final transaction in chain - status='redeemed')
       const newTransactionResult = await client.query(`
         INSERT INTO transactions (
           transaction_number,
+          tracking_number,
+          previous_transaction_number,
           pawner_id,
           branch_id,
           transaction_type,
@@ -1020,73 +1060,60 @@ router.post('/redeem', async (req, res) => {
           transaction_date,
           granted_date,
           maturity_date,
+          grace_period_date,
           expiry_date,
-          parent_transaction_id,
           notes,
           created_by,
           updated_by
         ) VALUES (
-          $1, $2, $3, 'redemption', 'redeemed',
-          $4, $5, $6, $7, 0, $8, $9, 0,
-          CURRENT_TIMESTAMP, $10, $11, $12, $13, $14, $15, $15
-        ) RETURNING id
+          $1, $2, $3, $4, $5, 'redemption', 'redeemed',
+          $6, $7, $8, $9, 0, $10, $11, 0,
+          $12, $13, $14, $15, $16, $17, $18, $18
+        ) RETURNING id, transaction_number
       `, [
-        newTransactionNumber,
-        transaction.pawner_id,
-        transaction.branch_id,
-        transaction.principal_amount,
-        transaction.interest_rate,
-        transaction.interest_amount,
-        parseFloat(penaltyAmount || 0),
-        parseFloat(totalDue || redeemAmount),
-        parseFloat(redeemAmount),
-        transaction.granted_date,
-        transaction.maturity_date,
-        transaction.expiry_date,
-        ticketId, // Link to original transaction
-        notes || `Redemption - Total Due: ${totalDue}, Paid: ${redeemAmount}`,
-        req.user.id
+        newTransactionNumber,                                                  // $1: NEW transaction number
+        previousTransaction.tracking_number || previousTransaction.transaction_number,  // $2: SAME tracking number
+        previousTransaction.transaction_number,                                // $3: Previous transaction link
+        previousTransaction.pawner_id,                                        // $4
+        branchId,                                                             // $5
+        previousTransaction.principal_amount,                                  // $6
+        previousTransaction.interest_rate,                                    // $7
+        previousTransaction.interest_amount,                                  // $8
+        parseFloat(penaltyAmount || 0),                                       // $9
+        parseFloat(totalDue || redeemAmount),                                 // $10: Total amount
+        parseFloat(redeemAmount),                                             // $11: Amount paid
+        transactionDateStr,                                                   // $12: transaction_date (today)
+        previousTransaction.granted_date,                                     // $13: granted_date (keep original)
+        previousTransaction.maturity_date,                                    // $14: maturity date (keep original)
+        previousTransaction.grace_period_date,                                // $15: grace period date (keep original)
+        previousTransaction.expiry_date,                                      // $16: expiry date (keep original)
+        notes || `Redemption - Total Due: ₱${totalDue}, Paid: ₱${redeemAmount}`, // $17
+        req.user.id                                                           // $18
       ]);
       
       const newTransactionId = newTransactionResult.rows[0].id;
+      const newTicket = newTransactionResult.rows[0].transaction_number;
       
-      // 3. Update original transaction status to redeemed
-      await client.query(`
-        UPDATE transactions SET
-          status = 'redeemed',
-          amount_paid = COALESCE(amount_paid, 0) + $1,
-          balance = 0,
-          updated_at = CURRENT_TIMESTAMP,
-          updated_by = $2
-        WHERE id = $3
-      `, [
-        parseFloat(redeemAmount),
-        req.user.id,
-        ticketId
-      ]);
+      console.log(`✅ Redemption transaction created: ${newTicket}`);
       
-      // 3. Update original transaction status to redeemed
-      await client.query(`
-        UPDATE transactions SET
-          status = 'redeemed',
-          amount_paid = COALESCE(amount_paid, 0) + $1,
-          balance = 0,
-          updated_at = CURRENT_TIMESTAMP,
-          updated_by = $2
-        WHERE id = $3
-      `, [
-        parseFloat(redeemAmount),
-        req.user.id,
-        ticketId
-      ]);
+      // **TRACKING CHAIN: Do NOT update previous transaction (immutable!)**
+      console.log(`🔗 Tracking chain completed (final transaction):`);
+      console.log(`   Previous: ${previousTransaction.transaction_number} (unchanged)`);
+      console.log(`   Redeemed: ${newTicket} (final - status='redeemed')`);
       
-      // 4. Update pawn_tickets table if exists (only update status and timestamp)
+      // 4. Copy items from previous transaction to new transaction
       await client.query(`
-        UPDATE pawn_tickets SET
-          status = 'redeemed',
-          updated_at = CURRENT_TIMESTAMP
-        WHERE transaction_id = $1
-      `, [ticketId]);
+        INSERT INTO pawn_items (
+          transaction_id, category_id, description_id,
+          appraisal_notes, appraised_value, loan_amount, status
+        )
+        SELECT $1, category_id, description_id,
+               appraisal_notes, appraised_value, loan_amount, 'redeemed'
+        FROM pawn_items
+        WHERE transaction_id = $2
+      `, [newTransactionId, previousTransaction.id]);
+      
+      console.log(`📦 Copied items from previous transaction with status='redeemed'`);
       
       // 5. Log audit trail
       await client.query(`
@@ -1095,38 +1122,40 @@ router.post('/redeem', async (req, res) => {
         ) VALUES ($1, $2, $3, $4, $5, $6)
       `, [
         'transactions',
-        ticketId,
+        newTransactionId,
         'REDEMPTION',
         req.user.id,
         JSON.stringify({ 
-          old_values: { status: transaction.status },
-          new_values: { 
-            status: 'redeemed', 
-            redeem_amount: redeemAmount,
-            penalty_amount: penaltyAmount,
-            discount_amount: discountAmount,
-            new_transaction_id: newTransactionId
-          }
+          tracking_number: previousTransaction.tracking_number || previousTransaction.transaction_number,
+          previous_transaction: previousTransaction.transaction_number,
+          redemption_transaction: newTicket,
+          redeem_amount: redeemAmount,
+          penalty_amount: penaltyAmount,
+          discount_amount: discountAmount,
+          total_due: totalDue,
+          status: 'redeemed'
         }),
-        'Item redeemed'
+        `Item redeemed - ₱${redeemAmount} paid, loan completed`
       ]);
       
       await client.query('COMMIT');
       
-      console.log(`✅ Redeem transaction completed for transaction: ${transaction.transaction_number}`);
-      console.log(`📋 New redemption transaction created: ${newTransactionNumber} (ID: ${newTransactionId})`);
+      console.log(`✅ Redemption completed!`);
+      console.log(`📋 Previous Transaction: ${previousTransaction.transaction_number} (unchanged)`);
+      console.log(`📋 Redemption Transaction: ${newTicket} (final - redeemed)`);
       
       res.json({
         success: true,
         message: 'Item redeemed successfully',
         data: {
-          transactionId: ticketId,
-          ticketNumber: transaction.ticket_number,
-          transactionNumber: newTransactionNumber,
+          previousTicketNumber: previousTransaction.transaction_number,
+          redemptionTicketNumber: newTicket,
+          trackingNumber: previousTransaction.tracking_number || previousTransaction.transaction_number,
           redemptionTransactionId: newTransactionId,
           redeemAmount: parseFloat(redeemAmount),
           penaltyAmount: parseFloat(penaltyAmount || 0),
           discountAmount: parseFloat(discountAmount || 0),
+          totalDue: parseFloat(totalDue || redeemAmount),
           status: 'redeemed'
         }
       });
@@ -1177,72 +1206,88 @@ router.post('/partial-payment', async (req, res) => {
     try {
       await client.query('BEGIN');
       
-      // 1. Get current ticket and transaction details
-      const ticketResult = await client.query(`
-        SELECT pt.*, t.granted_date,
-               t.balance, t.principal_amount, t.total_amount,
-               t.pawner_id, t.branch_id, t.interest_rate,
-               t.maturity_date, t.expiry_date, t.status as transaction_status
-        FROM pawn_tickets pt
-        JOIN transactions t ON pt.transaction_id = t.id
-        WHERE t.id = $1 AND pt.status IN ('active', 'matured')
+      // **TRACKING CHAIN ARCHITECTURE**
+      // 1. Find the previous transaction by ticket number OR ID
+      console.log(`🔍 Looking for transaction with identifier: ${ticketId}`);
+      
+      // Check if ticketId is a number (ID) or string (transaction number)
+      const isNumericId = !isNaN(ticketId);
+      
+      const previousTxnResult = await client.query(`
+        SELECT t.*, t.transaction_number as ticket_number
+        FROM transactions t
+        WHERE ${isNumericId ? 't.id = $1' : 't.transaction_number = $1'}
       `, [ticketId]);
       
-      if (ticketResult.rows.length === 0) {
+      if (previousTxnResult.rows.length === 0) {
+        await client.query('ROLLBACK');
         return res.status(404).json({
           success: false,
-          message: 'Active pawn ticket not found'
+          message: 'Transaction not found'
         });
       }
       
-      const ticket = ticketResult.rows[0];
-      const currentBalance = parseFloat(ticket.balance || ticket.total_amount);
+      const previousTransaction = previousTxnResult.rows[0];
+      console.log(`✅ Found previous transaction: ${previousTransaction.transaction_number}`);
+      
+      // 2. Calculate amounts
+      const currentBalance = parseFloat(previousTransaction.balance || previousTransaction.total_amount);
       const paymentAmt = parseFloat(partialPayment);
       const newPrincipal = parseFloat(newPrincipalLoan);
       const discount = parseFloat(discountAmount || 0);
       const advance = parseFloat(advanceInterest || 0);
       const netPay = parseFloat(netPayment || paymentAmt);
       
-      // 2. Calculate new balance
+      // Calculate new balance
       const newBalance = Math.max(0, currentBalance - paymentAmt);
       
-      // 3. Update pawn_tickets with partial payment tracking information
-      await client.query(`
-        UPDATE pawn_tickets SET
-          partial_payment = COALESCE(partial_payment, 0) + $1,
-          new_principal_loan = $2,
-          discount_amount = COALESCE(discount_amount, 0) + $3,
-          advance_interest = COALESCE(advance_interest, 0) + $4,
-          net_payment = COALESCE(net_payment, 0) + $5,
-          payment_amount = COALESCE(payment_amount, 0) + $6,
-          updated_at = CURRENT_TIMESTAMP
-        WHERE transaction_id = $7
-      `, [
-        paymentAmt,
-        newPrincipal,
-        discount,
-        advance,
-        netPay,
-        paymentAmt,
-        ticketId
-      ]);
+      console.log(`💰 Partial Payment Calculation:`);
+      console.log(`   Previous Principal: ₱${previousTransaction.principal_amount}`);
+      console.log(`   Current Balance: ₱${currentBalance}`);
+      console.log(`   Payment Amount: ₱${paymentAmt}`);
+      console.log(`   New Principal: ₱${newPrincipal}`);
+      console.log(`   New Balance: ₱${newBalance}`);
       
-      // 4. Create a new transaction record for the partial payment
-      const newTransactionNumber = await generateTicketNumber('TXN');
+      // 3. Generate NEW transaction number for the partial payment
+      const branchId = parseInt(previousTransaction.branch_id) || 1;
+      console.log(`🏢 Branch ID for new transaction: ${branchId} (type: ${typeof branchId})`);
+      const newTransactionNumber = await generateTicketNumber(branchId);
       
-      // Calculate new dates for the partial payment
-      const today = new Date();
-      const newGrantedDate = today;
-      const newMaturityDate = new Date(today);
-      newMaturityDate.setDate(newMaturityDate.getDate() + 30);
+      console.log(`📝 Creating new partial payment transaction: ${newTransactionNumber}`);
+      console.log(`🔗 Tracking Number: ${previousTransaction.tracking_number || previousTransaction.transaction_number}`);
+      console.log(`⬅️  Previous Transaction: ${previousTransaction.transaction_number}`);
+      
+      // 4. Calculate new dates - extend by 1 month from previous maturity
+      const previousMaturityDate = new Date(previousTransaction.maturity_date);
+      const newMaturityDate = new Date(previousMaturityDate);
+      newMaturityDate.setMonth(newMaturityDate.getMonth() + 1);
+      
       const newGracePeriodDate = new Date(newMaturityDate);
-      newGracePeriodDate.setDate(newGracePeriodDate.getDate() + 3);
-      const newExpiryDate = new Date(newMaturityDate);
-      newExpiryDate.setDate(newExpiryDate.getDate() + 90);
+      newGracePeriodDate.setDate(newGracePeriodDate.getDate() + 3); // 3 days after maturity
       
+      const newExpiryDate = new Date(newMaturityDate);
+      newExpiryDate.setMonth(newExpiryDate.getMonth() + 3); // 3 months after maturity
+      
+      // Format dates as YYYY-MM-DD
+      const formatDateForDB = (date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      };
+      
+      const maturityDateStr = formatDateForDB(newMaturityDate);
+      const gracePeriodDateStr = formatDateForDB(newGracePeriodDate);
+      const expiryDateStr = formatDateForDB(newExpiryDate);
+      
+      console.log(`📅 New Dates: Maturity: ${maturityDateStr}, Grace: ${gracePeriodDateStr}, Expiry: ${expiryDateStr}`);
+      
+      // 5. Create NEW transaction (tracking chain - immutable previous transaction)
       const newTransactionResult = await client.query(`
         INSERT INTO transactions (
           transaction_number,
+          tracking_number,
+          previous_transaction_number,
           pawner_id,
           branch_id,
           transaction_type,
@@ -1259,7 +1304,6 @@ router.post('/partial-payment', async (req, res) => {
           maturity_date,
           grace_period_date,
           expiry_date,
-          parent_transaction_id,
           discount_amount,
           advance_interest,
           advance_service_charge,
@@ -1269,60 +1313,60 @@ router.post('/partial-payment', async (req, res) => {
           created_by,
           updated_by
         ) VALUES (
-          $1, $2, $3, 'partial_payment', $4,
-          $5, $6, 0, 0, $7, $8, $9,
-          CURRENT_TIMESTAMP, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $21
-        ) RETURNING id
+          $1, $2, $3, $4, $5, 'partial_payment', $6,
+          $7, $8, 0, 0, $9, $10, $11,
+          $12, $13, $14, $15, $16,
+          $17, $18, $19, $20, $21, $22, $23, $23
+        ) RETURNING id, transaction_number
       `, [
-        newTransactionNumber,
-        ticket.pawner_id,
-        ticket.branch_id,
-        ticket.transaction_status,
-        newPrincipal,
-        ticket.interest_rate,
-        newBalance,
-        paymentAmt,
-        newBalance,
-        newGrantedDate,
-        newMaturityDate,
-        newGracePeriodDate,
-        newExpiryDate,
-        ticket.transaction_id, // Link to original transaction
-        discount,
-        advance,
-        parseFloat(req.body.advanceServiceCharge || 0),
-        netPay,
-        newPrincipal,
-        notes ? `Partial payment: ${notes}` : `Partial payment of ${paymentAmt}`,
-        req.user.id
+        newTransactionNumber,                                                  // $1: NEW transaction number
+        previousTransaction.tracking_number || previousTransaction.transaction_number,  // $2: SAME tracking number
+        previousTransaction.transaction_number,                                // $3: Previous transaction link
+        previousTransaction.pawner_id,                                        // $4
+        branchId,                                                             // $5
+        previousTransaction.status,                                           // $6
+        newPrincipal,                                                         // $7: NEW principal
+        previousTransaction.interest_rate,                                    // $8
+        newBalance,                                                           // $9: NEW total amount
+        paymentAmt,                                                           // $10: Amount paid
+        newBalance,                                                           // $11: NEW balance
+        formatDateForDB(new Date()),                                          // $12: transaction_date (today)
+        previousTransaction.granted_date,                                     // $13: granted_date (keep original)
+        maturityDateStr,                                                      // $14: NEW maturity date
+        gracePeriodDateStr,                                                   // $15: NEW grace period date
+        expiryDateStr,                                                        // $16: NEW expiry date
+        discount,                                                             // $17
+        advance,                                                              // $18
+        parseFloat(req.body.advanceServiceCharge || 0),                      // $19
+        netPay,                                                               // $20
+        newPrincipal,                                                         // $21
+        notes ? `Partial payment: ${notes}` : `Partial payment of ₱${paymentAmt}`, // $22
+        req.user.id                                                           // $23
       ]);
+      
+      console.log(`✅ New partial payment transaction created: ${newTransactionResult.rows[0].transaction_number}`);
       
       const newTransactionId = newTransactionResult.rows[0].id;
+      const newTicket = newTransactionResult.rows[0].transaction_number;
       
-      // 5. Update original transaction with new principal, balance, and dates
+      // **TRACKING CHAIN: Do NOT update previous transaction (immutable!)**
+      console.log(`🔗 Tracking chain updated:`);
+      console.log(`   Previous: ${previousTransaction.transaction_number} (unchanged)`);
+      console.log(`   New: ${newTicket} (current state)`);
+      
+      // 5. Copy items from previous transaction to new transaction
       await client.query(`
-        UPDATE transactions SET
-          principal_amount = $1,
-          balance = $2,
-          amount_paid = COALESCE(amount_paid, 0) + $3,
-          granted_date = $4,
-          maturity_date = $5,
-          grace_period_date = $6,
-          expiry_date = $7,
-          updated_at = CURRENT_TIMESTAMP,
-          updated_by = $8
-        WHERE id = $9
-      `, [
-        newPrincipal,
-        newBalance,
-        paymentAmt,
-        newGrantedDate,
-        newMaturityDate,
-        newGracePeriodDate,
-        newExpiryDate,
-        req.user.id,
-        ticket.transaction_id
-      ]);
+        INSERT INTO pawn_items (
+          transaction_id, category_id, description_id,
+          appraisal_notes, appraised_value, loan_amount, status
+        )
+        SELECT $1, category_id, description_id,
+               appraisal_notes, appraised_value, loan_amount, status
+        FROM pawn_items
+        WHERE transaction_id = $2
+      `, [newTransactionId, previousTransaction.id]);
+      
+      console.log(`📦 Copied items from previous transaction`);
       
       // 6. Log audit trail
       await client.query(`
@@ -1331,36 +1375,35 @@ router.post('/partial-payment', async (req, res) => {
         ) VALUES ($1, $2, $3, $4, $5, $6)
       `, [
         'transactions',
-        ticket.transaction_id,
+        newTransactionId,
         'PARTIAL_PAYMENT',
         req.user.id,
         JSON.stringify({ 
-          old_values: { 
-            balance: currentBalance,
-            principal_amount: ticket.principal_amount
-          },
-          new_values: { 
-            partial_payment: paymentAmt,
-            new_principal_loan: newPrincipal,
-            balance: newBalance,
-            new_transaction_id: newTransactionId
-          }
+          tracking_number: previousTransaction.tracking_number || previousTransaction.transaction_number,
+          previous_transaction: previousTransaction.transaction_number,
+          new_transaction: newTicket,
+          previous_balance: currentBalance,
+          previous_principal: previousTransaction.principal_amount,
+          partial_payment: paymentAmt,
+          new_principal: newPrincipal,
+          new_balance: newBalance
         }),
-        'Partial payment applied'
+        `Partial payment of ₱${paymentAmt} - New transaction created in chain`
       ]);
       
       await client.query('COMMIT');
       
-      console.log(`✅ Partial payment completed for ticket: ${ticket.ticket_number}`);
-      console.log(`📋 New transaction created: ${newTransactionNumber} (ID: ${newTransactionId})`);
+      console.log(`✅ Partial payment completed!`);
+      console.log(`📋 Previous Transaction: ${previousTransaction.transaction_number} (unchanged)`);
+      console.log(`📋 New Transaction: ${newTicket} (current state)`);
       
       res.json({
         success: true,
         message: 'Partial payment processed successfully',
         data: {
-          ticketId,
-          ticketNumber: ticket.ticket_number,
-          transactionNumber: newTransactionNumber,
+          previousTicketNumber: previousTransaction.transaction_number,
+          newTicketNumber: newTicket,
+          trackingNumber: previousTransaction.tracking_number || previousTransaction.transaction_number,
           transactionId: newTransactionId,
           partialPayment: paymentAmt,
           newPrincipalLoan: newPrincipal,
@@ -1368,7 +1411,10 @@ router.post('/partial-payment', async (req, res) => {
           advanceInterest: advance,
           netPayment: netPay,
           remainingBalance: newBalance,
-          status: ticket.status
+          status: previousTransaction.status,
+          maturityDate: maturityDateStr,
+          gracePeriodDate: gracePeriodDateStr,
+          expiryDate: expiryDateStr
         }
       });
       
@@ -1419,10 +1465,15 @@ router.post('/additional-loan', async (req, res) => {
     try {
       await client.query('BEGIN');
       
-      // 1. Find previous transaction by ticket_number (originalTicketId is ticket number, not ID!)
+      // 1. Find previous transaction by ticket_number OR ID
+      console.log(`🔍 Looking for transaction with identifier: ${originalTicketId}`);
+      
+      // Check if originalTicketId is a number (ID) or string (transaction number)
+      const isNumericId = !isNaN(originalTicketId);
+      
       const transactionResult = await client.query(`
         SELECT * FROM transactions 
-        WHERE transaction_number = $1 AND status = 'active'
+        WHERE ${isNumericId ? 'id = $1' : 'transaction_number = $1'} AND status = 'active'
       `, [originalTicketId]);
       
       if (transactionResult.rows.length === 0) {
@@ -1437,7 +1488,7 @@ router.post('/additional-loan', async (req, res) => {
       console.log(`🔗 Found previous transaction: ${previousTransaction.transaction_number}, tracking: ${previousTransaction.tracking_number}`);
       
       // 2. Generate new ticket number for additional loan
-      const branchId = previousTransaction.branch_id;
+      const branchId = parseInt(previousTransaction.branch_id) || 1;
       const newTicketNumber = await generateTicketNumber(branchId);
       
       // 3. Calculate new amounts - use current principal from previous transaction
@@ -1488,7 +1539,7 @@ router.post('/additional-loan', async (req, res) => {
           pawner_id, branch_id, transaction_type, status,
           principal_amount, interest_rate, interest_amount, service_charge, 
           total_amount, balance, transaction_date, granted_date, maturity_date, grace_period_date, expiry_date,
-          new_principal_loan, notes, created_by, created_at, updated_at
+          notes, created_by, created_at, updated_at
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
         RETURNING *
       `, [
@@ -1498,7 +1549,7 @@ router.post('/additional-loan', async (req, res) => {
         previousTransaction.pawner_id, previousTransaction.branch_id, 'additional_loan', 'active',
         newPrincipal, interestRateDecimal, interestAmount, serviceCharge,
         totalAmount, totalAmount, new Date(), previousTransaction.granted_date, maturityDate, gracePeriodDate, expiryDate,
-        newPrincipal, notes || `Additional loan of ${addAmount} on ticket ${previousTransaction.transaction_number}. Previous principal: ${currentPrincipal}, New principal: ${newPrincipal}`,
+        notes || `Additional loan of ${addAmount} on ticket ${previousTransaction.transaction_number}. Previous principal: ${currentPrincipal}, New principal: ${newPrincipal}`,
         req.user.id, new Date(), new Date()
       ]);
       
@@ -1627,108 +1678,193 @@ router.post('/renew', async (req, res) => {
     try {
       await client.query('BEGIN');
       
-      // 1. Get current ticket details
-      const ticketResult = await client.query(`
-        SELECT * FROM pawn_tickets WHERE id = $1 AND status IN ('active', 'overdue')
+      // **TRACKING CHAIN ARCHITECTURE**
+      // 1. Find previous transaction by ticket number OR ID
+      console.log(`🔍 Looking for transaction with identifier: ${ticketId}`);
+      
+      // Check if ticketId is a number (ID) or string (transaction number)
+      const isNumericId = !isNaN(ticketId);
+      
+      const previousTxnResult = await client.query(`
+        SELECT * FROM transactions 
+        WHERE ${isNumericId ? 'id = $1' : 'transaction_number = $1'}
       `, [ticketId]);
       
-      if (ticketResult.rows.length === 0) {
+      if (previousTxnResult.rows.length === 0) {
+        await client.query('ROLLBACK');
         return res.status(404).json({
           success: false,
-          message: 'Active pawn ticket not found'
+          message: 'Transaction not found'
         });
       }
       
-      const ticket = ticketResult.rows[0];
+      const previousTransaction = previousTxnResult.rows[0];
+      console.log(`✅ Found previous transaction: ${previousTransaction.transaction_number}`);
       
-      // 2. Calculate new dates
-      const currentMaturity = new Date(ticket.maturity_date);
-      const maturityDate = newMaturityDate ? new Date(newMaturityDate) : (() => {
-        const date = new Date(currentMaturity);
-        date.setMonth(date.getMonth() + 4); // Extend by 4 months
-        return date;
-      })();
-      const expiryDate = newExpiryDate ? new Date(newExpiryDate) : (() => {
-        const date = new Date(maturityDate);
-        date.setMonth(date.getMonth() + 1); // 1 month grace period
-        return date;
-      })();
+      // 2. Generate NEW transaction number for renewal
+      const branchId = parseInt(previousTransaction.branch_id) || 1;
+      const newTransactionNumber = await generateTicketNumber(branchId);
       
-      // 3. Calculate new amounts
+      console.log(`📝 Creating renewal transaction: ${newTransactionNumber}`);
+      console.log(`🔗 Tracking Number: ${previousTransaction.tracking_number || previousTransaction.transaction_number}`);
+      console.log(`⬅️  Previous Transaction: ${previousTransaction.transaction_number}`);
+      
+      // 3. Calculate new amounts and dates - extend maturity by 1 month
       const renewFee = parseFloat(renewalFee);
-      const interestRate = parseFloat(newInterestRate || ticket.interest_rate);
-      const principalAmount = parseFloat(ticket.principal_amount);
+      const interestRate = parseFloat(newInterestRate || previousTransaction.interest_rate);
+      const principalAmount = parseFloat(previousTransaction.principal_amount);
       const newInterestAmount = (principalAmount * interestRate) / 100;
-      const newTotalAmount = principalAmount + newInterestAmount + renewFee;
+      const serviceCharge = parseFloat(previousTransaction.service_charge || 0);
+      const newTotalAmount = principalAmount + newInterestAmount + serviceCharge;
       
-      // 4. Update ticket with renewal information
-      await client.query(`
-        UPDATE pawn_tickets SET
-          status = 'active',
-          maturity_date = $1,
-          expiry_date = $2,
-          interest_rate = $3,
-          interest_amount = $4,
-          renewal_fee = COALESCE(renewal_fee, 0) + $5,
-          total_amount = $6,
-          due_amount = $7,
-          balance_remaining = $8,
-          renewed_date = CURRENT_TIMESTAMP,
-          notes = COALESCE(notes, '') || $9,
-          updated_at = CURRENT_TIMESTAMP
-        WHERE id = $10
+      // Calculate new dates - extend by 1 month
+      const previousMaturityDate = new Date(previousTransaction.maturity_date);
+      const newMaturityDate = new Date(previousMaturityDate);
+      newMaturityDate.setMonth(newMaturityDate.getMonth() + 1);
+      
+      const newGracePeriodDate = new Date(newMaturityDate);
+      newGracePeriodDate.setDate(newGracePeriodDate.getDate() + 3); // 3 days after maturity
+      
+      const newExpiryDate = new Date(newMaturityDate);
+      newExpiryDate.setMonth(newExpiryDate.getMonth() + 3); // 3 months after maturity
+      
+      // Format dates as YYYY-MM-DD
+      const formatDateForDB = (date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      };
+      
+      const transactionDateStr = formatDateForDB(new Date());
+      const maturityDateStr = formatDateForDB(newMaturityDate);
+      const gracePeriodDateStr = formatDateForDB(newGracePeriodDate);
+      const expiryDateStr = formatDateForDB(newExpiryDate);
+      
+      console.log(`💰 Renewal Calculation:`);
+      console.log(`   Principal: ₱${principalAmount}`);
+      console.log(`   Interest Rate: ${interestRate}%`);
+      console.log(`   New Interest: ₱${newInterestAmount}`);
+      console.log(`   Renewal Fee: ₱${renewFee}`);
+      console.log(`   New Total: ₱${newTotalAmount}`);
+      
+      // 4. Create NEW transaction (renewal extends maturity)
+      const newTransactionResult = await client.query(`
+        INSERT INTO transactions (
+          transaction_number,
+          tracking_number,
+          previous_transaction_number,
+          pawner_id,
+          branch_id,
+          transaction_type,
+          status,
+          principal_amount,
+          interest_rate,
+          interest_amount,
+          service_charge,
+          other_charges,
+          total_amount,
+          balance,
+          transaction_date,
+          granted_date,
+          maturity_date,
+          grace_period_date,
+          expiry_date,
+          notes,
+          created_by,
+          updated_by
+        ) VALUES (
+          $1, $2, $3, $4, $5, 'renewal', 'active',
+          $6, $7, $8, $9, $10, $11, $12,
+          $13, $14, $15, $16, $17, $18, $19, $19
+        ) RETURNING id, transaction_number
       `, [
-        maturityDate,
-        expiryDate,
-        interestRate,
-        newInterestAmount,
-        renewFee,
-        newTotalAmount,
-        newTotalAmount,
-        newTotalAmount,
-        notes ? `\nRenewed: ${notes}` : `\nRenewed with fee: ${renewFee}`,
-        ticketId
+        newTransactionNumber,                                                  // $1: NEW transaction number
+        previousTransaction.tracking_number || previousTransaction.transaction_number,  // $2: SAME tracking number
+        previousTransaction.transaction_number,                                // $3: Previous transaction link
+        previousTransaction.pawner_id,                                        // $4
+        branchId,                                                             // $5
+        principalAmount,                                                      // $6: Same principal
+        interestRate,                                                         // $7: Interest rate
+        newInterestAmount,                                                    // $8: NEW interest
+        serviceCharge,                                                        // $9: Service charge
+        renewFee,                                                             // $10: Renewal fee
+        newTotalAmount,                                                       // $11: NEW total
+        newTotalAmount,                                                       // $12: Balance
+        transactionDateStr,                                                   // $13: transaction_date (today)
+        previousTransaction.granted_date,                                     // $14: Keep original granted date
+        maturityDateStr,                                                      // $15: EXTENDED maturity
+        gracePeriodDateStr,                                                   // $16: EXTENDED grace period
+        expiryDateStr,                                                        // $17: EXTENDED expiry
+        notes || `Renewal - Fee: ₱${renewFee}, Extended maturity`, // $18
+        req.user.id                                                           // $19
       ]);
       
-      // 5. Log audit trail
+      const newTransactionId = newTransactionResult.rows[0].id;
+      const newTicket = newTransactionResult.rows[0].transaction_number;
+      
+      console.log(`✅ Renewal transaction created: ${newTicket}`);
+      
+      // **TRACKING CHAIN: Do NOT update previous transaction (immutable!)**
+      console.log(`🔗 Tracking chain updated:`);
+      console.log(`   Previous: ${previousTransaction.transaction_number} (unchanged)`);
+      console.log(`   Renewed: ${newTicket} (extended maturity)`);
+      
+      // 5. Copy items from previous transaction to new transaction
+      await client.query(`
+        INSERT INTO pawn_items (
+          transaction_id, category_id, description_id,
+          appraisal_notes, appraised_value, loan_amount, status
+        )
+        SELECT $1, category_id, description_id,
+               appraisal_notes, appraised_value, loan_amount, status
+        FROM pawn_items
+        WHERE transaction_id = $2
+      `, [newTransactionId, previousTransaction.id]);
+      
+      console.log(`📦 Copied items from previous transaction`);
+      
+      // 6. Log audit trail
       await client.query(`
         INSERT INTO audit_logs (
           entity_type, entity_id, action, user_id, changes, description
         ) VALUES ($1, $2, $3, $4, $5, $6)
       `, [
-        'pawn_tickets',
-        ticketId,
-        'UPDATE',
+        'transactions',
+        newTransactionId,
+        'RENEWAL',
         req.user.id,
         JSON.stringify({ 
-          old_values: { 
-            maturity_date: ticket.maturity_date,
-            expiry_date: ticket.expiry_date,
-            total_amount: ticket.total_amount
-          },
-          new_values: { 
-            maturity_date: maturityDate,
-            expiry_date: expiryDate,
-            renewal_fee: renewFee,
-            total_amount: newTotalAmount
-          }
+          tracking_number: previousTransaction.tracking_number || previousTransaction.transaction_number,
+          previous_transaction: previousTransaction.transaction_number,
+          renewal_transaction: newTicket,
+          previous_maturity: previousTransaction.maturity_date,
+          new_maturity: dates.maturityDate,
+          renewal_fee: renewFee,
+          new_total: newTotalAmount
         }),
-        'Ticket renewed'
+        `Loan renewed - Maturity extended, Fee: ₱${renewFee}`
       ]);
       
       await client.query('COMMIT');
       
-      console.log(`✅ Renewal completed for ticket: ${ticket.ticket_number}`);
+      console.log(`✅ Renewal completed!`);
+      console.log(`📋 Previous Transaction: ${previousTransaction.transaction_number} (unchanged)`);
+      console.log(`📋 Renewal Transaction: ${newTicket} (current state)`);
       
       res.json({
         success: true,
         message: 'Loan renewed successfully',
         data: {
-          ticketId,
-          ticketNumber: ticket.ticket_number,
+          previousTicketNumber: previousTransaction.transaction_number,
+          renewalTicketNumber: newTicket,
+          trackingNumber: previousTransaction.tracking_number || previousTransaction.transaction_number,
+          renewalTransactionId: newTransactionId,
           renewalFee: renewFee,
-          newMaturityDate: maturityDate,
-          newExpiryDate: expiryDate,
+          principalAmount: principalAmount,
+          newMaturityDate: dates.maturityDate,
+          newGracePeriodDate: dates.gracePeriodDate,
+          newExpiryDate: dates.expiryDate,
           newTotalAmount: newTotalAmount,
           interestRate: interestRate,
           status: 'active'
