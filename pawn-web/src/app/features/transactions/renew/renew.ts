@@ -479,13 +479,13 @@ export class Renew implements OnInit, AfterViewInit {
     // 300-399 = ₱3
     // 400-499 = ₱4
     // 500+ = ₱5
-    
+
     if (amount >= 1 && amount <= 100) return 1;
     if (amount >= 101 && amount <= 299) return 2;
     if (amount >= 300 && amount <= 399) return 3;
     if (amount >= 400 && amount <= 499) return 4;
     if (amount >= 500) return 5;
-    
+
     return 0; // For amounts less than 1
   }
 

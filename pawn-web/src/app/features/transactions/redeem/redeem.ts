@@ -204,7 +204,7 @@ export class Redeem implements OnInit, AfterViewInit {
 
     if (this.transactionInfo.maturedDate) {
       daysAfterMaturity = Math.floor((currentDate.getTime() - maturityDate.getTime()) / (1000 * 60 * 60 * 24));
-      
+
       // Check if within 3-day grace period (days 0, 1, 2, 3 after maturity)
       isWithinGracePeriod = daysAfterMaturity >= 0 && daysAfterMaturity <= 3;
 
@@ -226,7 +226,7 @@ export class Redeem implements OnInit, AfterViewInit {
     } else {
       // AFTER GRACE PERIOD OR BEFORE MATURITY: Calculate interest for additional days only
       const totalDays = Math.floor((currentDate.getTime() - grantDate.getTime()) / (1000 * 60 * 60 * 24));
-      
+
       // Days beyond the first 30 days (already paid in advance)
       const additionalDays = Math.max(0, totalDays - 30);
 
@@ -234,7 +234,7 @@ export class Redeem implements OnInit, AfterViewInit {
         // Calculate interest PER DAY for additional days only
         const monthlyRate = this.redeemComputation.interestRate / 100; // 6% = 0.06
         const dailyRate = monthlyRate / 30; // Daily rate = 6% / 30 = 0.002
-        
+
         // Interest = Principal × Daily Rate × Additional Days
         this.redeemComputation.interest = this.redeemComputation.principalLoan * dailyRate * additionalDays;
         this.redeemComputation.discount = 0;

@@ -1,6 +1,6 @@
 /**
  * Service Charge Configuration
- * 
+ *
  * This file contains the tier-based service charge configuration.
  * You can edit these values directly without needing database changes.
  * Changes will take effect immediately after saving and refreshing the app.

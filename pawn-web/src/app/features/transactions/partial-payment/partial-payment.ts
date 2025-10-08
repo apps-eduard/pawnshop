@@ -208,7 +208,7 @@ export class PartialPayment implements OnInit, AfterViewInit {
       // Calculate interest PER DAY (Monthly rate / 30 days × additional days)
       const monthlyRate = this.partialComputation.interestRate / 100; // 6% = 0.06
       const dailyRate = monthlyRate / 30; // Daily rate = 6% / 30 = 0.002
-      
+
       // Interest = Principal × Daily Rate × Additional Days
       this.partialComputation.interest = this.partialComputation.principalLoan * dailyRate * additionalDays;
       this.partialComputation.discount = 0; // No discount after grace period
@@ -360,13 +360,13 @@ export class PartialPayment implements OnInit, AfterViewInit {
     // 300-399 = ₱3
     // 400-499 = ₱4
     // 500+ = ₱5
-    
+
     if (amount >= 1 && amount <= 100) return 1;
     if (amount >= 101 && amount <= 299) return 2;
     if (amount >= 300 && amount <= 399) return 3;
     if (amount >= 400 && amount <= 499) return 4;
     if (amount >= 500) return 5;
-    
+
     return 0; // For amounts less than 1
   }
 
