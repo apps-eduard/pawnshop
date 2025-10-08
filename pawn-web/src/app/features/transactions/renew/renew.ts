@@ -184,8 +184,8 @@ export class Renew implements OnInit, AfterViewInit {
           if (!isLatestTransaction) {
             // This is an old transaction in the chain
             this.toastService.showError(
-              'Transaction Superseded',
-              `This transaction has been superseded. Please search for the latest transaction: ${latestTransaction.transactionNumber}`
+              'Transaction Closed',
+              `Ticket ${currentTransactionNumber} is already closed. Please search for the latest ticket: ${latestTransaction.transactionNumber}`
             );
             this.transactionFound = false;
             this.isLoading = false;
@@ -654,7 +654,12 @@ export class Renew implements OnInit, AfterViewInit {
         // Show invoice modal
         this.showInvoiceModal = true;
       } else {
-        this.toastService.showError('Error', result.message || 'Failed to process renewal');
+        let errorMessage = result.message || 'Failed to process renewal';
+        // Replace technical "superseded" language with user-friendly "already closed" message
+        if (errorMessage.toLowerCase().includes('superseded') || errorMessage.toLowerCase().includes('cannot be processed')) {
+          errorMessage = `Ticket ${this.searchTicketNumber} is already closed`;
+        }
+        this.toastService.showError('Error', errorMessage);
       }
     } catch (error) {
       console.error('Error processing renewal:', error);

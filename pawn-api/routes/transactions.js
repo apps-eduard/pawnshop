@@ -1096,7 +1096,19 @@ router.post('/redeem', async (req, res) => {
       
       console.log(`✅ Redemption transaction created: ${newTicket}`);
       
-      // **TRACKING CHAIN: Do NOT update previous transaction (immutable!)**
+      // Mark previous transaction as superseded
+      await client.query(`
+        UPDATE transactions 
+        SET status = 'superseded', 
+            is_active = false,
+            notes = COALESCE(notes, '') || ' | Superseded by ${newTicket}',
+            updated_at = CURRENT_TIMESTAMP
+        WHERE transaction_number = $1
+      `, [previousTransaction.transaction_number]);
+      
+      console.log(`✅ Marked ${previousTransaction.transaction_number} as superseded by ${newTicket}`);
+      
+      // **TRACKING CHAIN: Previous transaction now superseded**
       console.log(`🔗 Tracking chain completed (final transaction):`);
       console.log(`   Previous: ${previousTransaction.transaction_number} (unchanged)`);
       console.log(`   Redeemed: ${newTicket} (final - status='redeemed')`);
@@ -1349,7 +1361,19 @@ router.post('/partial-payment', async (req, res) => {
       const newTransactionId = newTransactionResult.rows[0].id;
       const newTicket = newTransactionResult.rows[0].transaction_number;
       
-      // **TRACKING CHAIN: Do NOT update previous transaction (immutable!)**
+      // Mark previous transaction as superseded
+      await client.query(`
+        UPDATE transactions 
+        SET status = 'superseded', 
+            is_active = false,
+            notes = COALESCE(notes, '') || ' | Superseded by ${newTicket}',
+            updated_at = CURRENT_TIMESTAMP
+        WHERE transaction_number = $1
+      `, [previousTransaction.transaction_number]);
+      
+      console.log(`✅ Marked ${previousTransaction.transaction_number} as superseded by ${newTicket}`);
+      
+      // **TRACKING CHAIN: Previous transaction now superseded**
       console.log(`🔗 Tracking chain updated:`);
       console.log(`   Previous: ${previousTransaction.transaction_number} (unchanged)`);
       console.log(`   New: ${newTicket} (current state)`);
@@ -1560,6 +1584,18 @@ router.post('/additional-loan', async (req, res) => {
         - Tracking Number: ${previousTransaction.tracking_number}
         - Previous Ticket: ${previousTransaction.transaction_number}
       `);
+      
+      // 5.5. Mark previous transaction as superseded
+      await client.query(`
+        UPDATE transactions 
+        SET status = 'superseded', 
+            is_active = false,
+            notes = COALESCE(notes, '') || ' | Superseded by ${newTicketNumber}',
+            updated_at = CURRENT_TIMESTAMP
+        WHERE transaction_number = $1
+      `, [previousTransaction.transaction_number]);
+      
+      console.log(`✅ Marked ${previousTransaction.transaction_number} as superseded by ${newTicketNumber}`);
       
       // 6. Create new pawn ticket (for printing)
       const newTicketResult = await client.query(`
@@ -1805,7 +1841,19 @@ router.post('/renew', async (req, res) => {
       
       console.log(`✅ Renewal transaction created: ${newTicket}`);
       
-      // **TRACKING CHAIN: Do NOT update previous transaction (immutable!)**
+      // Mark previous transaction as superseded
+      await client.query(`
+        UPDATE transactions 
+        SET status = 'superseded', 
+            is_active = false,
+            notes = COALESCE(notes, '') || ' | Superseded by ${newTicket}',
+            updated_at = CURRENT_TIMESTAMP
+        WHERE transaction_number = $1
+      `, [previousTransaction.transaction_number]);
+      
+      console.log(`✅ Marked ${previousTransaction.transaction_number} as superseded by ${newTicket}`);
+      
+      // **TRACKING CHAIN: Previous transaction now superseded**
       console.log(`🔗 Tracking chain updated:`);
       console.log(`   Previous: ${previousTransaction.transaction_number} (unchanged)`);
       console.log(`   Renewed: ${newTicket} (extended maturity)`);

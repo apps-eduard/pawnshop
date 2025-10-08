@@ -379,6 +379,65 @@ export class AdditionalLoan implements OnInit, AfterViewInit {
       const result = await response.json();
 
       if (result.success && result.data) {
+        // **TRACKING CHAIN VALIDATION**
+        // Check if this transaction has been superseded by newer transactions
+        const transactionHistory = result.data.transactionHistory || [];
+        const currentTransactionNumber = result.data.ticketNumber || result.data.transactionNumber;
+
+        // If there's transaction history, check if this is the latest transaction
+        if (transactionHistory.length > 0) {
+          // Sort by creation date to get the latest transaction
+          const sortedHistory = [...transactionHistory].sort((a: any, b: any) => {
+            return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+          });
+
+          const latestTransaction = sortedHistory[0];
+          const isLatestTransaction = latestTransaction.transactionNumber === currentTransactionNumber;
+
+          if (!isLatestTransaction) {
+            // This is an old transaction in the chain
+            this.toastService.showError(
+              'Transaction Closed',
+              `Ticket ${currentTransactionNumber} is already closed. Please search for the latest ticket: ${latestTransaction.transactionNumber}`
+            );
+            this.transactionFound = false;
+            this.isLoading = false;
+            return;
+          }
+        }
+
+        // Check if transaction status allows additional loans
+        const status = (result.data.status || '').toLowerCase();
+        if (status === 'superseded') {
+          this.toastService.showError('Transaction Closed', `Ticket ${this.searchTicketNumber} is already closed`);
+          this.transactionFound = false;
+          this.isLoading = false;
+          setTimeout(() => {
+            this.searchInput?.nativeElement.focus();
+          }, 100);
+          return;
+        }
+        
+        if (status === 'redeemed') {
+          this.toastService.showError('Transaction Closed', `Ticket ${this.searchTicketNumber} is already closed`);
+          this.transactionFound = false;
+          this.isLoading = false;
+          setTimeout(() => {
+            this.searchInput?.nativeElement.focus();
+          }, 100);
+          return;
+        }
+        
+        if (status === 'defaulted') {
+          this.toastService.showError('Transaction Closed', `Ticket ${this.searchTicketNumber} is already closed`);
+          this.transactionFound = false;
+          this.isLoading = false;
+          setTimeout(() => {
+            this.searchInput?.nativeElement.focus();
+          }, 100);
+          return;
+        }
+
         this.populateForm(result.data);
         this.transactionFound = true;
         // Focus on additional amount input after successful search
@@ -386,8 +445,17 @@ export class AdditionalLoan implements OnInit, AfterViewInit {
           this.additionalAmountInput?.nativeElement.focus();
         }, 0);
       } else {
-        this.toastService.showError('Not Found', result.message || 'Transaction not found');
+        let errorMessage = result.message || 'Transaction not found';
+        // Replace technical "superseded" language with user-friendly "already closed" message
+        if (errorMessage.toLowerCase().includes('superseded') || errorMessage.toLowerCase().includes('cannot be processed')) {
+          errorMessage = `Ticket ${this.searchTicketNumber} is already closed`;
+        }
+        this.toastService.showError('Not Found', errorMessage);
         this.transactionFound = false;
+        // Keep focus on search input for retry
+        setTimeout(() => {
+          this.searchInput?.nativeElement.focus();
+        }, 100);
       }
     } catch (error) {
       console.error('Error searching transaction:', error);
@@ -599,7 +667,12 @@ export class AdditionalLoan implements OnInit, AfterViewInit {
           this.router.navigate(['/cashier-dashboard']);
         }, 1500);
       } else {
-        this.toastService.showError('Error', result.message || 'Failed to process additional loan');
+        let errorMessage = result.message || 'Failed to process additional loan';
+        // Replace technical "superseded" language with user-friendly "already closed" message
+        if (errorMessage.toLowerCase().includes('superseded') || errorMessage.toLowerCase().includes('cannot be processed')) {
+          errorMessage = `Ticket ${this.searchTicketNumber} is already closed`;
+        }
+        this.toastService.showError('Error', errorMessage);
       }
     } catch (error) {
       console.error('Error processing additional loan:', error);

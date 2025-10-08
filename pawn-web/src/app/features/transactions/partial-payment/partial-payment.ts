@@ -393,6 +393,70 @@ export class PartialPayment implements OnInit, AfterViewInit {
       const result = await response.json();
 
       if (result.success && result.data) {
+        // **TRACKING CHAIN VALIDATION**
+        // Check if this transaction has been superseded by newer transactions
+        const transactionHistory = result.data.transactionHistory || [];
+        const currentTransactionNumber = result.data.ticketNumber || result.data.transactionNumber;
+        
+        // If there's transaction history, check if this is the latest transaction
+        if (transactionHistory.length > 0) {
+          // Sort by creation date to get the latest transaction
+          const sortedHistory = [...transactionHistory].sort((a: any, b: any) => {
+            return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+          });
+          
+          const latestTransaction = sortedHistory[0];
+          const isLatestTransaction = latestTransaction.transactionNumber === currentTransactionNumber;
+          
+          if (!isLatestTransaction) {
+            // This is an old transaction in the chain
+            this.toastService.showError(
+              'Transaction Closed', 
+              `Ticket ${this.searchTicketNumber} is already closed`
+            );
+            this.transactionFound = false;
+            this.isLoading = false;
+            // Keep focus on search input for retry
+            setTimeout(() => {
+              this.searchInput?.nativeElement.focus();
+            }, 100);
+            return;
+          }
+        }
+        
+        // Check if transaction status allows partial payment
+        const status = (result.data.status || '').toLowerCase();
+        if (status === 'redeemed') {
+          this.toastService.showError('Transaction Closed', `Ticket ${this.searchTicketNumber} is already closed`);
+          this.transactionFound = false;
+          this.isLoading = false;
+          setTimeout(() => {
+            this.searchInput?.nativeElement.focus();
+          }, 100);
+          return;
+        }
+        
+        if (status === 'superseded') {
+          this.toastService.showError('Transaction Closed', `Ticket ${this.searchTicketNumber} is already closed`);
+          this.transactionFound = false;
+          this.isLoading = false;
+          setTimeout(() => {
+            this.searchInput?.nativeElement.focus();
+          }, 100);
+          return;
+        }
+        
+        if (status === 'defaulted') {
+          this.toastService.showError('Transaction Closed', `Ticket ${this.searchTicketNumber} is already closed`);
+          this.transactionFound = false;
+          this.isLoading = false;
+          setTimeout(() => {
+            this.searchInput?.nativeElement.focus();
+          }, 100);
+          return;
+        }
+
+        // Proceed with partial payment if all validations pass
         console.log('🔍 SEARCH RESPONSE - Full data:', result.data);
         console.log('📅 REDEEM DATE - gracePeriodDate from backend:', result.data.gracePeriodDate);
         console.log('📅 REDEEM DATE - All date fields:', {
@@ -409,7 +473,12 @@ export class PartialPayment implements OnInit, AfterViewInit {
           this.partialPayInput?.nativeElement.focus();
         }, 100);
       } else {
-        this.toastService.showError('Not Found', result.message || 'Transaction not found');
+        // Handle simple error message for closed transactions
+        let errorMessage = result.message || 'Transaction not found';
+        if (errorMessage.toLowerCase().includes('superseded') || errorMessage.toLowerCase().includes('cannot be processed')) {
+          errorMessage = `Ticket ${this.searchTicketNumber} is already closed`;
+        }
+        this.toastService.showError('Transaction Closed', errorMessage);
         this.transactionFound = false;
         // Keep focus on search input for retry
         setTimeout(() => {
