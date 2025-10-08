@@ -148,9 +148,9 @@
                   </svg>
                   Discount
                 </span>
-                <input type="number" [(ngModel)]="redeemComputation.discount" (input)="calculateRedeemAmount()"
-                  class="w-[65%] px-2 py-1 text-xs font-medium border border-blue-300 dark:border-blue-600 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-blue-900/30 dark:text-white text-right"
-                  min="0" [max]="redeemComputation.dueAmount" step="0.01" placeholder="0.00" title="Enter discount amount">
+                <input type="text" [value]="'₱' + (redeemComputation.discount | number:'1.2-2')"
+                  class="w-[65%] px-2 py-1 text-xs font-medium border border-blue-300 dark:border-blue-600 rounded bg-blue-50 dark:bg-blue-900/40 text-blue-900 dark:text-blue-300 text-right cursor-not-allowed"
+                  readonly tabindex="-1" title="Discount amount (read-only)">
               </div>
             </div>
 
@@ -194,6 +194,7 @@
                   Received Amount
                 </span>
                 <input type="text"
+                  #receivedAmountInput
                   appCurrencyInput
                   [minValue]="0"
                   (valueChange)="redeemComputation.receivedAmount = $event; calculateChange()"

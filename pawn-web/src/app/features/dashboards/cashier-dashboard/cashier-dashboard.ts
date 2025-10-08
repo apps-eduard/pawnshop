@@ -68,6 +68,7 @@ export class CashierDashboard implements OnInit, OnDestroy {
 
   // Time update mechanism to prevent ExpressionChangedAfterItHasBeenCheckedError
   private timeUpdateInterval: any;
+  private clockUpdateInterval: any; // Separate interval for clock updates
   private timeAgoCache = new Map<string, string>();
 
   // New Loan Modal Properties
@@ -292,8 +293,11 @@ export class CashierDashboard implements OnInit, OnDestroy {
     this.loadDashboardData();
     this.loadRecentTransactions();
     this.loadPendingAppraisals();
-    this.updateTime();
-    setInterval(() => this.updateTime(), 1000);
+    
+    // Update clock every second
+    this.clockUpdateInterval = setInterval(() => {
+      this.currentDateTime = new Date();
+    }, 1000);
 
     // Update time ago values every minute to prevent change detection errors
     this.timeUpdateInterval = setInterval(() => {
@@ -314,6 +318,9 @@ export class CashierDashboard implements OnInit, OnDestroy {
     // Clean up intervals to prevent memory leaks
     if (this.timeUpdateInterval) {
       clearInterval(this.timeUpdateInterval);
+    }
+    if (this.clockUpdateInterval) {
+      clearInterval(this.clockUpdateInterval);
     }
   }
 
@@ -359,12 +366,6 @@ export class CashierDashboard implements OnInit, OnDestroy {
     setTimeout(() => {
       this.isLoading = false;
     }, 500);
-  }
-
-  private updateTime() {
-    setInterval(() => {
-      this.currentDateTime = new Date();
-    }, 1000);
   }
 
   formatCurrency(amount: number | undefined | null): string {

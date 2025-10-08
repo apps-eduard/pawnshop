@@ -32,6 +32,7 @@ interface RedeemComputation {
 })
 export class Redeem implements OnInit, AfterViewInit {
   @ViewChild('searchInput') searchInput?: ElementRef<HTMLInputElement>;
+  @ViewChild('receivedAmountInput') receivedAmountInput?: ElementRef<HTMLInputElement>;
 
   searchTicketNumber: string = '';
   transactionNumber: string = '';
@@ -279,14 +280,29 @@ export class Redeem implements OnInit, AfterViewInit {
       if (result.success && result.data) {
         this.populateForm(result.data);
         this.transactionFound = true;
+        
+        // Focus on received amount input after successful search
+        setTimeout(() => {
+          this.receivedAmountInput?.nativeElement.focus();
+        }, 100);
       } else {
         this.toastService.showError('Not Found', result.message || 'Transaction not found');
         this.transactionFound = false;
+        
+        // Keep focus on search input if not found
+        setTimeout(() => {
+          this.searchInput?.nativeElement.focus();
+        }, 100);
       }
     } catch (error) {
       console.error('Error searching transaction:', error);
       this.toastService.showError('Error', 'Failed to search transaction');
       this.transactionFound = false;
+      
+      // Keep focus on search input on error
+      setTimeout(() => {
+        this.searchInput?.nativeElement.focus();
+      }, 100);
     } finally {
       this.isLoading = false;
     }
