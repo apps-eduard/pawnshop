@@ -70,6 +70,7 @@ interface RenewComputation {
 export class Renew implements OnInit, AfterViewInit {
 
   @ViewChild('searchInput') searchInput?: ElementRef<HTMLInputElement>;
+  @ViewChild('receivedAmountInput') receivedAmountInput?: ElementRef<HTMLInputElement>;
 
   searchTicketNumber: string = '';
   transactionId: number = 0;
@@ -165,8 +166,56 @@ export class Renew implements OnInit, AfterViewInit {
       const result = await response.json();
 
       if (result.success && result.data) {
+        // **TRACKING CHAIN VALIDATION**
+        // Check if this transaction has been superseded by newer transactions
+        const transactionHistory = result.data.transactionHistory || [];
+        const currentTransactionNumber = result.data.ticketNumber || result.data.transactionNumber;
+        
+        // If there's transaction history, check if this is the latest transaction
+        if (transactionHistory.length > 0) {
+          // Sort by creation date to get the latest transaction
+          const sortedHistory = [...transactionHistory].sort((a: any, b: any) => {
+            return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+          });
+          
+          const latestTransaction = sortedHistory[0];
+          const isLatestTransaction = latestTransaction.transactionNumber === currentTransactionNumber;
+          
+          if (!isLatestTransaction) {
+            // This is an old transaction in the chain
+            this.toastService.showError(
+              'Transaction Superseded', 
+              `This transaction has been superseded. Please search for the latest transaction: ${latestTransaction.transactionNumber}`
+            );
+            this.transactionFound = false;
+            this.isLoading = false;
+            return;
+          }
+        }
+        
+        // Check if transaction status allows renewal
+        const status = (result.data.status || '').toLowerCase();
+        if (status === 'redeemed') {
+          this.toastService.showError('Transaction Closed', 'This transaction has been redeemed and cannot be renewed');
+          this.transactionFound = false;
+          this.isLoading = false;
+          return;
+        }
+        
+        if (status === 'defaulted') {
+          this.toastService.showError('Transaction Defaulted', 'This transaction has been defaulted and cannot be renewed');
+          this.transactionFound = false;
+          this.isLoading = false;
+          return;
+        }
+        
         this.populateForm(result.data);
         this.transactionFound = true;
+        
+        // Set focus to received amount input after successful search
+        setTimeout(() => {
+          this.receivedAmountInput?.nativeElement.focus();
+        }, 100);
       } else {
         this.toastService.showError('Not Found', result.message || 'Transaction not found');
         this.transactionFound = false;
@@ -470,6 +519,12 @@ export class Renew implements OnInit, AfterViewInit {
   }
 
   calculateChange() {
+    // Set change to 0 if received amount is empty or 0
+    if (!this.renewComputation.receivedAmount || this.renewComputation.receivedAmount === 0) {
+      this.renewComputation.change = 0;
+      return;
+    }
+    
     this.renewComputation.change = this.renewComputation.receivedAmount - this.renewComputation.totalRenewAmount;
   }
 

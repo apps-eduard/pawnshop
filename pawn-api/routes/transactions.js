@@ -1839,7 +1839,7 @@ router.post('/renew', async (req, res) => {
           previous_transaction: previousTransaction.transaction_number,
           renewal_transaction: newTicket,
           previous_maturity: previousTransaction.maturity_date,
-          new_maturity: dates.maturityDate,
+          new_maturity: maturityDateStr,
           renewal_fee: renewFee,
           new_total: newTotalAmount
         }),
@@ -1862,9 +1862,9 @@ router.post('/renew', async (req, res) => {
           renewalTransactionId: newTransactionId,
           renewalFee: renewFee,
           principalAmount: principalAmount,
-          newMaturityDate: dates.maturityDate,
-          newGracePeriodDate: dates.gracePeriodDate,
-          newExpiryDate: dates.expiryDate,
+          newMaturityDate: maturityDateStr,
+          newGracePeriodDate: gracePeriodDateStr,
+          newExpiryDate: expiryDateStr,
           newTotalAmount: newTotalAmount,
           interestRate: interestRate,
           status: 'active'

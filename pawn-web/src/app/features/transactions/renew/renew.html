@@ -248,7 +248,7 @@
                   </svg>
                   Received Amount
                 </span>
-                <input type="text" appCurrencyInput [minValue]="0" (valueChange)="renewComputation.receivedAmount = $event; calculateChange()"
+                <input #receivedAmountInput type="text" appCurrencyInput [minValue]="0" (valueChange)="renewComputation.receivedAmount = $event; calculateChange()"
                   class="w-[65%] px-2 py-1 text-xs font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-600 border border-slate-300 dark:border-slate-500 rounded focus:outline-none focus:ring-1 focus:ring-slate-500 text-right"
                   placeholder="₱ 0.00">
               </div>
