@@ -225,8 +225,28 @@ export class PartialPayment implements OnInit, AfterViewInit {
 
     // If partial payment is specified, calculate new principal and advance charges
     if (this.partialComputation.partialPay > 0) {
+      // Validate partial payment amount
+      const maxPartialPayment = this.partialComputation.principalLoan;
+
+      // Ensure partial payment doesn't exceed the principal loan
+      if (this.partialComputation.partialPay > maxPartialPayment) {
+        console.warn('⚠️ Partial payment exceeds principal loan. Adjusting to maximum allowed.');
+        this.partialComputation.partialPay = maxPartialPayment;
+      }
+
+      // Validate that partialPay is a reasonable number (not NaN or Infinity)
+      if (!isFinite(this.partialComputation.partialPay) || this.partialComputation.partialPay < 0) {
+        console.error('❌ Invalid partial payment value detected:', this.partialComputation.partialPay);
+        this.partialComputation.partialPay = 0;
+        this.partialComputation.newPrincipalLoan = this.partialComputation.principalLoan;
+        this.partialComputation.advanceInterest = 0;
+        this.partialComputation.advServiceCharge = 0;
+        this.partialComputation.netPayment = 0;
+        return;
+      }
+
       // New Principal = Current Principal - Partial Payment
-      this.partialComputation.newPrincipalLoan = this.partialComputation.principalLoan - this.partialComputation.partialPay;
+      this.partialComputation.newPrincipalLoan = Math.max(0, this.partialComputation.principalLoan - this.partialComputation.partialPay);
 
       // Calculate advance interest for 1 month on new principal
       const monthlyRate = this.partialComputation.interestRate / 100;
@@ -568,6 +588,29 @@ export class PartialPayment implements OnInit, AfterViewInit {
       advServiceCharge: this.partialComputation.advServiceCharge,
       netPayment: this.partialComputation.netPayment
     });
+  }
+
+  // Validate and sanitize partial payment input
+  validatePartialPayment(value: number): number {
+    // Check for invalid values
+    if (!isFinite(value) || isNaN(value) || value < 0) {
+      console.warn('⚠️ Invalid partial payment value detected:', value, 'Setting to 0');
+      return 0;
+    }
+
+    // Check if value exceeds principal loan
+    if (value > this.partialComputation.principalLoan) {
+      console.warn('⚠️ Partial payment exceeds principal loan. Max allowed:', this.partialComputation.principalLoan);
+      return this.partialComputation.principalLoan;
+    }
+
+    // Check for unreasonably large values (over 10 million)
+    if (value > 10000000) {
+      console.warn('⚠️ Partial payment value too large:', value, 'Setting to maximum principal');
+      return this.partialComputation.principalLoan;
+    }
+
+    return value;
   }
 
   private clearForm() {

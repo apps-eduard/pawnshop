@@ -82,8 +82,10 @@ interface LoanForm {
 })
 export class NewLoan implements OnInit, OnDestroy {
   @ViewChild('searchInput') searchInput!: ElementRef<HTMLInputElement>;
+  @ViewChild('categorySelect') categorySelect!: ElementRef<HTMLSelectElement>;
   @ViewChild('categoryDescriptionSelect') categoryDescriptionSelect!: ElementRef<HTMLSelectElement>;
   @ViewChild('principalLoanInput', { read: CurrencyInputDirective }) principalLoanDirective!: CurrencyInputDirective;
+  @ViewChild('principalLoanInput') principalLoanInput!: ElementRef<HTMLInputElement>;
   @ViewChild('appraisalValueInput', { read: CurrencyInputDirective }) appraisalValueDirective!: CurrencyInputDirective;
 
   // Lifecycle management
@@ -97,6 +99,7 @@ export class NewLoan implements OnInit, OnDestroy {
   isSearching = false;
   pawners: Pawner[] = [];
   selectedPawner: Pawner | null = null;
+  isPawnerSearchExpanded = false;
 
   // Pawner Form for manual input
   pawnerForm = {
@@ -145,7 +148,7 @@ export class NewLoan implements OnInit, OnDestroy {
 
   // Forms
   itemForm: ItemForm = {
-    category: '',
+    category: 'Jewelry',
     categoryDescription: '',
     description: '',
     appraisalValue: 0
@@ -416,6 +419,11 @@ export class NewLoan implements OnInit, OnDestroy {
         if (response.success && response.data) {
           this.categories = response.data;
           console.log('✅ Categories loaded successfully:', this.categories.length, 'categories');
+
+          // Load descriptions for default "Jewelry" category
+          if (this.itemForm.category === 'Jewelry') {
+            this.onCategoryChange();
+          }
         } else {
           console.warn('⚠️ Categories response not successful:', response);
           this.toastService.showWarning('Warning', 'Categories data format unexpected');
@@ -445,6 +453,7 @@ export class NewLoan implements OnInit, OnDestroy {
 
   searchPawners() {
     this.isSearching = true;
+    this.isPawnerSearchExpanded = false; // Reset expanded state on new search
 
     this.pawnerService.searchPawners(this.searchQuery).subscribe({
       next: (response) => {
@@ -469,6 +478,18 @@ export class NewLoan implements OnInit, OnDestroy {
     this.selectedPawner = pawner;
     this.searchQuery = `${pawner.firstName} ${pawner.lastName}`;
     this.pawners = []; // Clear search results
+    this.isPawnerSearchExpanded = false; // Reset expanded state
+
+    // Focus on category select after pawner selection
+    setTimeout(() => {
+      if (this.categorySelect) {
+        this.categorySelect.nativeElement.focus();
+      }
+    }, 100);
+  }
+
+  togglePawnerSearchExpanded() {
+    this.isPawnerSearchExpanded = !this.isPawnerSearchExpanded;
   }
 
   changePawner() {
@@ -684,8 +705,9 @@ export class NewLoan implements OnInit, OnDestroy {
         if (this.appraisalValueDirective) {
           this.appraisalValueDirective.setValue(0);
         }
-        if (this.categoryDescriptionSelect) {
-          this.categoryDescriptionSelect.nativeElement.focus();
+        // Focus on principal loan input after adding item
+        if (this.principalLoanInput) {
+          this.principalLoanInput.nativeElement.focus();
         }
       }, 100);
 

@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, Output, EventEmitter } from '@angular/core';
+import { Component, Input, OnInit, Output, EventEmitter, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 export interface LoanInvoiceData {
@@ -204,7 +204,7 @@ export interface LoanInvoiceData {
         </svg>
         Save as PDF
       </button>
-      <button (click)="onClose()" class="btn btn-outline">
+      <button #closeButton (click)="onClose()" class="btn btn-outline">
         Close
       </button>
     </div>
@@ -529,12 +529,22 @@ export interface LoanInvoiceData {
     }
   `]
 })
-export class LoanInvoiceComponent implements OnInit {
+export class LoanInvoiceComponent implements OnInit, AfterViewInit {
   @Input() invoiceData!: LoanInvoiceData;
   @Output() closeInvoice = new EventEmitter<void>();
+  @ViewChild('closeButton') closeButton!: ElementRef<HTMLButtonElement>;
 
   ngOnInit(): void {
     console.log('Invoice data:', this.invoiceData);
+  }
+
+  ngAfterViewInit(): void {
+    // Focus on the close button when the modal opens
+    setTimeout(() => {
+      if (this.closeButton && this.closeButton.nativeElement) {
+        this.closeButton.nativeElement.focus();
+      }
+    }, 100);
   }
 
   formatCurrency(amount: number | undefined): string {

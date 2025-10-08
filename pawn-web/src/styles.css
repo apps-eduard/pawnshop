@@ -212,10 +212,24 @@ body.dark {
 .compact-mode .mb-2 { margin-bottom: var(--spacing-compact-md) !important; }
 
 /* ================================================================= */
-/* 🎯 GLOBAL FOCUS ANIMATION FOR ALL TEXT INPUTS                    */
+/* 🎯 ENHANCED GLOBAL FOCUS ANIMATION FOR ALL TEXT INPUTS           */
 /* ================================================================= */
 
-/* Apply subtle focus animation to all text inputs, textareas, and selects */
+/* Enhanced global input focus styles with thicker borders, larger font, and smooth animations */
+input[type="text"],
+input[type="number"],
+input[type="email"],
+input[type="password"],
+input[type="tel"],
+input[type="date"],
+input[type="search"],
+textarea,
+select {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-width: 1px;
+  /* Removed font-size: inherit to allow individual components to set their own font size */
+}
+
 input[type="text"]:focus,
 input[type="number"]:focus,
 input[type="email"]:focus,
@@ -225,38 +239,215 @@ input[type="date"]:focus,
 input[type="search"]:focus,
 textarea:focus,
 select:focus {
-  animation: inputPulseFocus 400ms ease-out;
+  /* Thicker border on focus */
+  border-width: 2px !important;
+
+  /* Increase font size on focus */
+  font-size: 1.05em !important;
+
+  /* Enhanced box shadow for better visual feedback */
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15) !important;
+
+  /* Subtle scale animation */
+  transform: scale(1.02);
+
+  /* Ensure higher z-index to prevent clipping */
+  position: relative;
+  z-index: 10;
+
+  /* Enhanced outline */
+  outline: none !important;
 }
 
-@keyframes inputPulseFocus {
-  0% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.01);
-  }
-  100% {
-    transform: scale(1);
-  }
+/* Smooth transition back to normal state when focus is lost */
+input[type="text"]:not(:focus),
+input[type="number"]:not(:focus),
+input[type="email"]:not(:focus),
+input[type="password"]:not(:focus),
+input[type="tel"]:not(:focus),
+input[type="date"]:not(:focus),
+input[type="search"]:not(:focus),
+textarea:not(:focus),
+select:not(:focus) {
+  transform: scale(1);
+  box-shadow: none;
+  z-index: 1;
+}
+
+/* Special handling for dark mode */
+.dark input[type="text"]:focus,
+.dark input[type="number"]:focus,
+.dark input[type="email"]:focus,
+.dark input[type="password"]:focus,
+.dark input[type="tel"]:focus,
+.dark input[type="date"]:focus,
+.dark input[type="search"]:focus,
+.dark textarea:focus,
+.dark select:focus {
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.25) !important;
 }
 
 /* Enhanced focus for search inputs with white ring (on colored backgrounds) */
-.search-input-animated:focus {
-  animation: searchPulseFocus 400ms ease-out;
+.search-input-animated {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-@keyframes searchPulseFocus {
+.search-input-animated:focus {
+  border-width: 2px !important;
+  font-size: 1.05em !important;
+  transform: scale(1.02);
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.3) !important;
+  position: relative;
+  z-index: 10;
+}
+
+/* Special focus states for different input contexts */
+
+/* Currency inputs - highlight with golden accent */
+.currency-input:focus,
+[appCurrencyInput]:focus {
+  box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.2) !important;
+}
+
+.dark .currency-input:focus,
+.dark [appCurrencyInput]:focus {
+  box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.3) !important;
+}
+
+/* Error state inputs - red accent */
+.error-input:focus,
+.ng-invalid.ng-touched:focus {
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2) !important;
+}
+
+.dark .error-input:focus,
+.dark .ng-invalid.ng-touched:focus {
+  box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.3) !important;
+}
+
+/* Success state inputs - green accent */
+.success-input:focus,
+.ng-valid.ng-touched:focus {
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.2) !important;
+}
+
+.dark .success-input:focus,
+.dark .ng-valid.ng-touched:focus {
+  box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.3) !important;
+}
+
+/* Animation for initial focus */
+@keyframes inputFocusEnter {
   0% {
-    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0);
     transform: scale(1);
+    box-shadow: 0 0 0 0 transparent;
   }
   50% {
-    box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.25);
-    transform: scale(1.01);
+    transform: scale(1.03);
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.15);
-    transform: scale(1);
+    transform: scale(1.02);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
   }
+}
+
+/* Apply entrance animation only on first focus */
+input[type="text"]:focus,
+input[type="number"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+input[type="tel"]:focus,
+input[type="date"]:focus,
+input[type="search"]:focus,
+textarea:focus,
+select:focus {
+  animation: inputFocusEnter 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Prevent layout shift by adding consistent padding compensation */
+input[type="text"],
+input[type="number"],
+input[type="email"],
+input[type="password"],
+input[type="tel"],
+input[type="date"],
+input[type="search"],
+textarea,
+select {
+  /* Add 1px margin to compensate for border width change */
+  margin: 1px;
+}
+
+input[type="text"]:focus,
+input[type="number"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+input[type="tel"]:focus,
+input[type="date"]:focus,
+input[type="search"]:focus,
+textarea:focus,
+select:focus {
+  /* Reduce margin when border becomes thicker */
+  margin: 0px;
+}
+
+/* ================================================================= */
+/* 🎯 ENHANCED TAB NAVIGATION AND KEYBOARD FOCUS                    */
+/* ================================================================= */
+
+/* Enhanced focus indicators for keyboard navigation */
+*:focus-visible {
+  outline: 3px solid rgba(59, 130, 246, 0.6) !important;
+  outline-offset: 2px !important;
+  border-radius: 4px;
+}
+
+/* Button focus states for better keyboard navigation */
+button:focus-visible {
+  outline: 3px solid rgba(59, 130, 246, 0.8) !important;
+  outline-offset: 2px !important;
+  transform: scale(1.02) !important;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2) !important;
+}
+
+/* Enhanced focus for disabled buttons */
+button:disabled:focus-visible {
+  outline: 3px solid rgba(156, 163, 175, 0.6) !important;
+  transform: none !important;
+  box-shadow: 0 0 0 4px rgba(156, 163, 175, 0.1) !important;
+}
+
+/* Tab order visual indicators (optional - can be removed if not needed) */
+/* Shows small numbers on focused elements to indicate tab order */
+[tabindex="1"]:focus::before { content: "1"; position: absolute; top: -8px; left: -8px; background: #3b82f6; color: white; border-radius: 50%; width: 16px; height: 16px; font-size: 10px; display: flex; align-items: center; justify-content: center; z-index: 1000; }
+[tabindex="2"]:focus::before { content: "2"; position: absolute; top: -8px; left: -8px; background: #3b82f6; color: white; border-radius: 50%; width: 16px; height: 16px; font-size: 10px; display: flex; align-items: center; justify-content: center; z-index: 1000; }
+[tabindex="3"]:focus::before { content: "3"; position: absolute; top: -8px; left: -8px; background: #3b82f6; color: white; border-radius: 50%; width: 16px; height: 16px; font-size: 10px; display: flex; align-items: center; justify-content: center; z-index: 1000; }
+[tabindex="4"]:focus::before { content: "4"; position: absolute; top: -8px; left: -8px; background: #3b82f6; color: white; border-radius: 50%; width: 16px; height: 16px; font-size: 10px; display: flex; align-items: center; justify-content: center; z-index: 1000; }
+[tabindex="5"]:focus::before { content: "5"; position: absolute; top: -8px; left: -8px; background: #3b82f6; color: white; border-radius: 50%; width: 16px; height: 16px; font-size: 10px; display: flex; align-items: center; justify-content: center; z-index: 1000; }
+[tabindex="6"]:focus::before { content: "6"; position: absolute; top: -8px; left: -8px; background: #3b82f6; color: white; border-radius: 50%; width: 16px; height: 16px; font-size: 10px; display: flex; align-items: center; justify-content: center; z-index: 1000; }
+
+/* Skip focus on elements that should not be in tab order */
+[tabindex="-1"] {
+  outline: none !important;
+}
+
+/* Smooth transitions for all focusable elements */
+input, button, select, textarea, a, [tabindex] {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Keyboard navigation hints */
+.keyboard-nav-active [tabindex]:focus {
+  position: relative;
+}
+
+/* Dark mode adjustments for focus indicators */
+.dark *:focus-visible {
+  outline-color: rgba(96, 165, 250, 0.8) !important;
+}
+
+.dark button:focus-visible {
+  outline-color: rgba(96, 165, 250, 0.9) !important;
+  box-shadow: 0 0 0 4px rgba(96, 165, 250, 0.3) !important;
 }
 

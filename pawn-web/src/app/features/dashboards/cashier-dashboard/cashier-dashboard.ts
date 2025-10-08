@@ -630,15 +630,16 @@ export class CashierDashboard implements OnInit, OnDestroy {
             console.log('🔍 Mapping transaction:', {
               transactionNumber: transaction.transactionNumber,
               ticketNumber: transaction.ticketNumber,
-              transaction_number: transaction.transaction_number
+              transaction_number: transaction.transaction_number,
+              transactionType: transaction.transactionType
             });
-            return {
+            const mappedTransaction = {
               id: parseInt(transaction.id) || 0,
               transaction_number: transaction.transactionNumber || transaction.ticketNumber || transaction.transaction_number || 'N/A',
               type: transaction.transactionType || 'new_loan',
               customer_name: transaction.pawnerName || transaction.pawner_name || `${transaction.pawnerFirstName || transaction.pawner_first_name || ''} ${transaction.pawnerLastName || transaction.pawner_last_name || ''}`.trim(),
               pawner_name: transaction.pawnerName || transaction.pawner_name || `${transaction.pawnerFirstName || transaction.pawner_first_name || ''} ${transaction.pawnerLastName || transaction.pawner_last_name || ''}`.trim(),
-              amount: parseFloat(transaction.principalAmount || transaction.principal_amount || transaction.totalAmount || transaction.total_amount || 0),
+              amount: 0, // Will be calculated below
               principal_amount: parseFloat(transaction.principalAmount || transaction.principal_amount || 0),
               status: transaction.status || 'active',
               created_at: new Date(transaction.createdAt || transaction.created_at || transaction.loanDate || transaction.loan_date),
@@ -648,6 +649,11 @@ export class CashierDashboard implements OnInit, OnDestroy {
               items: transaction.items || [],
               transactionHistory: transaction.transactionHistory || []
             };
+
+            // Calculate amount based on transaction type
+            mappedTransaction.amount = this.getTransactionDisplayAmount(mappedTransaction);
+
+            return mappedTransaction;
           });
         } else if (response.success && Array.isArray(response.data)) {
           // Wrapped response
@@ -655,15 +661,16 @@ export class CashierDashboard implements OnInit, OnDestroy {
             console.log('🔍 Mapping transaction:', {
               transactionNumber: transaction.transactionNumber,
               ticketNumber: transaction.ticketNumber,
-              transaction_number: transaction.transaction_number
+              transaction_number: transaction.transaction_number,
+              transactionType: transaction.transactionType
             });
-            return {
+            const mappedTransaction = {
               id: parseInt(transaction.id) || 0,
               transaction_number: transaction.transactionNumber || transaction.ticketNumber || transaction.transaction_number || 'N/A',
               type: transaction.transactionType || 'new_loan',
               customer_name: transaction.pawnerName || transaction.pawner_name || `${transaction.pawnerFirstName || transaction.pawner_first_name || ''} ${transaction.pawnerLastName || transaction.pawner_last_name || ''}`.trim(),
               pawner_name: transaction.pawnerName || transaction.pawner_name || `${transaction.pawnerFirstName || transaction.pawner_first_name || ''} ${transaction.pawnerLastName || transaction.pawner_last_name || ''}`.trim(),
-              amount: parseFloat(transaction.principalAmount || transaction.principal_amount || transaction.totalAmount || transaction.total_amount || 0),
+              amount: 0, // Will be calculated below
               principal_amount: parseFloat(transaction.principalAmount || transaction.principal_amount || 0),
               status: transaction.status || 'active',
               created_at: new Date(transaction.createdAt || transaction.created_at || transaction.loanDate || transaction.loan_date),
@@ -673,6 +680,11 @@ export class CashierDashboard implements OnInit, OnDestroy {
               items: transaction.items || [],
               transactionHistory: transaction.transactionHistory || []
             };
+
+            // Calculate amount based on transaction type
+            mappedTransaction.amount = this.getTransactionDisplayAmount(mappedTransaction);
+
+            return mappedTransaction;
           });
         } else {
           console.warn('⚠️ Unexpected transactions response format:', response);
@@ -691,6 +703,32 @@ export class CashierDashboard implements OnInit, OnDestroy {
         }
       }
     });
+  }
+
+  getTransactionDisplayAmount(transaction: any): number {
+    // For new loans, show the principal amount (loan amount)
+    if (transaction.type === 'new_loan') {
+      return parseFloat(transaction.principal_amount || 0);
+    }
+
+    // For other transaction types (partial payment, renewal, redemption), show total amount or balance
+    return parseFloat(transaction.totalAmount || transaction.total_amount ||
+                     transaction.principal_amount || 0);
+  }
+
+  getAmountLabel(transactionType: string): string {
+    switch (transactionType) {
+      case 'new_loan':
+        return 'Principal:';
+      case 'partial_payment':
+        return 'Payment:';
+      case 'redemption':
+        return 'Total:';
+      case 'renewal':
+        return 'Balance:';
+      default:
+        return 'Amount:';
+    }
   }
 
   isNavigating = false;
