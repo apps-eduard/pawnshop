@@ -17,14 +17,14 @@ if (user) {
   console.log('   - Username:', userObj.username);
   console.log('   - Role:', userObj.role);
   console.log('   - ID:', userObj.id);
-  
+
   console.log('\n📋 Required roles for set-auction-price:');
   console.log('   - administrator');
   console.log('   - manager');
   console.log('   - auctioneer');
-  
+
   const hasAccess = ['administrator', 'manager', 'auctioneer'].includes(userObj.role);
-  
+
   if (hasAccess) {
     console.log('\n✅ Your role has access!');
   } else {

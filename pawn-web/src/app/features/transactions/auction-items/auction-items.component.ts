@@ -56,7 +56,7 @@ export class AuctionItemsComponent implements OnInit {
 
     try {
       const response = await this.itemService.getAuctionItems();
-      
+
       if (response.success && response.data) {
         this.auctionItems = response.data.map((item: any) => ({
           id: item.id,

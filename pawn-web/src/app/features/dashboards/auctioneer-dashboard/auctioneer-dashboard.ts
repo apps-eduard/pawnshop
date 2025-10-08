@@ -361,14 +361,14 @@ export class AuctioneerDashboard implements OnInit {
   getDaysExpired(expiredDate: Date): string {
     const now = new Date();
     const expired = new Date(expiredDate);
-    
+
     // Clear time components for accurate day calculation
     now.setHours(0, 0, 0, 0);
     expired.setHours(0, 0, 0, 0);
-    
+
     const diffTime = now.getTime() - expired.getTime();
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-    
+
     if (diffDays === 0) {
       return 'Expired today';
     } else if (diffDays === 1) {
