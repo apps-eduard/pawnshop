@@ -170,21 +170,21 @@ export class Renew implements OnInit, AfterViewInit {
         // Check if this transaction has been superseded by newer transactions
         const transactionHistory = result.data.transactionHistory || [];
         const currentTransactionNumber = result.data.ticketNumber || result.data.transactionNumber;
-        
+
         // If there's transaction history, check if this is the latest transaction
         if (transactionHistory.length > 0) {
           // Sort by creation date to get the latest transaction
           const sortedHistory = [...transactionHistory].sort((a: any, b: any) => {
             return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
           });
-          
+
           const latestTransaction = sortedHistory[0];
           const isLatestTransaction = latestTransaction.transactionNumber === currentTransactionNumber;
-          
+
           if (!isLatestTransaction) {
             // This is an old transaction in the chain
             this.toastService.showError(
-              'Transaction Superseded', 
+              'Transaction Superseded',
               `This transaction has been superseded. Please search for the latest transaction: ${latestTransaction.transactionNumber}`
             );
             this.transactionFound = false;
@@ -192,7 +192,7 @@ export class Renew implements OnInit, AfterViewInit {
             return;
           }
         }
-        
+
         // Check if transaction status allows renewal
         const status = (result.data.status || '').toLowerCase();
         if (status === 'redeemed') {
@@ -201,17 +201,17 @@ export class Renew implements OnInit, AfterViewInit {
           this.isLoading = false;
           return;
         }
-        
+
         if (status === 'defaulted') {
           this.toastService.showError('Transaction Defaulted', 'This transaction has been defaulted and cannot be renewed');
           this.transactionFound = false;
           this.isLoading = false;
           return;
         }
-        
+
         this.populateForm(result.data);
         this.transactionFound = true;
-        
+
         // Set focus to received amount input after successful search
         setTimeout(() => {
           this.receivedAmountInput?.nativeElement.focus();
@@ -524,7 +524,7 @@ export class Renew implements OnInit, AfterViewInit {
       this.renewComputation.change = 0;
       return;
     }
-    
+
     this.renewComputation.change = this.renewComputation.receivedAmount - this.renewComputation.totalRenewAmount;
   }
 
