@@ -417,7 +417,7 @@ export class AdditionalLoan implements OnInit, AfterViewInit {
           }, 100);
           return;
         }
-        
+
         if (status === 'redeemed') {
           this.toastService.showError('Transaction Closed', `Ticket ${this.searchTicketNumber} is already closed`);
           this.transactionFound = false;
@@ -427,7 +427,7 @@ export class AdditionalLoan implements OnInit, AfterViewInit {
           }, 100);
           return;
         }
-        
+
         if (status === 'defaulted') {
           this.toastService.showError('Transaction Closed', `Ticket ${this.searchTicketNumber} is already closed`);
           this.transactionFound = false;
