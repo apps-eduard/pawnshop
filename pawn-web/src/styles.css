@@ -210,3 +210,53 @@ body.dark {
 .compact-mode .gap-2 { gap: var(--spacing-compact-sm) !important; }
 .compact-mode .mb-3 { margin-bottom: var(--spacing-compact-lg) !important; }
 .compact-mode .mb-2 { margin-bottom: var(--spacing-compact-md) !important; }
+
+/* ================================================================= */
+/* 🎯 GLOBAL FOCUS ANIMATION FOR ALL TEXT INPUTS                    */
+/* ================================================================= */
+
+/* Apply subtle focus animation to all text inputs, textareas, and selects */
+input[type="text"]:focus,
+input[type="number"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+input[type="tel"]:focus,
+input[type="date"]:focus,
+input[type="search"]:focus,
+textarea:focus,
+select:focus {
+  animation: inputPulseFocus 400ms ease-out;
+}
+
+@keyframes inputPulseFocus {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.01);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Enhanced focus for search inputs with white ring (on colored backgrounds) */
+.search-input-animated:focus {
+  animation: searchPulseFocus 400ms ease-out;
+}
+
+@keyframes searchPulseFocus {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.25);
+    transform: scale(1.01);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.15);
+    transform: scale(1);
+  }
+}
+

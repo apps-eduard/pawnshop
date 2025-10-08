@@ -64,12 +64,14 @@ interface AdditionalComputation {
 export class AdditionalLoan implements OnInit, AfterViewInit {
 
   @ViewChild('searchInput') searchInput?: ElementRef<HTMLInputElement>;
+  @ViewChild('additionalAmountInput') additionalAmountInput?: ElementRef<HTMLInputElement>;
 
   searchTicketNumber: string = '';
   transactionNumber: string = '';
   transactionId: number = 0;
   isLoading: boolean = false;
   transactionFound: boolean = false;
+  private lastAdditionalAmount: number = 0; // Track last value to prevent redundant recalculations
 
   customerInfo: CustomerInfo = {
     contactNumber: '',
@@ -144,12 +146,19 @@ export class AdditionalLoan implements OnInit, AfterViewInit {
     // Customer will need to pay the deficit (negative net proceed)
     // No capping to available amount - let them borrow more if needed
 
-    // Ensure it's not negative
+    // Ensure it's not negative (directive should handle this, but double-check)
     if (this.additionalComputation.additionalAmount < 0) {
       console.warn('⚠️ Additional amount is negative, setting to 0');
       this.additionalComputation.additionalAmount = 0;
     }
 
+    // Prevent redundant recalculations if value hasn't actually changed
+    if (this.additionalComputation.additionalAmount === this.lastAdditionalAmount) {
+      console.log('⏭️ Skipping recalculation - value unchanged');
+      return;
+    }
+
+    this.lastAdditionalAmount = this.additionalComputation.additionalAmount;
     console.log('✅ Final additional amount:', this.additionalComputation.additionalAmount);
 
     // Recalculate dependent values
@@ -422,6 +431,10 @@ export class AdditionalLoan implements OnInit, AfterViewInit {
       if (result.success && result.data) {
         this.populateForm(result.data);
         this.transactionFound = true;
+        // Focus on additional amount input after successful search
+        setTimeout(() => {
+          this.additionalAmountInput?.nativeElement.focus();
+        }, 0);
       } else {
         this.toastService.showError('Not Found', result.message || 'Transaction not found');
         this.transactionFound = false;
@@ -491,6 +504,7 @@ export class AdditionalLoan implements OnInit, AfterViewInit {
     this.transactionNumber = '';
     this.transactionId = 0;
     this.transactionFound = false;
+    this.lastAdditionalAmount = 0; // Reset tracking variable
 
     this.customerInfo = {
       contactNumber: '',

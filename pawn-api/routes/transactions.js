@@ -341,16 +341,16 @@ router.get('/', async (req, res) => {
       paramIndex++;
     }
     
-    // Filter by date range
+    // Filter by date range (use updated_at to show recent activity, not just creation date)
     if (dateFrom) {
       params.push(dateFrom);
-      whereConditions.push(`DATE(t.transaction_date) >= $${paramIndex}`);
+      whereConditions.push(`DATE(t.updated_at) >= $${paramIndex}`);
       paramIndex++;
     }
     
     if (dateTo) {
       params.push(dateTo);
-      whereConditions.push(`DATE(t.transaction_date) <= $${paramIndex}`);
+      whereConditions.push(`DATE(t.updated_at) <= $${paramIndex}`);
       paramIndex++;
     }
     
