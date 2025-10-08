@@ -13,9 +13,8 @@ router.get('/', async (req, res) => {
     console.log(`🔍 [${new Date().toISOString()}] Fetching items - User: ${req.user.username}`);
     
     const result = await pool.query(`
-      SELECT pi.id, pi.brand, pi.model, pi.custom_description, 
-             pi.appraised_value, pi.loan_amount, pi.serial_number, 
-             pi.weight, pi.karat, pi.item_condition, pi.defects,
+      SELECT pi.id, pi.custom_description, 
+             pi.appraised_value, pi.loan_amount,
              pi.appraisal_notes,
              pi.status, pi.location, pi.created_at,
              t.transaction_number, t.principal_amount, t.status as transaction_status,
@@ -33,18 +32,11 @@ router.get('/', async (req, res) => {
     
     const items = result.rows.map(row => ({
       id: row.id,
-      brand: row.brand,
-      model: row.model,
       description: row.custom_description || row.description_name || row.description_text,
       categoryName: row.category_name,
       appraisedValue: row.appraised_value ? parseFloat(row.appraised_value) : null,
       loanAmount: row.loan_amount ? parseFloat(row.loan_amount) : null,
-      serialNumber: row.serial_number,
-      weight: row.weight ? parseFloat(row.weight) : null,
-      karat: row.karat,
-      condition: row.item_condition,
       conditionNotes: row.appraisal_notes,
-      defects: row.defects,
       status: row.status,
       location: row.location,
       createdAt: row.created_at,
@@ -81,8 +73,6 @@ router.get('/expired', async (req, res) => {
     const result = await pool.query(`
       SELECT 
         pi.id, 
-        pi.brand, 
-        pi.model, 
         pi.custom_description,
         pi.appraised_value,
         pi.loan_amount,
@@ -106,7 +96,7 @@ router.get('/expired', async (req, res) => {
     const expiredItems = result.rows.map(row => ({
       id: row.id,
       ticketNumber: row.ticket_number,
-      itemDescription: row.custom_description || `${row.brand || ''} ${row.model || ''}`.trim() || 'N/A',
+      itemDescription: row.custom_description || 'N/A',
       pawnerName: row.first_name && row.last_name ? `${row.first_name} ${row.last_name}` : 'N/A',
       appraisedValue: row.appraised_value ? parseFloat(row.appraised_value) : 0,
       loanAmount: row.loan_amount ? parseFloat(row.loan_amount) : 0,
@@ -134,6 +124,69 @@ router.get('/expired', async (req, res) => {
   }
 });
 
+// Get items ready for auction (expired items with auction_price set)
+router.get('/for-auction/list', async (req, res) => {
+  try {
+    console.log(`🔨 [${new Date().toISOString()}] Fetching items ready for auction - User: ${req.user.username}`);
+    
+    const result = await pool.query(`
+      SELECT 
+        pi.id, 
+        pi.custom_description,
+        pi.appraised_value,
+        pi.loan_amount,
+        pi.auction_price,
+        pi.status,
+        t.transaction_number as ticket_number,
+        t.expiry_date as expired_date,
+        t.granted_date,
+        p.first_name, 
+        p.last_name,
+        c.name as category
+      FROM pawn_items pi
+      LEFT JOIN transactions t ON pi.transaction_id = t.id
+      LEFT JOIN pawners p ON t.pawner_id = p.id
+      LEFT JOIN categories c ON pi.category_id = c.id
+      WHERE t.expiry_date < CURRENT_DATE
+        AND pi.status = 'in_vault'
+        AND t.status IN ('active', 'expired')
+        AND pi.auction_price IS NOT NULL
+        AND pi.auction_price > 0
+      ORDER BY t.expiry_date DESC
+    `);
+    
+    const auctionItems = result.rows.map(row => ({
+      id: row.id,
+      ticketNumber: row.ticket_number,
+      itemDescription: row.custom_description || 'N/A',
+      pawnerName: row.first_name && row.last_name ? `${row.first_name} ${row.last_name}` : 'N/A',
+      appraisedValue: row.appraised_value ? parseFloat(row.appraised_value) : 0,
+      loanAmount: row.loan_amount ? parseFloat(row.loan_amount) : 0,
+      auctionPrice: row.auction_price ? parseFloat(row.auction_price) : 0,
+      expiredDate: row.expired_date,
+      grantedDate: row.granted_date,
+      category: row.category || 'N/A',
+      status: 'available' // Items set for auction are available for sale
+    }));
+    
+    console.log(`✅ Found ${auctionItems.length} items ready for auction`);
+    
+    res.json({
+      success: true,
+      message: 'Auction items retrieved successfully',
+      data: auctionItems
+    });
+    
+  } catch (error) {
+    console.error('❌ Error fetching auction items:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch auction items',
+      error: error.message
+    });
+  }
+});
+
 // Get single item by ID
 router.get('/:id', async (req, res) => {
   try {
@@ -142,14 +195,16 @@ router.get('/:id', async (req, res) => {
     console.log(`🔍 [${new Date().toISOString()}] Fetching item ${id} - User: ${req.user.username}`);
     
     const result = await pool.query(`
-      SELECT pi.id, pi.ticket_id, pi.item_type, pi.brand, pi.model, pi.description, 
-             pi.estimated_value, pi.condition_notes, pi.serial_number, 
-             pi.weight, pi.karat, pi.created_at,
-             pt.ticket_number, pt.principal_amount, pt.status as ticket_status,
-             p.id as pawner_id, p.first_name, p.last_name, p.contact_number
+      SELECT pi.id, pi.transaction_id, pi.custom_description, 
+             pi.appraised_value, pi.loan_amount, pi.appraisal_notes, 
+             pi.status, pi.location, pi.created_at,
+             t.transaction_number, t.principal_amount, t.status as transaction_status,
+             p.id as pawner_id, p.first_name, p.last_name, p.mobile_number,
+             c.name as category_name
       FROM pawn_items pi
-      LEFT JOIN pawn_tickets pt ON pi.ticket_id = pt.id
-      LEFT JOIN pawners p ON pt.pawner_id = p.id
+      LEFT JOIN transactions t ON pi.transaction_id = t.id
+      LEFT JOIN pawners p ON t.pawner_id = p.id
+      LEFT JOIN categories c ON pi.category_id = c.id
       WHERE pi.id = $1
     `, [id]);
     
@@ -163,23 +218,21 @@ router.get('/:id', async (req, res) => {
     const row = result.rows[0];
     const item = {
       id: row.id,
-      ticketId: row.ticket_id,
-      itemType: row.item_type,
-      brand: row.brand,
-      model: row.model,
-      description: row.description,
-      estimatedValue: parseFloat(row.estimated_value),
-      conditionNotes: row.condition_notes,
-      serialNumber: row.serial_number,
-      weight: row.weight ? parseFloat(row.weight) : null,
-      karat: row.karat,
+      transactionId: row.transaction_id,
+      description: row.custom_description,
+      categoryName: row.category_name,
+      appraisedValue: row.appraised_value ? parseFloat(row.appraised_value) : null,
+      loanAmount: row.loan_amount ? parseFloat(row.loan_amount) : null,
+      conditionNotes: row.appraisal_notes,
+      status: row.status,
+      location: row.location,
       createdAt: row.created_at,
-      ticketNumber: row.ticket_number,
+      transactionNumber: row.transaction_number,
       principalAmount: row.principal_amount ? parseFloat(row.principal_amount) : null,
-      ticketStatus: row.ticket_status,
+      transactionStatus: row.transaction_status,
       pawnerId: row.pawner_id,
       pawnerName: row.first_name && row.last_name ? `${row.first_name} ${row.last_name}` : null,
-      pawnerContact: row.contact_number
+      pawnerContact: row.mobile_number
     };
     
     res.json({
@@ -198,155 +251,20 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// Create new item
+// Create new item - DISABLED (schema mismatch)
 router.post('/', authorizeRoles(['administrator', 'manager']), async (req, res) => {
-  try {
-    const {
-      ticketId,
-      itemType,
-      brand,
-      model,
-      description,
-      estimatedValue,
-      conditionNotes,
-      serialNumber,
-      weight,
-      karat
-    } = req.body;
-    
-    console.log(`📦 [${new Date().toISOString()}] Creating item for ticket ${ticketId} - User: ${req.user.username}`);
-    
-    // Validate required fields
-    if (!ticketId || !itemType || !description || !estimatedValue) {
-      return res.status(400).json({
-        success: false,
-        message: 'Missing required fields: ticketId, itemType, description, estimatedValue'
-      });
-    }
-    
-    // Verify ticket exists
-    const ticketCheck = await pool.query('SELECT id FROM pawn_tickets WHERE id = $1', [ticketId]);
-    if (ticketCheck.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: 'Pawn ticket not found'
-      });
-    }
-    
-    const result = await pool.query(`
-      INSERT INTO pawn_items (
-        ticket_id, item_type, brand, model, description, 
-        estimated_value, condition_notes, serial_number, weight, karat
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-      RETURNING *
-    `, [
-      ticketId, itemType, brand, model, description,
-      estimatedValue, conditionNotes, serialNumber, weight, karat
-    ]);
-    
-    const newItem = {
-      id: result.rows[0].id,
-      ticketId: result.rows[0].ticket_id,
-      itemType: result.rows[0].item_type,
-      brand: result.rows[0].brand,
-      model: result.rows[0].model,
-      description: result.rows[0].description,
-      estimatedValue: parseFloat(result.rows[0].estimated_value),
-      conditionNotes: result.rows[0].condition_notes,
-      serialNumber: result.rows[0].serial_number,
-      weight: result.rows[0].weight ? parseFloat(result.rows[0].weight) : null,
-      karat: result.rows[0].karat,
-      createdAt: result.rows[0].created_at
-    };
-    
-    console.log(`✅ Created item ${newItem.id} for ticket ${ticketId}`);
-    
-    res.status(201).json({
-      success: true,
-      message: 'Item created successfully',
-      data: newItem
-    });
-    
-  } catch (error) {
-    console.error('❌ Error creating item:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to create item',
-      error: error.message
-    });
-  }
+  res.status(501).json({
+    success: false,
+    message: 'Create item endpoint disabled - schema update required'
+  });
 });
 
-// Update item
+// Update item - DISABLED (schema mismatch)
 router.put('/:id', authorizeRoles(['administrator', 'manager']), async (req, res) => {
-  try {
-    const { id } = req.params;
-    const {
-      itemType,
-      brand,
-      model,
-      description,
-      estimatedValue,
-      conditionNotes,
-      serialNumber,
-      weight,
-      karat
-    } = req.body;
-    
-    console.log(`📝 [${new Date().toISOString()}] Updating item ${id} - User: ${req.user.username}`);
-    
-    // Check if item exists
-    const checkItem = await pool.query('SELECT id FROM pawn_items WHERE id = $1', [id]);
-    if (checkItem.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: 'Item not found'
-      });
-    }
-    
-    const result = await pool.query(`
-      UPDATE pawn_items 
-      SET item_type = $1, brand = $2, model = $3, description = $4,
-          estimated_value = $5, condition_notes = $6, serial_number = $7,
-          weight = $8, karat = $9
-      WHERE id = $10
-      RETURNING *
-    `, [
-      itemType, brand, model, description, estimatedValue,
-      conditionNotes, serialNumber, weight, karat, id
-    ]);
-    
-    const updatedItem = {
-      id: result.rows[0].id,
-      ticketId: result.rows[0].ticket_id,
-      itemType: result.rows[0].item_type,
-      brand: result.rows[0].brand,
-      model: result.rows[0].model,
-      description: result.rows[0].description,
-      estimatedValue: parseFloat(result.rows[0].estimated_value),
-      conditionNotes: result.rows[0].condition_notes,
-      serialNumber: result.rows[0].serial_number,
-      weight: result.rows[0].weight ? parseFloat(result.rows[0].weight) : null,
-      karat: result.rows[0].karat,
-      createdAt: result.rows[0].created_at
-    };
-    
-    console.log(`✅ Updated item ${id}`);
-    
-    res.json({
-      success: true,
-      message: 'Item updated successfully',
-      data: updatedItem
-    });
-    
-  } catch (error) {
-    console.error('❌ Error updating item:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to update item',
-      error: error.message
-    });
-  }
+  res.status(501).json({
+    success: false,
+    message: 'Update item endpoint disabled - schema update required'
+  });
 });
 
 // Delete item
@@ -382,56 +300,16 @@ router.delete('/:id', authorizeRoles(['administrator']), async (req, res) => {
   }
 });
 
-// Get items by ticket ID
+// Get items by ticket ID - DISABLED (no ticket_id in current schema)
 router.get('/ticket/:ticketId', async (req, res) => {
-  try {
-    const { ticketId } = req.params;
-    
-    console.log(`🎫 [${new Date().toISOString()}] Fetching items for ticket ${ticketId} - User: ${req.user.username}`);
-    
-    const result = await pool.query(`
-      SELECT pi.id, pi.item_type, pi.brand, pi.model, pi.description, 
-             pi.estimated_value, pi.condition_notes, pi.serial_number, 
-             pi.weight, pi.karat, pi.created_at
-      FROM pawn_items pi
-      WHERE pi.ticket_id = $1
-      ORDER BY pi.created_at ASC
-    `, [ticketId]);
-    
-    const items = result.rows.map(row => ({
-      id: row.id,
-      itemType: row.item_type,
-      brand: row.brand,
-      model: row.model,
-      description: row.description,
-      estimatedValue: parseFloat(row.estimated_value),
-      conditionNotes: row.condition_notes,
-      serialNumber: row.serial_number,
-      weight: row.weight ? parseFloat(row.weight) : null,
-      karat: row.karat,
-      createdAt: row.created_at
-    }));
-    
-    console.log(`✅ Found ${items.length} items for ticket ${ticketId}`);
-    
-    res.json({
-      success: true,
-      message: 'Items retrieved successfully',
-      data: items
-    });
-    
-  } catch (error) {
-    console.error('❌ Error fetching items by ticket:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch items',
-      error: error.message
-    });
-  }
+  res.status(501).json({
+    success: false,
+    message: 'Get items by ticket endpoint disabled - use transaction_id instead'
+  });
 });
 
 // Set auction price for an expired item
-router.post('/set-auction-price', authorizeRoles(['administrator', 'manager', 'auctioneer']), async (req, res) => {
+router.post('/set-auction-price', authorizeRoles('administrator', 'admin', 'manager', 'auctioneer'), async (req, res) => {
   try {
     const { itemId, auctionPrice } = req.body;
     

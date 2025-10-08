@@ -352,5 +352,37 @@ export class AuctioneerDashboard implements OnInit {
     // TODO: Implement view bidders logic
     console.log('Viewing bidders for auction:', auction.id);
   }
-}
 
+  /**
+   * Calculate how many days an item has been expired
+   * @param expiredDate The date the item expired
+   * @returns Formatted string showing days expired
+   */
+  getDaysExpired(expiredDate: Date): string {
+    const now = new Date();
+    const expired = new Date(expiredDate);
+    
+    // Clear time components for accurate day calculation
+    now.setHours(0, 0, 0, 0);
+    expired.setHours(0, 0, 0, 0);
+    
+    const diffTime = now.getTime() - expired.getTime();
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) {
+      return 'Expired today';
+    } else if (diffDays === 1) {
+      return '1 day ago';
+    } else if (diffDays < 30) {
+      return `${diffDays} days ago`;
+    } else if (diffDays < 60) {
+      return 'Over 1 month ago';
+    } else if (diffDays < 365) {
+      const months = Math.floor(diffDays / 30);
+      return `${months} month${months > 1 ? 's' : ''} ago`;
+    } else {
+      const years = Math.floor(diffDays / 365);
+      return `${years} year${years > 1 ? 's' : ''} ago`;
+    }
+  }
+}

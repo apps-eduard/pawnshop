@@ -119,4 +119,18 @@ export class ItemService {
       };
     }
   }
+
+  async getAuctionItems(): Promise<ApiResponse<any[]>> {
+    try {
+      const response = await this.http.get<ApiResponse<any[]>>(`${this.apiUrl}/for-auction/list`).toPromise();
+      return response || { success: false, message: 'No response', data: [] };
+    } catch (error: any) {
+      console.error('Error fetching auction items:', error);
+      return {
+        success: false,
+        message: error?.error?.message || 'Failed to fetch auction items',
+        data: []
+      };
+    }
+  }
 }

@@ -1,7 +1,9 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { RouterModule, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { ItemService } from '../../../core/services/item.service';
+import { ToastService } from '../../../core/services/toast.service';
 
 interface AuctionItem {
   id: number;
@@ -9,13 +11,12 @@ interface AuctionItem {
   itemDescription: string;
   category: string;
   appraisedValue: number;
-  startingBid: number;
-  currentBid?: number;
+  loanAmount: number;
+  auctionPrice: number;
   status: 'available' | 'bidding' | 'sold' | 'withdrawn';
-  dateAdded: Date;
-  auctionDate?: Date;
+  expiredDate: string;
+  grantedDate?: string;
   pawnerName: string;
-  images?: string[];
 }
 
 @Component({
@@ -34,86 +35,62 @@ export class AuctionItemsComponent implements OnInit {
   searchQuery = '';
   selectedCategory = '';
   selectedStatus = '';
-  sortBy = 'dateAdded';
+  sortBy = 'expiredDate';
   sortDirection: 'asc' | 'desc' = 'desc';
 
-  categories = ['All', 'Jewelry', 'Electronics', 'Watches', 'Vehicles', 'Appliances', 'Others'];
+  categories: string[] = ['All'];
   statuses = ['All', 'Available', 'Bidding', 'Sold', 'Withdrawn'];
+
+  constructor(
+    private itemService: ItemService,
+    private toastService: ToastService,
+    private router: Router
+  ) {}
 
   ngOnInit(): void {
     this.loadAuctionItems();
   }
 
-  loadAuctionItems(): void {
+  async loadAuctionItems(): Promise<void> {
     this.isLoading = true;
 
-    // Mock data - replace with actual API call
-    setTimeout(() => {
-      this.auctionItems = [
-        {
-          id: 1,
-          ticketNumber: 'TKT-2025-001',
-          itemDescription: 'Gold Ring 14K with Diamond',
-          category: 'Jewelry',
-          appraisedValue: 25000,
-          startingBid: 20000,
-          currentBid: 22000,
-          status: 'bidding',
-          dateAdded: new Date('2025-10-05'),
-          auctionDate: new Date('2025-10-15'),
-          pawnerName: 'Juan Dela Cruz'
-        },
-        {
-          id: 2,
-          ticketNumber: 'TKT-2025-002',
-          itemDescription: 'Samsung Galaxy S23 Ultra',
-          category: 'Electronics',
-          appraisedValue: 35000,
-          startingBid: 28000,
-          status: 'available',
-          dateAdded: new Date('2025-10-06'),
-          pawnerName: 'Maria Santos'
-        },
-        {
-          id: 3,
-          ticketNumber: 'TKT-2025-003',
-          itemDescription: 'Rolex Submariner Watch',
-          category: 'Watches',
-          appraisedValue: 150000,
-          startingBid: 120000,
-          currentBid: 135000,
-          status: 'sold',
-          dateAdded: new Date('2025-10-03'),
-          auctionDate: new Date('2025-10-08'),
-          pawnerName: 'Pedro Garcia'
-        },
-        {
-          id: 4,
-          ticketNumber: 'TKT-2025-004',
-          itemDescription: 'Honda Motorcycle CBR 150R',
-          category: 'Vehicles',
-          appraisedValue: 80000,
-          startingBid: 65000,
-          status: 'available',
-          dateAdded: new Date('2025-10-07'),
-          pawnerName: 'Ana Rodriguez'
-        },
-        {
-          id: 5,
-          ticketNumber: 'TKT-2025-005',
-          itemDescription: 'LG Refrigerator 2-Door',
-          category: 'Appliances',
-          appraisedValue: 20000,
-          startingBid: 16000,
-          status: 'withdrawn',
-          dateAdded: new Date('2025-10-02'),
-          pawnerName: 'Carlos Miguel'
-        }
-      ];
+    try {
+      const response = await this.itemService.getAuctionItems();
+      
+      if (response.success && response.data) {
+        this.auctionItems = response.data.map((item: any) => ({
+          id: item.id,
+          ticketNumber: item.ticketNumber,
+          itemDescription: item.itemDescription,
+          category: item.category,
+          appraisedValue: item.appraisedValue,
+          loanAmount: item.loanAmount,
+          auctionPrice: item.auctionPrice,
+          status: item.status || 'available',
+          expiredDate: item.expiredDate,
+          grantedDate: item.grantedDate,
+          pawnerName: item.pawnerName
+        }));
 
-      this.filteredItems = [...this.auctionItems];
+        // Extract unique categories from the data
+        const uniqueCategories = [...new Set(this.auctionItems.map(item => item.category))];
+        this.categories = ['All', ...uniqueCategories.sort()];
+
+        this.filteredItems = [...this.auctionItems];
+        console.log(`✅ Loaded ${this.auctionItems.length} auction items`);
+      } else {
+        this.toastService.showError('Error', response.message || 'Failed to load auction items');
+        this.auctionItems = [];
+        this.filteredItems = [];
+      }
+    } catch (error) {
+      console.error('Error loading auction items:', error);
+      this.toastService.showError('Error', 'An error occurred while loading auction items');
+      this.auctionItems = [];
+      this.filteredItems = [];
+    } finally {
       this.isLoading = false;
-    }, 1000);
+    }
   }
 
   applyFilters(): void {
@@ -142,14 +119,14 @@ export class AuctionItemsComponent implements OnInit {
       let comparison = 0;
 
       switch (this.sortBy) {
-        case 'dateAdded':
-          comparison = a.dateAdded.getTime() - b.dateAdded.getTime();
+        case 'expiredDate':
+          comparison = new Date(a.expiredDate).getTime() - new Date(b.expiredDate).getTime();
           break;
         case 'appraisedValue':
           comparison = a.appraisedValue - b.appraisedValue;
           break;
-        case 'startingBid':
-          comparison = a.startingBid - b.startingBid;
+        case 'auctionPrice':
+          comparison = a.auctionPrice - b.auctionPrice;
           break;
         case 'itemDescription':
           comparison = a.itemDescription.localeCompare(b.itemDescription);
@@ -208,12 +185,13 @@ export class AuctionItemsComponent implements OnInit {
     }).format(amount);
   }
 
-  formatDate(date: Date): string {
+  formatDate(date: Date | string): string {
+    const dateObj = typeof date === 'string' ? new Date(date) : date;
     return new Intl.DateTimeFormat('en-PH', {
       year: 'numeric',
       month: 'short',
       day: '2-digit'
-    }).format(date);
+    }).format(dateObj);
   }
 
   viewItemDetails(item: AuctionItem): void {

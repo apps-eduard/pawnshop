@@ -20,6 +20,7 @@ interface Transaction {
   loan_date: string;
   dateGranted?: string;
   maturity_date: string;
+  expiry_date: string;  // Added for display status calculation
   first_name: string;
   last_name: string;
   branch_name: string;
@@ -194,6 +195,7 @@ export class TransactionManagement implements OnInit {
             status: row.status,
             loan_date: row.loan_date || row.loanDate,
             maturity_date: row.maturity_date || row.maturityDate,
+            expiry_date: row.expiry_date || row.expiryDate || row.dateExpired,
             first_name: row.first_name || row.pawnerName?.split(' ')[0] || '',
             last_name: row.last_name || row.pawnerName?.split(' ')[1] || '',
             branch_name: row.branch_name || row.branchName || 'N/A',
@@ -288,9 +290,40 @@ export class TransactionManagement implements OnInit {
       'redeemed': 'bg-blue-100 text-blue-800',
       'renewed': 'bg-yellow-100 text-yellow-800',
       'defaulted': 'bg-red-100 text-red-800',
-      'partial': 'bg-orange-100 text-orange-800'
+      'partial': 'bg-orange-100 text-orange-800',
+      'expired': 'bg-red-100 text-red-800',
+      'matured': 'bg-yellow-100 text-yellow-800'
     };
     return statusClasses[status] || 'bg-gray-100 text-gray-800';
+  }
+
+  /**
+   * Calculate display status based on database status and dates
+   * If database status is 'active', check if it's actually expired or matured based on dates
+   */
+  getDisplayStatus(transaction: Transaction): string {
+    // If transaction is already closed (redeemed, renewed, etc.), show that status
+    if (transaction.status !== 'active') {
+      return transaction.status;
+    }
+
+    // For active transactions, calculate based on dates
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const expiryDate = new Date(transaction.expiry_date);
+    expiryDate.setHours(0, 0, 0, 0);
+
+    const maturityDate = new Date(transaction.maturity_date);
+    maturityDate.setHours(0, 0, 0, 0);
+
+    if (today > expiryDate) {
+      return 'expired';
+    } else if (today >= maturityDate) {
+      return 'matured';
+    } else {
+      return 'active';
+    }
   }
 
   getTypeClass(type: string): string {

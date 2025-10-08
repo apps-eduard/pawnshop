@@ -249,8 +249,8 @@
 
               <!-- Status -->
               <td class="px-6 py-4 whitespace-nowrap">
-                <span class="px-2 py-1 text-xs font-medium rounded-full" [class]="getStatusClass(transaction.status)">
-                  {{ transaction.status | titlecase }}
+                <span class="px-2 py-1 text-xs font-medium rounded-full" [class]="getStatusClass(getDisplayStatus(transaction))">
+                  {{ getDisplayStatus(transaction) | titlecase }}
                 </span>
               </td>
 
@@ -476,8 +476,8 @@
             </div>
             <div>
               <span class="text-gray-500 dark:text-gray-400">Status:</span>
-              <span class="ml-2" [class]="'px-2 py-1 rounded-full text-xs font-medium ' + getStatusClass(selectedTransaction.status)">
-                {{ selectedTransaction.status | titlecase }}
+              <span class="ml-2" [class]="'px-2 py-1 rounded-full text-xs font-medium ' + getStatusClass(getDisplayStatus(selectedTransaction))">
+                {{ getDisplayStatus(selectedTransaction) | titlecase }}
               </span>
             </div>
             <div>
