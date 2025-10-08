@@ -1,6 +1,8 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
+import { FormsModule } from '@angular/forms';
+import { HttpClient } from '@angular/common/http';
 import { StatusColorService } from '../../../core/services/status-color.service';
 
 interface DashboardCard {
@@ -25,6 +27,20 @@ interface AuctionItem {
   item_type: 'jewelry' | 'appliance' | 'electronics' | 'vehicle';
 }
 
+interface ExpiredItem {
+  id: number;
+  ticketNumber: string;
+  loanId: string;
+  itemDescription: string;
+  pawnerName: string;
+  appraisedValue: number;
+  loanAmount: number;
+  expiredDate: Date;
+  category: string;
+  auctionPrice?: number;
+  isSetForAuction?: boolean;
+}
+
 interface AuctionStats {
   total_auctions: number;
   active_auctions: number;
@@ -39,13 +55,17 @@ interface AuctionStats {
   templateUrl: './auctioneer-dashboard.html',
   styleUrl: './auctioneer-dashboard.css',
   standalone: true,
-  imports: [CommonModule, RouterModule]
+  imports: [CommonModule, RouterModule, FormsModule]
 })
 export class AuctioneerDashboard implements OnInit {
   currentDateTime = new Date();
   isLoading = false;
   dashboardCards: DashboardCard[] = [];
   upcomingAuctions: AuctionItem[] = [];
+  expiredItems: ExpiredItem[] = [];
+  showPriceModal = false;
+  selectedExpiredItem: ExpiredItem | null = null;
+  tempAuctionPrice = '';
   auctionStats: AuctionStats = {
     total_auctions: 0,
     active_auctions: 0,
@@ -55,10 +75,14 @@ export class AuctioneerDashboard implements OnInit {
     success_rate: 0
   };
 
-  constructor(public statusColorService: StatusColorService) {}
+  constructor(
+    public statusColorService: StatusColorService,
+    private http: HttpClient
+  ) {}
 
   ngOnInit() {
     this.loadDashboardData();
+    this.loadExpiredItems();
     this.updateTime();
   }
 
@@ -89,13 +113,6 @@ export class AuctioneerDashboard implements OnInit {
         color: 'purple',
         route: '/auctions/sold',
         amount: 420000
-      },
-      {
-        title: 'Success Rate',
-        count: 87,
-        icon: 'success',
-        color: 'orange',
-        route: '/auctions/statistics'
       }
     ];
 
@@ -168,6 +185,101 @@ export class AuctioneerDashboard implements OnInit {
     setInterval(() => {
       this.currentDateTime = new Date();
     }, 1000);
+  }
+
+  private async loadExpiredItems(): Promise<void> {
+    try {
+      console.log('🔄 Loading expired items from database...');
+      const apiUrl = 'http://localhost:3000/api/items/expired';
+
+      const response = await this.http.get<any>(apiUrl).toPromise();
+
+      console.log('📦 Raw API Response:', response);
+
+      if (response && response.success && response.data) {
+        console.log('📦 Expired items data:', response.data);
+
+        this.expiredItems = response.data.map((item: any) => ({
+          id: item.id,
+          ticketNumber: item.ticketNumber || item.ticket_number || 'N/A',
+          loanId: item.loanId || item.loan_id || '',
+          itemDescription: item.itemDescription || item.item_description || item.description || 'N/A',
+          pawnerName: item.pawnerName || item.pawner_name || 'N/A',
+          appraisedValue: item.appraisedValue || item.appraised_value || item.appraisal_value || 0,
+          loanAmount: item.loanAmount || item.loan_amount || item.principal_amount || 0,
+          expiredDate: new Date(item.expiredDate || item.expired_date || item.expiry_date),
+          category: item.category || 'N/A',
+          auctionPrice: item.auctionPrice || item.auction_price || undefined,
+          isSetForAuction: item.isSetForAuction || item.is_set_for_auction || false
+        }));
+
+        console.log(`✅ Successfully loaded ${this.expiredItems.length} expired items`);
+        console.log('📦 Mapped expired items:', this.expiredItems);
+      } else {
+        console.warn('⚠️ No expired items data in response');
+        this.expiredItems = [];
+      }
+    } catch (error: any) {
+      console.error('❌ Error loading expired items:', error);
+      console.error('❌ Error details:', error?.error || error?.message || error);
+      this.expiredItems = [];
+    }
+  }
+
+
+
+  openPriceModal(item: ExpiredItem): void {
+    this.selectedExpiredItem = item;
+    this.tempAuctionPrice = item.auctionPrice?.toString() || '';
+    this.showPriceModal = true;
+  }
+
+  closePriceModal(): void {
+    this.showPriceModal = false;
+    this.selectedExpiredItem = null;
+    this.tempAuctionPrice = '';
+  }
+
+  async setAuctionPrice(): Promise<void> {
+    if (this.selectedExpiredItem && this.tempAuctionPrice) {
+      const price = parseFloat(this.tempAuctionPrice);
+      if (price > 0) {
+        try {
+          console.log(`💰 Setting auction price for item ${this.selectedExpiredItem.id}: ₱${price}`);
+
+          const apiUrl = 'http://localhost:3000/api/items/set-auction-price';
+          const payload = {
+            itemId: this.selectedExpiredItem.id,
+            auctionPrice: price
+          };
+
+          const response = await this.http.post<any>(apiUrl, payload).toPromise();
+
+          console.log('✅ Auction price set response:', response);
+
+          if (response && response.success) {
+            // Update local data on successful save
+            this.selectedExpiredItem!.auctionPrice = price;
+            this.selectedExpiredItem!.isSetForAuction = true;
+
+            console.log(`✅ Auction price set successfully for ${this.selectedExpiredItem!.itemDescription}: ₱${price.toLocaleString()}`);
+            this.closePriceModal();
+
+            // Reload expired items to get updated data
+            await this.loadExpiredItems();
+          } else {
+            console.error('❌ Failed to set auction price:', response?.message);
+            alert('Failed to set auction price. Please try again.');
+          }
+        } catch (error: any) {
+          console.error('❌ Error setting auction price:', error);
+          console.error('❌ Error details:', error?.error || error?.message || error);
+          alert('Failed to set auction price. Please try again.');
+        }
+      }
+    }
+  }  parseFloat(value: string): number {
+    return parseFloat(value);
   }
 
   formatCurrency(amount: number): string {

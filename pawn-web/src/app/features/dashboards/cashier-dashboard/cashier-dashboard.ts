@@ -220,10 +220,10 @@ export class CashierDashboard implements OnInit, OnDestroy {
   // Transaction types
   transactionTypes = [
     {
-      id: 'create_appraisal',
-      title: 'Create Appraisal',
-      description: 'Appraise items for pawning',
-      icon: 'clipboard-list',
+      id: 'auction_sales',
+      title: 'Auction Sales',
+      description: 'View and manage auction items',
+      icon: 'gavel',
       color: 'bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-400',
       bgColor: 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800',
       iconColor: 'text-indigo-600 dark:text-indigo-400'
@@ -755,9 +755,9 @@ export class CashierDashboard implements OnInit, OnDestroy {
     try {
       let navigationPromise: Promise<boolean>;
 
-      if (transactionType.id === 'create_appraisal') {
-        // Navigate to appraisal page
-        navigationPromise = this.router.navigate(['/transactions/appraisal']);
+      if (transactionType.id === 'auction_sales') {
+        // Navigate to auction items page
+        navigationPromise = this.router.navigate(['/transactions/auction-items']);
       } else if (transactionType.id === 'new_loan') {
         // Navigate to new loan page
         navigationPromise = this.router.navigate(['/transactions/new-loan']);

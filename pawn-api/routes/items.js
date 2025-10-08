@@ -73,6 +73,67 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Get expired pawn items (for auction) - MUST BE BEFORE /:id route
+router.get('/expired', async (req, res) => {
+  try {
+    console.log(`⏰ [${new Date().toISOString()}] Fetching expired items - User: ${req.user.username}`);
+    
+    const result = await pool.query(`
+      SELECT 
+        pi.id, 
+        pi.brand, 
+        pi.model, 
+        pi.custom_description,
+        pi.appraised_value,
+        pi.loan_amount,
+        pi.auction_price,
+        pi.status,
+        t.transaction_number as ticket_number,
+        t.expiry_date as expired_date,
+        p.first_name, 
+        p.last_name,
+        c.name as category
+      FROM pawn_items pi
+      LEFT JOIN transactions t ON pi.transaction_id = t.id
+      LEFT JOIN pawners p ON t.pawner_id = p.id
+      LEFT JOIN categories c ON pi.category_id = c.id
+      WHERE t.expiry_date < CURRENT_DATE
+        AND pi.status = 'in_vault'
+        AND t.status IN ('active', 'expired')
+      ORDER BY t.expiry_date DESC
+    `);
+    
+    const expiredItems = result.rows.map(row => ({
+      id: row.id,
+      ticketNumber: row.ticket_number,
+      itemDescription: row.custom_description || `${row.brand || ''} ${row.model || ''}`.trim() || 'N/A',
+      pawnerName: row.first_name && row.last_name ? `${row.first_name} ${row.last_name}` : 'N/A',
+      appraisedValue: row.appraised_value ? parseFloat(row.appraised_value) : 0,
+      loanAmount: row.loan_amount ? parseFloat(row.loan_amount) : 0,
+      expiredDate: row.expired_date,
+      category: row.category || 'N/A',
+      auctionPrice: row.auction_price ? parseFloat(row.auction_price) : null,
+      isSetForAuction: !!row.auction_price
+    }));
+    
+    console.log(`✅ Found ${expiredItems.length} expired items`);
+    
+    res.json({
+      success: true,
+      message: 'Expired items retrieved successfully',
+      data: expiredItems
+    });
+    
+  } catch (error) {
+    console.error('❌ Error fetching expired items:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch expired items',
+      error: error.message
+    });
+  }
+});
+
 // Get single item by ID
 router.get('/:id', async (req, res) => {
   try {
@@ -364,6 +425,76 @@ router.get('/ticket/:ticketId', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch items',
+      error: error.message
+    });
+  }
+});
+
+// Set auction price for an expired item
+router.post('/set-auction-price', authorizeRoles(['administrator', 'manager', 'auctioneer']), async (req, res) => {
+  try {
+    const { itemId, auctionPrice } = req.body;
+    
+    console.log(`💰 [${new Date().toISOString()}] Setting auction price for item ${itemId}: ₱${auctionPrice} - User: ${req.user.username}`);
+    
+    // Validate input
+    if (!itemId || !auctionPrice || auctionPrice <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid itemId or auctionPrice'
+      });
+    }
+    
+    // Check if item exists and is expired
+    const checkResult = await pool.query(`
+      SELECT pi.id, t.expiry_date, t.status as transaction_status
+      FROM pawn_items pi
+      LEFT JOIN transactions t ON pi.transaction_id = t.id
+      WHERE pi.id = $1
+    `, [itemId]);
+    
+    if (checkResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Item not found'
+      });
+    }
+    
+    const item = checkResult.rows[0];
+    const isExpired = new Date(item.expiry_date) < new Date();
+    
+    if (!isExpired) {
+      return res.status(400).json({
+        success: false,
+        message: 'Item is not expired yet. Cannot set auction price.'
+      });
+    }
+    
+    // Update auction price
+    const updateResult = await pool.query(`
+      UPDATE pawn_items
+      SET auction_price = $1,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = $2
+      RETURNING id, auction_price
+    `, [auctionPrice, itemId]);
+    
+    console.log(`✅ Auction price set for item ${itemId}: ₱${auctionPrice}`);
+    
+    res.json({
+      success: true,
+      message: 'Auction price set successfully',
+      data: {
+        itemId: updateResult.rows[0].id,
+        auctionPrice: parseFloat(updateResult.rows[0].auction_price)
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Error setting auction price:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to set auction price',
       error: error.message
     });
   }

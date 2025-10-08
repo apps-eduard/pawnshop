@@ -12,58 +12,76 @@ import { CityModalConfig, ModalResult, CityModalData } from '../../models/modal-
   standalone: true,
   imports: [CommonModule, FormsModule],
   template: `
-    <div *ngIf="isVisible" class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
-      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 p-4 w-80 max-w-full mx-4">
+    <div *ngIf="isVisible" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 w-full max-w-sm transform transition-all duration-200 ease-out">
+
         <!-- Header -->
-        <div class="flex items-center justify-between mb-3">
-          <div class="flex items-center">
-            <svg class="w-4 h-4 mr-2 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
-            </svg>
-            <h3 class="text-base font-semibold text-gray-900 dark:text-white">{{ config?.title || 'Add City' }}</h3>
+        <div class="flex items-center justify-between p-4 pb-2">
+          <div class="flex items-center space-x-2">
+            <div class="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
+              <svg class="w-4 h-4 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+              </svg>
+            </div>
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ config?.title || 'Add City' }}</h3>
           </div>
-          <button type="button" (click)="onCancel()" title="Close Modal" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+          <button type="button" (click)="onCancel()"
+                  class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
             </svg>
           </button>
         </div>
-        
+
         <!-- Form -->
-        <div class="mb-4">
-          <label for="cityNameInput" class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-            City Name
-          </label>
-          <input 
-            #cityInput
-            id="cityNameInput" 
-            type="text" 
-            [(ngModel)]="cityName" 
-            [placeholder]="config?.placeholder || 'Enter city name...'"
-            (keyup.enter)="onAdd()"
-            class="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-emerald-400 focus:border-emerald-500 dark:bg-gray-700 dark:text-white transition-all"
-            [class.border-emerald-300]="cityName && cityName.trim()"
-            [class.bg-emerald-50]="cityName && cityName.trim()"
-            [class.dark:bg-emerald-900/10]="cityName && cityName.trim()">
-        </div>
-        
-        <!-- Buttons -->
-        <div class="flex justify-end gap-2">
-          <button type="button" (click)="onCancel()"
-            class="flex items-center px-3 py-1.5 text-xs font-medium text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 border border-red-200 dark:border-red-800 rounded transition-all">
-            <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-            </svg>
-            Cancel
-          </button>
-          <button type="button" (click)="onAdd()" [disabled]="!cityName || !cityName.trim() || isLoading"
-            class="flex items-center px-3 py-1.5 text-xs font-medium text-white bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed rounded transition-all shadow-sm">
-            <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-            </svg>
-            {{ isLoading ? 'Adding...' : 'Add' }}
-          </button>
+        <div class="px-4 pb-4">
+          <div class="space-y-3">
+            <div>
+              <label for="cityNameInput" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                City Name
+              </label>
+              <div class="relative">
+                <input
+                  #cityInput
+                  id="cityNameInput"
+                  type="text"
+                  [(ngModel)]="cityName"
+                  [placeholder]="config?.placeholder || 'Enter city name...'"
+                  (keyup.enter)="onAdd()"
+                  class="w-full px-4 py-3 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 dark:bg-gray-700 dark:text-white transition-all placeholder-gray-400 dark:placeholder-gray-500"
+                  [class.border-emerald-500]="cityName && cityName.trim()"
+                  [class.bg-emerald-50]="cityName && cityName.trim()"
+                  [class.dark:bg-emerald-900/10]="cityName && cityName.trim()">
+                <div *ngIf="cityName && cityName.trim()" class="absolute right-3 top-1/2 transform -translate-y-1/2">
+                  <svg class="w-4 h-4 text-emerald-500" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                  </svg>
+                </div>
+              </div>
+            </div>
+
+            <!-- Buttons -->
+            <div class="flex justify-between gap-3 pt-2">
+              <!-- Add Button (Left) -->
+              <button type="button" (click)="onAdd()" [disabled]="!cityName || !cityName.trim() || isLoading"
+                      class="flex-1 flex items-center justify-center px-4 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed rounded-lg transition-all shadow-sm hover:shadow-md">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                </svg>
+                {{ isLoading ? 'Adding...' : 'Add City' }}
+              </button>
+
+              <!-- Cancel Button (Right) -->
+              <button type="button" (click)="onCancel()"
+                      class="flex-1 flex items-center justify-center px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 border border-gray-300 dark:border-gray-600 rounded-lg transition-all">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+                Cancel
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -71,7 +89,7 @@ import { CityModalConfig, ModalResult, CityModalData } from '../../models/modal-
 })
 export class AddCityModalComponent implements OnInit, OnDestroy, AfterViewInit {
   @ViewChild('cityInput') cityInput!: ElementRef<HTMLInputElement>;
-  
+
   private modalService = inject(ModalService);
   private addressService = inject(AddressService);
   private toastService = inject(ToastService);
@@ -149,7 +167,7 @@ export class AddCityModalComponent implements OnInit, OnDestroy, AfterViewInit {
             },
             action: 'add'
           };
-          
+
           this.toastService.showSuccess('Success', 'City added successfully');
           this.modalService.cityModalResult(result);
         } else {
@@ -159,9 +177,9 @@ export class AddCityModalComponent implements OnInit, OnDestroy, AfterViewInit {
       },
       error: (error: any) => {
         console.error('Error adding city:', error);
-        
+
         let errorMessage = 'Failed to add city';
-        
+
         if (error.status === 409) {
           errorMessage = 'A city with this name already exists';
         } else if (error.status === 403) {
@@ -169,7 +187,7 @@ export class AddCityModalComponent implements OnInit, OnDestroy, AfterViewInit {
         } else if (error.error?.message) {
           errorMessage = error.error.message;
         }
-        
+
         this.toastService.showError('Error', errorMessage);
         this.isLoading = false;
       }

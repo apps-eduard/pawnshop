@@ -7,6 +7,8 @@ import { managementRoutes } from './features/management/routes/management.routes
 import { settingsRoutes } from './features/settings/routes/settings.routes';
 // Import auth component
 import { LoginComponent } from './auth/login/login';
+// Import layout component
+import { LayoutComponent } from './shared/layout/layout';
 
 export const routes: Routes = [
   { path: '', redirectTo: '/login', pathMatch: 'full' },
@@ -17,43 +19,50 @@ export const routes: Routes = [
     component: LoginComponent
   },
 
-  // Management routes
+  // Authenticated routes with layout
   {
-    path: 'management',
-    children: managementRoutes
-  },
+    path: '',
+    component: LayoutComponent,
+    children: [
+      // Dashboard routes
+      {
+        path: 'dashboard',
+        children: dashboardRoutes
+      },
 
-  // Settings routes
-  {
-    path: 'settings',
-    children: settingsRoutes
-  },
+      // Management routes
+      {
+        path: 'management',
+        children: managementRoutes
+      },
 
-  // Legacy redirects for management
-  { path: 'address-management', redirectTo: 'management/address', pathMatch: 'full' },
-  { path: 'item-management', redirectTo: 'management/item', pathMatch: 'full' },
-  { path: 'pawner-management', redirectTo: 'management/pawner', pathMatch: 'full' },
-  { path: 'user-management', redirectTo: 'management/user', pathMatch: 'full' },
-  { path: 'admin-settings', redirectTo: 'settings/admin', pathMatch: 'full' },
+      // Settings routes
+      {
+        path: 'settings',
+        children: settingsRoutes
+      },
 
-  // Dashboard routes
-  {
-    path: 'dashboard',
-    children: dashboardRoutes
-  },
+      // Transaction Routes
+      {
+        path: 'transactions',
+        children: transactionRoutes
+      },
 
-  // Legacy redirects (to maintain backward compatibility)
-  { path: 'admin-dashboard', redirectTo: 'dashboard/admin', pathMatch: 'full' },
-  { path: 'manager-dashboard', redirectTo: 'dashboard/manager', pathMatch: 'full' },
-  { path: 'cashier-dashboard', redirectTo: 'dashboard/cashier', pathMatch: 'full' },
-  { path: 'appraiser-dashboard', redirectTo: 'dashboard/appraiser', pathMatch: 'full' },
-  { path: 'auctioneer-dashboard', redirectTo: 'dashboard/auctioneer', pathMatch: 'full' },
-  { path: 'pawner-dashboard', redirectTo: 'dashboard/pawner', pathMatch: 'full' },
+      // Legacy redirects for management
+      { path: 'address-management', redirectTo: 'management/address', pathMatch: 'full' },
+      { path: 'item-management', redirectTo: 'management/item', pathMatch: 'full' },
+      { path: 'pawner-management', redirectTo: 'management/pawner', pathMatch: 'full' },
+      { path: 'user-management', redirectTo: 'management/user', pathMatch: 'full' },
+      { path: 'admin-settings', redirectTo: 'settings/admin', pathMatch: 'full' },
 
-  // Transaction Routes
-  {
-    path: 'transactions',
-    children: transactionRoutes
+      // Legacy redirects (to maintain backward compatibility)
+      { path: 'admin-dashboard', redirectTo: 'dashboard/admin', pathMatch: 'full' },
+      { path: 'manager-dashboard', redirectTo: 'dashboard/manager', pathMatch: 'full' },
+      { path: 'cashier-dashboard', redirectTo: 'dashboard/cashier', pathMatch: 'full' },
+      { path: 'appraiser-dashboard', redirectTo: 'dashboard/appraiser', pathMatch: 'full' },
+      { path: 'auctioneer-dashboard', redirectTo: 'dashboard/auctioneer', pathMatch: 'full' },
+      { path: 'pawner-dashboard', redirectTo: 'dashboard/pawner', pathMatch: 'full' },
+    ]
   },
 
   // Error routes

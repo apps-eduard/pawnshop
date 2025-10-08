@@ -62,24 +62,25 @@ export class AuthService {
     if (!user) return '/login';
 
     switch (user.role) {
+      case 'admin':
       case 'administrator':
       case UserRole.ADMINISTRATOR:
-        return '/admin-dashboard';
+        return '/dashboard/admin';
       case 'manager':
       case UserRole.MANAGER:
-        return '/manager-dashboard';
+        return '/dashboard/manager';
       case 'cashier':
       case UserRole.CASHIER:
-        return '/cashier-dashboard';
+        return '/dashboard/cashier';
       case 'auctioneer':
       case UserRole.AUCTIONEER:
-        return '/auctioneer-dashboard';
+        return '/dashboard/auctioneer';
       case 'appraiser':
       case UserRole.APPRAISER:
-        return '/appraiser-dashboard';
+        return '/dashboard/appraiser';
       case 'pawner':
       case UserRole.PAWNER:
-        return '/pawner-dashboard';
+        return '/dashboard/pawner';
       default:
         console.warn(`Unknown user role: ${user.role}`);
         return '/login';

@@ -29,23 +29,23 @@ export class SidebarComponent implements OnInit, OnDestroy {
   // Navigation items for different roles
   navigationItems: NavigationItem[] = [
     // Dashboard items
-    { label: 'Dashboard', route: '/admin-dashboard', icon: '📊', roles: ['administrator'] },
-    { label: 'Dashboard', route: '/manager-dashboard', icon: '📊', roles: ['manager'] },
-    { label: 'Dashboard', route: '/cashier-dashboard', icon: '📊', roles: ['cashier'] },
-    { label: 'Dashboard', route: '/appraiser-dashboard', icon: '📊', roles: ['appraiser'] },
-    { label: 'Dashboard', route: '/auctioneer-dashboard', icon: '📊', roles: ['auctioneer'] },
-    { label: 'Dashboard', route: '/pawner-dashboard', icon: '📊', roles: ['pawner'] },
+    { label: 'Dashboard', route: '/dashboard/admin', icon: '📊', roles: ['admin', 'administrator'] },
+    { label: 'Dashboard', route: '/dashboard/manager', icon: '📊', roles: ['manager'] },
+    { label: 'Dashboard', route: '/dashboard/cashier', icon: '📊', roles: ['cashier'] },
+    { label: 'Dashboard', route: '/dashboard/appraiser', icon: '📊', roles: ['appraiser'] },
+    { label: 'Dashboard', route: '/dashboard/auctioneer', icon: '📊', roles: ['auctioneer'] },
+    { label: 'Dashboard', route: '/dashboard/pawner', icon: '📊', roles: ['pawner'] },
 
     // Transactions
-    { label: 'Transactions', route: '/transactions', icon: '💳', roles: ['administrator', 'manager', 'cashier'] },
+    { label: 'Transactions', route: '/transactions', icon: '💳', roles: ['admin', 'administrator', 'manager', 'cashier'] },
 
     // Users & Staff Management
-    { label: 'User Management', route: '/user-management', icon: '👥', roles: ['administrator'] },
-    { label: 'Address Management', route: '/address-management', icon: '🏠', roles: ['administrator'] },
+    { label: 'User Management', route: '/user-management', icon: '👥', roles: ['admin', 'administrator'] },
+    { label: 'Address Management', route: '/address-management', icon: '🏠', roles: ['admin', 'administrator'] },
     { label: 'Staff', route: '/staff', icon: '👨‍💼', roles: ['manager'] },
 
     // Customer Management
-    { label: 'Pawner Management', route: '/pawner-management', icon: '🧑‍🤝‍🧑', roles: ['administrator', 'manager', 'cashier'] },
+    { label: 'Pawner Management', route: '/pawner-management', icon: '🧑‍🤝‍🧑', roles: ['admin', 'administrator', 'manager', 'cashier'] },
     { label: 'Customers', route: '/customers', icon: '👤', roles: ['cashier'] },
 
     // Loans & Pawning
@@ -58,26 +58,26 @@ export class SidebarComponent implements OnInit, OnDestroy {
     { label: 'Appraisals', route: '/appraisals', icon: '💎', roles: ['appraiser'] },
 
     // Items Management
-    { label: 'Item Management', route: '/item-management', icon: '📦', roles: ['administrator', 'manager'] },
+    { label: 'Item Management', route: '/item-management', icon: '📦', roles: ['admin', 'administrator', 'manager'] },
 
     // Auctions
     { label: 'Auctions', route: '/auctions', icon: '🔨', roles: ['auctioneer', 'manager'] },
     { label: 'Bidders', route: '/bidders', icon: '🙋', roles: ['auctioneer'] },
 
     // Reports
-    { label: 'Reports', route: '/reports', icon: '📈', roles: ['administrator', 'manager', 'appraiser'] },
+    { label: 'Reports', route: '/reports', icon: '📈', roles: ['admin', 'administrator', 'manager', 'appraiser'] },
 
     // Settings (Admin only)
-    { label: 'Settings', route: '/admin-settings', icon: '⚙️', roles: ['administrator'] },
+    { label: 'Settings', route: '/admin-settings', icon: '⚙️', roles: ['admin', 'administrator'] },
   ];
 
   // Quick action items
   quickActions = [
-    { label: 'New User', action: 'newUser', icon: '➕', roles: ['administrator'] },
+    { label: 'New User', action: 'newUser', icon: '➕', roles: ['admin', 'administrator'] },
     { label: 'New Loan', action: 'newLoan', icon: '🏦', roles: ['cashier'] },
     { label: 'New Appraisal', action: 'newAppraisal', icon: '💎', roles: ['appraiser'] },
     { label: 'New Auction', action: 'newAuction', icon: '🔨', roles: ['auctioneer'] },
-    { label: 'Generate Report', action: 'generateReport', icon: '📄', roles: ['administrator', 'manager'] },
+    { label: 'Generate Report', action: 'generateReport', icon: '📄', roles: ['admin', 'administrator', 'manager'] },
   ];
 
   constructor(

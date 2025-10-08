@@ -1,0 +1,208 @@
+<div class="min-h-screen bg-gray-50 dark:bg-gray-900">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+    <!-- Header -->
+    <div class="mb-8">
+      <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Auction Items</h1>
+      <p class="mt-2 text-gray-600 dark:text-gray-400">Manage items available for auction</p>
+    </div>
+
+    <!-- Filters and Search -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+
+        <!-- Search -->
+        <div class="lg:col-span-2">
+          <label for="search" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Search</label>
+          <input
+            id="search"
+            type="text"
+            [(ngModel)]="searchQuery"
+            (input)="onSearchChange()"
+            placeholder="Search by item, ticket number, or pawner name..."
+            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+        </div>
+
+        <!-- Category Filter -->
+        <div>
+          <label for="category" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Category</label>
+          <select
+            id="category"
+            [(ngModel)]="selectedCategory"
+            (change)="onCategoryChange()"
+            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+            <option *ngFor="let category of categories" [value]="category === 'All' ? '' : category">
+              {{ category }}
+            </option>
+          </select>
+        </div>
+
+        <!-- Status Filter -->
+        <div>
+          <label for="status" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Status</label>
+          <select
+            id="status"
+            [(ngModel)]="selectedStatus"
+            (change)="onStatusChange()"
+            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+            <option *ngFor="let status of statuses" [value]="status === 'All' ? '' : status">
+              {{ status }}
+            </option>
+          </select>
+        </div>
+
+        <!-- Sort -->
+        <div>
+          <label for="sort" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Sort By</label>
+          <div class="flex space-x-2">
+            <select
+              id="sort"
+              [(ngModel)]="sortBy"
+              (change)="onSortChange()"
+              class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+              <option value="dateAdded">Date Added</option>
+              <option value="appraisedValue">Appraised Value</option>
+              <option value="startingBid">Starting Bid</option>
+              <option value="itemDescription">Item Name</option>
+              <option value="status">Status</option>
+            </select>
+            <button
+              (click)="toggleSortDirection()"
+              class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <svg class="w-4 h-4" [class.rotate-180]="sortDirection === 'desc'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Loading State -->
+    <div *ngIf="isLoading" class="flex items-center justify-center py-12">
+      <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+    </div>
+
+    <!-- Results Count -->
+    <div *ngIf="!isLoading" class="mb-4">
+      <p class="text-sm text-gray-600 dark:text-gray-400">
+        Showing {{ filteredItems.length }} of {{ auctionItems.length }} items
+      </p>
+    </div>
+
+    <!-- Auction Items Grid -->
+    <div *ngIf="!isLoading" class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+      <div *ngFor="let item of filteredItems"
+        class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-md transition-shadow">
+
+        <!-- Item Header -->
+        <div class="p-6">
+          <div class="flex items-start justify-between mb-4">
+            <div>
+              <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+                {{ item.itemDescription }}
+              </h3>
+              <p class="text-sm text-gray-500 dark:text-gray-400">{{ item.ticketNumber }}</p>
+            </div>
+            <span
+              class="px-2 py-1 rounded-full text-xs font-medium border capitalize"
+              [ngClass]="getStatusColor(item.status)">
+              {{ item.status }}
+            </span>
+          </div>
+
+          <!-- Item Details -->
+          <div class="space-y-3">
+            <div class="flex justify-between">
+              <span class="text-sm text-gray-600 dark:text-gray-400">Category:</span>
+              <span class="text-sm font-medium text-gray-900 dark:text-white">{{ item.category }}</span>
+            </div>
+
+            <div class="flex justify-between">
+              <span class="text-sm text-gray-600 dark:text-gray-400">Pawner:</span>
+              <span class="text-sm font-medium text-gray-900 dark:text-white">{{ item.pawnerName }}</span>
+            </div>
+
+            <div class="flex justify-between">
+              <span class="text-sm text-gray-600 dark:text-gray-400">Appraised Value:</span>
+              <span class="text-sm font-semibold text-green-600 dark:text-green-400">
+                {{ formatCurrency(item.appraisedValue) }}
+              </span>
+            </div>
+
+            <div class="flex justify-between">
+              <span class="text-sm text-gray-600 dark:text-gray-400">Starting Bid:</span>
+              <span class="text-sm font-semibold text-blue-600 dark:text-blue-400">
+                {{ formatCurrency(item.startingBid) }}
+              </span>
+            </div>
+
+            <div *ngIf="item.currentBid" class="flex justify-between">
+              <span class="text-sm text-gray-600 dark:text-gray-400">Current Bid:</span>
+              <span class="text-sm font-bold text-orange-600 dark:text-orange-400">
+                {{ formatCurrency(item.currentBid) }}
+              </span>
+            </div>
+
+            <div class="flex justify-between">
+              <span class="text-sm text-gray-600 dark:text-gray-400">Date Added:</span>
+              <span class="text-sm text-gray-900 dark:text-white">{{ formatDate(item.dateAdded) }}</span>
+            </div>
+
+            <div *ngIf="item.auctionDate" class="flex justify-between">
+              <span class="text-sm text-gray-600 dark:text-gray-400">Auction Date:</span>
+              <span class="text-sm font-medium text-purple-600 dark:text-purple-400">
+                {{ formatDate(item.auctionDate) }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="px-6 py-4 bg-gray-50 dark:bg-gray-700/50 border-t border-gray-200 dark:border-gray-600">
+          <div class="flex space-x-2">
+            <button
+              (click)="viewItemDetails(item)"
+              class="flex-1 px-3 py-2 text-sm font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800 dark:hover:bg-blue-900/30">
+              View Details
+            </button>
+
+            <!-- Sale Button - Show only for available and bidding items -->
+            <button
+              *ngIf="item.status === 'available' || item.status === 'bidding'"
+              (click)="saleItem(item)"
+              class="px-3 py-2 text-sm font-medium text-white bg-green-600 border border-green-600 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500">
+              Sale
+            </button>
+
+            <button
+              (click)="editItem(item)"
+              class="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-600 dark:text-gray-300 dark:border-gray-500 dark:hover:bg-gray-500">
+              Edit
+            </button>
+            <button
+              (click)="deleteItem(item)"
+              class="px-3 py-2 text-sm font-medium text-red-700 bg-red-50 border border-red-200 rounded-md hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-900/30">
+              Remove
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Empty State -->
+    <div *ngIf="!isLoading && filteredItems.length === 0"
+      class="text-center py-12 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+      <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M9.172 16.172a4 4 0 015.656 0M9 12h6m-6-4h6m2 5.291A7.962 7.962 0 0112 15c-2.34 0-4.47.881-6.078 2.333C7.06 17.5 9.45 18 12 18c2.55 0 4.94-.5 6.078-.667z M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+      </svg>
+      <h3 class="mt-4 text-lg font-medium text-gray-900 dark:text-white">No auction items found</h3>
+      <p class="mt-2 text-gray-500 dark:text-gray-400">
+        {{ searchQuery || selectedCategory || selectedStatus ? 'Try adjusting your filters' : 'No items available for auction yet' }}
+      </p>
+    </div>
+
+  </div>
+</div>

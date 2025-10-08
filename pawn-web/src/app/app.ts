@@ -1,16 +1,15 @@
 import { Component, OnInit } from '@angular/core';
-import { Router, NavigationEnd } from '@angular/router';
+import { Router, NavigationEnd, RouterOutlet } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { HttpClientModule } from '@angular/common/http';
 import { filter } from 'rxjs/operators';
-import { LayoutComponent } from './shared/layout/layout';
 import { ToastComponent } from './shared/toast/toast.component';
 import { ThemeService } from './core/theme/theme';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, HttpClientModule, LayoutComponent, ToastComponent],
+  imports: [CommonModule, HttpClientModule, RouterOutlet, ToastComponent],
   templateUrl: './app.html',
   styleUrl: './app.css'
 })
