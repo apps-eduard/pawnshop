@@ -78,33 +78,53 @@ router.get('/expired', async (req, res) => {
         pi.loan_amount,
         pi.auction_price,
         pi.status,
+        t.id as transaction_id,
         t.transaction_number as ticket_number,
+        t.tracking_number,
         t.expiry_date as expired_date,
+        t.principal_amount,
         p.first_name, 
         p.last_name,
-        c.name as category
+        c.name as category,
+        d.name as description_name
       FROM pawn_items pi
       LEFT JOIN transactions t ON pi.transaction_id = t.id
       LEFT JOIN pawners p ON t.pawner_id = p.id
       LEFT JOIN categories c ON pi.category_id = c.id
+      LEFT JOIN descriptions d ON pi.description_id = d.id
       WHERE t.expiry_date < CURRENT_DATE
         AND pi.status = 'in_vault'
         AND t.status IN ('active', 'expired')
       ORDER BY t.expiry_date DESC
     `);
     
-    const expiredItems = result.rows.map(row => ({
-      id: row.id,
-      ticketNumber: row.ticket_number,
-      itemDescription: row.custom_description || 'N/A',
-      pawnerName: row.first_name && row.last_name ? `${row.first_name} ${row.last_name}` : 'N/A',
-      appraisedValue: row.appraised_value ? parseFloat(row.appraised_value) : 0,
-      loanAmount: row.loan_amount ? parseFloat(row.loan_amount) : 0,
-      expiredDate: row.expired_date,
-      category: row.category || 'N/A',
-      auctionPrice: row.auction_price ? parseFloat(row.auction_price) : null,
-      isSetForAuction: !!row.auction_price
-    }));
+    const expiredItems = result.rows.map(row => {
+      // Build item description from available fields
+      let itemDesc = row.custom_description;
+      if (!itemDesc || itemDesc.trim() === '') {
+        // Use category and description name if custom description is empty
+        const parts = [];
+        if (row.category) parts.push(row.category);
+        if (row.description_name) parts.push(row.description_name);
+        itemDesc = parts.length > 0 ? parts.join(' - ') : 'Item';
+      }
+      
+      return {
+        id: row.id,
+        transactionId: row.transaction_id,
+        ticketNumber: row.ticket_number,
+        trackingNumber: row.tracking_number || row.ticket_number,
+        itemDescription: itemDesc,
+        pawnerName: row.first_name && row.last_name ? `${row.first_name} ${row.last_name}` : 'N/A',
+        appraisedValue: row.appraised_value ? parseFloat(row.appraised_value) : 0,
+        loanAmount: row.loan_amount ? parseFloat(row.loan_amount) : 0,
+        currentPrincipal: row.principal_amount ? parseFloat(row.principal_amount) : 0,
+        expiredDate: row.expired_date,
+        category: row.category || 'N/A',
+        auctionPrice: row.auction_price ? parseFloat(row.auction_price) : null,
+        isSetForAuction: !!row.auction_price
+      };
+    });
     
     console.log(`✅ Found ${expiredItems.length} expired items`);
     
@@ -119,6 +139,102 @@ router.get('/expired', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch expired items',
+      error: error.message
+    });
+  }
+});
+
+// Get transaction history for expired item (for auction pricing decision)
+router.get('/expired/:itemId/history', async (req, res) => {
+  try {
+    const { itemId } = req.params;
+    console.log(`📜 [${new Date().toISOString()}] Fetching transaction history for item ${itemId} - User: ${req.user.username}`);
+    
+    // Get the item's transaction to find tracking number
+    const itemResult = await pool.query(`
+      SELECT t.tracking_number, t.transaction_number
+      FROM pawn_items pi
+      LEFT JOIN transactions t ON pi.transaction_id = t.id
+      WHERE pi.id = $1
+    `, [itemId]);
+    
+    if (itemResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Item not found'
+      });
+    }
+    
+    const trackingNumber = itemResult.rows[0].tracking_number || itemResult.rows[0].transaction_number;
+    
+    // Get all transactions in the chain
+    const historyResult = await pool.query(`
+      SELECT 
+        t.id,
+        t.transaction_number,
+        t.tracking_number,
+        t.previous_transaction_number,
+        t.transaction_type,
+        t.transaction_date,
+        t.maturity_date,
+        t.expiry_date,
+        t.principal_amount,
+        t.interest_rate,
+        t.interest_amount,
+        t.service_charge,
+        t.total_amount,
+        t.amount_paid,
+        t.balance,
+        t.discount_amount,
+        t.advance_interest,
+        t.new_principal_loan,
+        t.status,
+        t.notes
+      FROM transactions t
+      WHERE t.tracking_number = $1
+      ORDER BY t.transaction_date ASC
+    `, [trackingNumber]);
+    
+    const transactionHistory = historyResult.rows.map(row => ({
+      id: row.id,
+      transactionNumber: row.transaction_number,
+      trackingNumber: row.tracking_number,
+      previousTransactionNumber: row.previous_transaction_number,
+      transactionType: row.transaction_type,
+      transactionDate: row.transaction_date,
+      maturityDate: row.maturity_date,
+      expiryDate: row.expiry_date,
+      principalAmount: parseFloat(row.principal_amount || 0),
+      interestRate: parseFloat(row.interest_rate || 0) * 100,
+      interestAmount: parseFloat(row.interest_amount || 0),
+      serviceCharge: parseFloat(row.service_charge || 0),
+      totalAmount: parseFloat(row.total_amount || 0),
+      amountPaid: parseFloat(row.amount_paid || 0),
+      balance: parseFloat(row.balance || 0),
+      discountAmount: parseFloat(row.discount_amount || 0),
+      advanceInterest: parseFloat(row.advance_interest || 0),
+      newPrincipalLoan: row.new_principal_loan ? parseFloat(row.new_principal_loan) : null,
+      status: row.status,
+      notes: row.notes
+    }));
+    
+    console.log(`✅ Found ${transactionHistory.length} transactions in chain for item ${itemId}`);
+    
+    res.json({
+      success: true,
+      message: 'Transaction history retrieved successfully',
+      data: {
+        trackingNumber: trackingNumber,
+        transactionCount: transactionHistory.length,
+        history: transactionHistory
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Error fetching transaction history:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch transaction history',
       error: error.message
     });
   }
@@ -373,6 +489,74 @@ router.post('/set-auction-price', authorizeRoles('administrator', 'admin', 'mana
     res.status(500).json({
       success: false,
       message: 'Failed to set auction price',
+      error: error.message
+    });
+  }
+});
+
+// Remove auction price (unset from auction)
+router.post('/remove-auction-price', authorizeRoles('administrator', 'admin', 'manager', 'auctioneer'), async (req, res) => {
+  try {
+    const { itemId } = req.body;
+    
+    console.log(`🚫 [${new Date().toISOString()}] Removing auction price for item ${itemId} - User: ${req.user.username}`);
+    
+    // Validate input
+    if (!itemId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid itemId'
+      });
+    }
+    
+    // Check if item exists
+    const checkResult = await pool.query(`
+      SELECT pi.id, pi.auction_price
+      FROM pawn_items pi
+      WHERE pi.id = $1
+    `, [itemId]);
+    
+    if (checkResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Item not found'
+      });
+    }
+    
+    const item = checkResult.rows[0];
+    
+    // Check if auction price is already null
+    if (!item.auction_price) {
+      return res.status(400).json({
+        success: false,
+        message: 'Item does not have an auction price set'
+      });
+    }
+    
+    // Remove auction price (set to NULL)
+    const updateResult = await pool.query(`
+      UPDATE pawn_items
+      SET auction_price = NULL,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = $1
+      RETURNING id
+    `, [itemId]);
+    
+    console.log(`✅ Auction price removed for item ${itemId} - returned to pending status`);
+    
+    res.json({
+      success: true,
+      message: 'Auction price removed successfully. Item returned to pending status.',
+      data: {
+        itemId: updateResult.rows[0].id
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Error removing auction price:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to remove auction price',
       error: error.message
     });
   }

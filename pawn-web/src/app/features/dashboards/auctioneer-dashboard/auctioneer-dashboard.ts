@@ -1,9 +1,11 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild, ElementRef, AfterViewChecked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { StatusColorService } from '../../../core/services/status-color.service';
+import { ToastService } from '../../../core/services/toast.service';
+import { CurrencyInputDirective } from '../../../shared/directives/currency-input.directive';
 
 interface DashboardCard {
   title: string;
@@ -29,16 +31,43 @@ interface AuctionItem {
 
 interface ExpiredItem {
   id: number;
+  transactionId?: number;
   ticketNumber: string;
+  trackingNumber?: string;
   loanId: string;
   itemDescription: string;
   pawnerName: string;
   appraisedValue: number;
   loanAmount: number;
+  currentPrincipal?: number;
   expiredDate: Date;
   category: string;
   auctionPrice?: number;
   isSetForAuction?: boolean;
+  showHistory?: boolean;
+  transactionHistory?: TransactionHistoryItem[];
+  loadingHistory?: boolean;
+}
+
+interface TransactionHistoryItem {
+  id: number;
+  transactionNumber: string;
+  transactionType: string;
+  transactionDate: Date;
+  maturityDate?: Date;
+  expiryDate?: Date;
+  principalAmount: number;
+  interestRate: number;
+  interestAmount: number;
+  serviceCharge: number;
+  totalAmount: number;
+  amountPaid: number;
+  balance: number;
+  discountAmount?: number;
+  advanceInterest?: number;
+  newPrincipalLoan?: number;
+  status: string;
+  notes?: string;
 }
 
 interface AuctionStats {
@@ -55,9 +84,11 @@ interface AuctionStats {
   templateUrl: './auctioneer-dashboard.html',
   styleUrl: './auctioneer-dashboard.css',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule]
+  imports: [CommonModule, RouterModule, FormsModule, CurrencyInputDirective]
 })
-export class AuctioneerDashboard implements OnInit {
+export class AuctioneerDashboard implements OnInit, AfterViewChecked {
+  @ViewChild('auctionPriceInput') auctionPriceInput?: ElementRef<HTMLInputElement>;
+  
   currentDateTime = new Date();
   isLoading = false;
   dashboardCards: DashboardCard[] = [];
@@ -66,6 +97,7 @@ export class AuctioneerDashboard implements OnInit {
   showPriceModal = false;
   selectedExpiredItem: ExpiredItem | null = null;
   tempAuctionPrice = '';
+  private shouldFocusInput = false;
   auctionStats: AuctionStats = {
     total_auctions: 0,
     active_auctions: 0,
@@ -77,13 +109,22 @@ export class AuctioneerDashboard implements OnInit {
 
   constructor(
     public statusColorService: StatusColorService,
-    private http: HttpClient
+    private http: HttpClient,
+    private toastService: ToastService
   ) {}
 
   ngOnInit() {
     this.loadDashboardData();
     this.loadExpiredItems();
     this.updateTime();
+  }
+
+  ngAfterViewChecked() {
+    // Auto-focus the input when modal opens
+    if (this.shouldFocusInput && this.auctionPriceInput) {
+      this.auctionPriceInput.nativeElement.focus();
+      this.shouldFocusInput = false;
+    }
   }
 
   private loadDashboardData() {
@@ -199,21 +240,25 @@ export class AuctioneerDashboard implements OnInit {
       if (response && response.success && response.data) {
         console.log('📦 Expired items data:', response.data);
 
-        this.expiredItems = response.data.map((item: any) => ({
-          id: item.id,
-          ticketNumber: item.ticketNumber || item.ticket_number || 'N/A',
-          loanId: item.loanId || item.loan_id || '',
-          itemDescription: item.itemDescription || item.item_description || item.description || 'N/A',
-          pawnerName: item.pawnerName || item.pawner_name || 'N/A',
-          appraisedValue: item.appraisedValue || item.appraised_value || item.appraisal_value || 0,
-          loanAmount: item.loanAmount || item.loan_amount || item.principal_amount || 0,
-          expiredDate: new Date(item.expiredDate || item.expired_date || item.expiry_date),
-          category: item.category || 'N/A',
-          auctionPrice: item.auctionPrice || item.auction_price || undefined,
-          isSetForAuction: item.isSetForAuction || item.is_set_for_auction || false
-        }));
-
-        console.log(`✅ Successfully loaded ${this.expiredItems.length} expired items`);
+      this.expiredItems = response.data.map((item: any) => ({
+        id: item.id,
+        transactionId: item.transactionId || item.transaction_id,
+        ticketNumber: item.ticketNumber || item.ticket_number || 'N/A',
+        trackingNumber: item.trackingNumber || item.tracking_number || item.ticketNumber || item.ticket_number,
+        loanId: item.loanId || item.loan_id || '',
+        itemDescription: item.itemDescription || item.item_description || item.description || `Item #${item.id}`,
+        pawnerName: item.pawnerName || item.pawner_name || 'Unknown',
+        appraisedValue: item.appraisedValue || item.appraised_value || item.appraisal_value || 0,
+        loanAmount: item.loanAmount || item.loan_amount || item.principal_amount || 0,
+        currentPrincipal: item.currentPrincipal || item.current_principal || item.principal_amount || 0,
+        expiredDate: new Date(item.expiredDate || item.expired_date || item.expiry_date),
+        category: item.category || 'Uncategorized',
+        auctionPrice: item.auctionPrice || item.auction_price || undefined,
+        isSetForAuction: item.isSetForAuction || item.is_set_for_auction || false,
+        showHistory: false,
+        transactionHistory: [],
+        loadingHistory: false
+      }));        console.log(`✅ Successfully loaded ${this.expiredItems.length} expired items`);
         console.log('📦 Mapped expired items:', this.expiredItems);
       } else {
         console.warn('⚠️ No expired items data in response');
@@ -232,12 +277,87 @@ export class AuctioneerDashboard implements OnInit {
     this.selectedExpiredItem = item;
     this.tempAuctionPrice = item.auctionPrice?.toString() || '';
     this.showPriceModal = true;
+    this.shouldFocusInput = true; // Flag to focus input after view is rendered
   }
 
   closePriceModal(): void {
     this.showPriceModal = false;
     this.selectedExpiredItem = null;
     this.tempAuctionPrice = '';
+    this.shouldFocusInput = false;
+  }
+
+  async toggleTransactionHistory(item: ExpiredItem): Promise<void> {
+    // Toggle the display
+    item.showHistory = !item.showHistory;
+
+    // If showing and history not yet loaded, fetch it
+    if (item.showHistory && (!item.transactionHistory || item.transactionHistory.length === 0)) {
+      await this.loadTransactionHistory(item);
+    }
+  }
+
+  async loadTransactionHistory(item: ExpiredItem): Promise<void> {
+    try {
+      item.loadingHistory = true;
+      console.log(`📜 Loading transaction history for item ${item.id}...`);
+
+      const apiUrl = `http://localhost:3000/api/items/expired/${item.id}/history`;
+      const response = await this.http.get<any>(apiUrl).toPromise();
+
+      if (response && response.success && response.data) {
+        item.transactionHistory = response.data.history.map((tx: any) => ({
+          id: tx.id,
+          transactionNumber: tx.transactionNumber,
+          transactionType: tx.transactionType,
+          transactionDate: new Date(tx.transactionDate),
+          maturityDate: tx.maturityDate ? new Date(tx.maturityDate) : undefined,
+          expiryDate: tx.expiryDate ? new Date(tx.expiryDate) : undefined,
+          principalAmount: tx.principalAmount,
+          interestRate: tx.interestRate,
+          interestAmount: tx.interestAmount,
+          serviceCharge: tx.serviceCharge,
+          totalAmount: tx.totalAmount,
+          amountPaid: tx.amountPaid,
+          balance: tx.balance,
+          discountAmount: tx.discountAmount,
+          advanceInterest: tx.advanceInterest,
+          newPrincipalLoan: tx.newPrincipalLoan,
+          status: tx.status,
+          notes: tx.notes
+        }));
+        console.log(`✅ Loaded ${item.transactionHistory?.length} transactions for item ${item.id}`);
+      }
+    } catch (error: any) {
+      console.error('❌ Error loading transaction history:', error);
+      item.transactionHistory = [];
+    } finally {
+      item.loadingHistory = false;
+    }
+  }
+
+  getTransactionTypeLabel(type: string): string {
+    const labels: { [key: string]: string } = {
+      'new_loan': 'New Loan',
+      'renewal': 'Renewal',
+      'partial_payment': 'Partial Payment',
+      'full_payment': 'Full Payment',
+      'redemption': 'Redemption',
+      'additional_loan': 'Additional Loan'
+    };
+    return labels[type] || type;
+  }
+
+  getTransactionTypeColor(type: string): string {
+    const colors: { [key: string]: string } = {
+      'new_loan': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+      'renewal': 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
+      'partial_payment': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+      'full_payment': 'bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200',
+      'redemption': 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200',
+      'additional_loan': 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200'
+    };
+    return colors[type] || 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
   }
 
   async setAuctionPrice(): Promise<void> {
@@ -258,27 +378,95 @@ export class AuctioneerDashboard implements OnInit {
           console.log('✅ Auction price set response:', response);
 
           if (response && response.success) {
+            // Store item description before updating
+            const itemDescription = this.selectedExpiredItem!.itemDescription;
+            const priceFormatted = price.toLocaleString();
+            
             // Update local data on successful save
             this.selectedExpiredItem!.auctionPrice = price;
             this.selectedExpiredItem!.isSetForAuction = true;
 
-            console.log(`✅ Auction price set successfully for ${this.selectedExpiredItem!.itemDescription}: ₱${price.toLocaleString()}`);
+            console.log(`✅ Auction price set successfully for ${itemDescription}: ₱${priceFormatted}`);
             this.closePriceModal();
 
             // Reload expired items to get updated data
             await this.loadExpiredItems();
+
+            // Show success toast
+            this.toastService.showSuccess(
+              'Auction Price Set',
+              `Price set to ₱${priceFormatted} for "${itemDescription}"`
+            );
           } else {
             console.error('❌ Failed to set auction price:', response?.message);
-            alert('Failed to set auction price. Please try again.');
+            this.toastService.showError(
+              'Failed to Set Price',
+              response?.message || 'An error occurred. Please try again.'
+            );
           }
         } catch (error: any) {
           console.error('❌ Error setting auction price:', error);
           console.error('❌ Error details:', error?.error || error?.message || error);
-          alert('Failed to set auction price. Please try again.');
+          this.toastService.showError(
+            'Failed to Set Price',
+            'An error occurred. Please try again.'
+          );
         }
       }
     }
-  }  parseFloat(value: string): number {
+  }
+
+  async removeAuctionPrice(item: ExpiredItem): Promise<void> {
+    // Create a detailed confirmation message
+    const priceDisplay = item.auctionPrice ? `₱${item.auctionPrice.toLocaleString()}` : 'Not Set';
+    const itemInfo = `Item: ${item.itemDescription}\nCurrent Auction Price: ${priceDisplay}`;
+    const warning = `\n\n⚠️ Warning: This action will:\n• Remove the auction price\n• Return the item to "Pending" status\n• Remove it from the auction list\n\nAre you sure you want to proceed?`;
+    const confirmMessage = itemInfo + warning;
+    
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+
+    try {
+      console.log(`🚫 Removing auction price for item ${item.id}...`);
+      
+      const apiUrl = 'http://localhost:3000/api/items/remove-auction-price';
+      const payload = { itemId: item.id };
+
+      const response = await this.http.post<any>(apiUrl, payload).toPromise();
+
+      if (response && response.success) {
+        console.log(`✅ Auction price removed successfully for item ${item.id}`);
+
+        // Update local data
+        item.auctionPrice = undefined;
+        item.isSetForAuction = false;
+
+        // Reload expired items to get fresh data
+        await this.loadExpiredItems();
+
+        // Show success toast
+        this.toastService.showSuccess(
+          'Auction Price Removed',
+          `"${item.itemDescription}" has been returned to Pending status.`
+        );
+      } else {
+        console.error('❌ Failed to remove auction price:', response?.message);
+        this.toastService.showError(
+          'Failed to Remove Price',
+          response?.message || 'An error occurred. Please try again.'
+        );
+      }
+    } catch (error: any) {
+      console.error('❌ Error removing auction price:', error);
+      this.toastService.showError(
+        'Failed to Remove Price',
+        'An error occurred. Please try again.'
+      );
+    }
+  }
+
+  parseFloat(value: string): number {
     return parseFloat(value);
   }
 

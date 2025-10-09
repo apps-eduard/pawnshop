@@ -162,9 +162,18 @@ exports.up = async function(knex) {
     table.decimal('appraised_value', 15, 2).notNullable();
     table.decimal('loan_amount', 15, 2).notNullable();
     table.text('appraisal_notes');
-    table.string('status', 20).defaultTo('in_vault');
+    table.string('status', 20).defaultTo('in_vault'); // in_vault, redeemed, auctioned, sold, expired
     table.string('location', 100);
     table.integer('appraised_by').unsigned().references('id').inTable('employees');
+    
+    // Auction-related columns
+    table.decimal('auction_price', 15, 2); // Starting/minimum auction price
+    table.date('auction_date'); // Date when item was/will be auctioned
+    table.integer('auctioned_by').unsigned().references('id').inTable('employees'); // Auctioneer who handled it
+    table.decimal('winning_bid', 15, 2); // Final winning bid amount
+    table.string('winning_bidder', 100); // Name of winning bidder
+    table.date('sold_date'); // Date when item was sold
+    
     table.timestamp('created_at').defaultTo(knex.fn.now());
     table.timestamp('updated_at').defaultTo(knex.fn.now());
   });
