@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { StatisticsService, DailyStatistics } from '../../../core/services/statistics.service';
 
 interface DashboardCard {
   title: string;
@@ -41,53 +42,83 @@ export class ManagerDashboard implements OnInit {
   currentDateTime = new Date();
   isLoading = false;
   dashboardCards: DashboardCard[] = [];
+  transactionCards: DashboardCard[] = [];
   branchData: BranchData[] = [];
   performanceMetrics: PerformanceMetric[] = [];
   selectedPeriod = 'month';
+
+  constructor(private statisticsService: StatisticsService) {}
 
   ngOnInit() {
     this.loadDashboardData();
     this.updateTime();
   }
 
-  private loadDashboardData() {
+  private async loadDashboardData() {
     this.isLoading = true;
 
-    // Mock dashboard data for Manager
-    this.dashboardCards = [
-      {
-        title: 'Total Revenue',
-        count: 2500000,
-        icon: 'revenue',
-        color: 'green',
-        route: '/reports/revenue',
-        percentage: 15
-      },
-      {
-        title: 'Active Loans',
-        count: 1247,
-        icon: 'loans',
-        color: 'blue',
-        route: '/loans',
-        amount: 18500000
-      },
-      {
-        title: 'Branch Performance',
-        count: 5,
-        icon: 'branches',
-        color: 'purple',
-        route: '/branches',
-        percentage: 8
-      },
-      {
-        title: 'Staff Efficiency',
-        count: 95,
-        icon: 'efficiency',
-        color: 'orange',
-        route: '/staff',
-        percentage: 12
+    try {
+      // Fetch today's statistics from API
+      const response = await this.statisticsService.getTodayStatistics();
+      
+      if (response.success) {
+        const stats = response.data;
+        
+        // Create transaction cards from real data
+        this.transactionCards = [
+          {
+            title: 'Auction Sales',
+            count: stats.auctionSales.count,
+            icon: 'auction',
+            color: 'green',
+            route: '/transactions/auction-items',
+            amount: stats.auctionSales.totalAmount
+          },
+          {
+            title: 'Redeem',
+            count: stats.redeem.count,
+            icon: 'redeem',
+            color: 'blue',
+            route: '/transactions/list',
+            amount: stats.redeem.totalAmount
+          },
+          {
+            title: 'Renew',
+            count: stats.renew.count,
+            icon: 'renew',
+            color: 'purple',
+            route: '/transactions/list',
+            amount: stats.renew.totalAmount
+          },
+          {
+            title: 'Partial',
+            count: stats.partial.count,
+            icon: 'partial',
+            color: 'orange',
+            route: '/transactions/list',
+            amount: stats.partial.totalAmount
+          },
+          {
+            title: 'Additional',
+            count: stats.additional.count,
+            icon: 'additional',
+            color: 'indigo',
+            route: '/transactions/list',
+            amount: stats.additional.totalAmount
+          }
+        ];
+        
+        console.log('✅ Loaded today\'s statistics:', stats);
+      } else {
+        console.error('❌ Failed to load statistics:', response.message);
+        // Initialize with empty data
+        this.transactionCards = this.getEmptyTransactionCards();
       }
-    ];
+    } catch (error) {
+      console.error('❌ Error loading statistics:', error);
+      // Initialize with empty data
+      this.transactionCards = this.getEmptyTransactionCards();
+    }
 
     // Mock branch data
     this.branchData = [

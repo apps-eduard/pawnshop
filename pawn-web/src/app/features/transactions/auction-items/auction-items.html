@@ -68,9 +68,19 @@
             </select>
             <button
               (click)="toggleSortDirection()"
-              class="px-2.5 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
-              <svg class="w-4 h-4" [class.rotate-180]="sortDirection === 'desc'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              class="px-2.5 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200"
+              title="Toggle sort direction">
+              <svg class="w-4 h-4 text-gray-700 dark:text-gray-300 transition-transform duration-300" [class.rotate-180]="sortDirection === 'desc'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
+              </svg>
+            </button>
+            <button
+              (click)="manualRefresh()"
+              [disabled]="isRefreshing || isLoading"
+              class="px-2.5 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+              title="Refresh auction items list">
+              <svg class="w-4 h-4 text-blue-600 dark:text-blue-400 transition-transform" [class.animate-spin]="isRefreshing" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
               </svg>
             </button>
           </div>
@@ -85,10 +95,13 @@
     </div>
 
     <!-- Results Count -->
-    <div *ngIf="!isLoading" class="mb-3">
+    <div *ngIf="!isLoading" class="mb-3 flex items-center justify-between">
       <p class="text-sm text-gray-600 dark:text-gray-400">
         Showing {{ filteredItems.length }} of {{ auctionItems.length }} items
       </p>
+      <span *ngIf="isRefreshing" class="text-xs text-blue-600 dark:text-blue-400 animate-pulse">
+        Refreshing...
+      </span>
     </div>
 
     <!-- Auction Items Table -->
@@ -261,5 +274,222 @@
       </p>
     </div>
 
+  </div>
+</div>
+
+<!-- Sale Dialog Modal -->
+<div *ngIf="showSaleDialog" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+  <div class="flex items-center justify-center min-h-screen pt-2 px-4 pb-4 text-center sm:block sm:p-0">
+    <!-- Background overlay -->
+    <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" (click)="closeSaleDialog()"></div>
+
+    <!-- Modal panel - Compact for 1366x768 -->
+    <div class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-4 sm:align-middle sm:max-w-2xl sm:w-full max-h-[95vh] overflow-y-auto">
+      <!-- Header - Compact -->
+      <div class="bg-green-600 dark:bg-green-700 px-4 py-2.5">
+        <div class="flex items-center justify-between">
+          <h3 class="text-base font-semibold text-white flex items-center">
+            <svg class="w-5 h-5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            Process Auction Sale
+          </h3>
+          <button (click)="closeSaleDialog()" class="text-white hover:text-gray-200 transition-colors">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Body - Compact Layout -->
+      <div class="px-4 py-3">
+        <div *ngIf="selectedSaleItem" class="space-y-3">
+          
+          <!-- Two Column Layout for Item and Price Info -->
+          <div class="grid grid-cols-2 gap-3">
+            
+            <!-- Item Details - Left Column -->
+            <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+              <h4 class="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">Item Details</h4>
+              <div class="space-y-1.5 text-xs">
+                <div class="flex justify-between">
+                  <span class="text-gray-600 dark:text-gray-400">Ticket:</span>
+                  <span class="font-medium text-gray-900 dark:text-white">{{ selectedSaleItem.ticketNumber }}</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-gray-600 dark:text-gray-400">Item:</span>
+                  <span class="font-medium text-gray-900 dark:text-white truncate ml-2">{{ selectedSaleItem.itemDescription }}</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-gray-600 dark:text-gray-400">Category:</span>
+                  <span class="font-medium text-gray-900 dark:text-white">{{ selectedSaleItem.category }}</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-gray-600 dark:text-gray-400">Pawner:</span>
+                  <span class="font-medium text-gray-900 dark:text-white truncate ml-2">{{ selectedSaleItem.pawnerName }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Price Information - Right Column -->
+            <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3">
+              <h4 class="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">Price Information</h4>
+              <div class="space-y-1.5 text-xs">
+                <div class="flex justify-between">
+                  <span class="text-gray-600 dark:text-gray-400">Appraised:</span>
+                  <span class="font-medium text-gray-900 dark:text-white">₱{{ selectedSaleItem.appraisedValue.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-gray-600 dark:text-gray-400">Loan:</span>
+                  <span class="font-medium text-gray-900 dark:text-white">₱{{ selectedSaleItem.loanAmount.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}</span>
+                </div>
+                <div class="flex justify-between pt-1.5 border-t border-blue-200 dark:border-blue-700">
+                  <span class="text-green-600 dark:text-green-400 font-semibold">Auction:</span>
+                  <span class="text-base font-bold text-green-600 dark:text-green-400">₱{{ selectedSaleItem.auctionPrice.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Discount Input - Full Width -->
+          <div class="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-3">
+            <label for="discountAmount" class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+              Discount Amount (Optional)
+            </label>
+            <input
+              #discountInput
+              id="discountAmount"
+              type="text"
+              appCurrencyInput
+              [maxValue]="selectedSaleItem.auctionPrice"
+              [(ngModel)]="discountAmount"
+              (ngModelChange)="calculateFinalPrice()"
+              placeholder="0.00"
+              class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white">
+            
+            <!-- Final Price Display -->
+            <div *ngIf="discountAmount && discountAmount > 0" class="flex justify-between items-center pt-2 mt-2 border-t border-green-200 dark:border-green-700">
+              <span class="text-sm text-green-700 dark:text-green-300 font-bold">Final Price:</span>
+              <span class="text-lg font-bold text-green-700 dark:text-green-300">₱{{ finalPrice.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}</span>
+            </div>
+          </div>
+
+          <!-- Payment Information - Grid Layout -->
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label for="receivedAmount" class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Received Amount</label>
+              <input
+                id="receivedAmount"
+                type="text"
+                appCurrencyInput
+                [(ngModel)]="receivedAmount"
+                (ngModelChange)="calculateChange()"
+                placeholder="Enter amount received"
+                class="w-full px-2.5 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white">
+            </div>
+
+            <div>
+              <label for="changeAmount" class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Change</label>
+              <div class="w-full px-2.5 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-800 dark:text-white font-semibold"
+                   [class.text-green-600]="changeAmount >= 0 && receivedAmount > 0"
+                   [class.dark:text-green-400]="changeAmount >= 0 && receivedAmount > 0"
+                   [class.text-red-600]="receivedAmount > 0 && receivedAmount < finalPrice"
+                   [class.dark:text-red-400]="receivedAmount > 0 && receivedAmount < finalPrice">
+                ₱{{ changeAmount.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
+              </div>
+            </div>
+          </div>
+
+          <!-- Payment Status Indicator -->
+          <div *ngIf="receivedAmount > 0" class="text-xs">
+            <div *ngIf="receivedAmount >= finalPrice" class="flex items-center text-green-600 dark:text-green-400">
+              <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+              </svg>
+              <span>Payment sufficient (Change: ₱{{ changeAmount.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }})</span>
+            </div>
+            <div *ngIf="receivedAmount < finalPrice" class="flex items-center text-red-600 dark:text-red-400">
+              <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
+              </svg>
+              <span>Insufficient payment (Short: ₱{{ (finalPrice - receivedAmount).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }})</span>
+            </div>
+          </div>
+
+          <!-- Buyer Information - Grid Layout -->
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label for="buyerName" class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Buyer Name *</label>
+              <input
+                id="buyerName"
+                type="text"
+                [(ngModel)]="buyerName"
+                placeholder="Enter buyer's name"
+                class="w-full px-2.5 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                required>
+            </div>
+
+            <div>
+              <label for="buyerContact" class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Contact Number</label>
+              <input
+                id="buyerContact"
+                type="text"
+                [(ngModel)]="buyerContact"
+                placeholder="Contact number"
+                class="w-full px-2.5 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white">
+            </div>
+          </div>
+
+          <!-- Notes - Compact -->
+          <div>
+            <label for="saleNotes" class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Notes (Optional)</label>
+            <textarea
+              id="saleNotes"
+              [(ngModel)]="saleNotes"
+              placeholder="Add notes..."
+              rows="2"
+              class="w-full px-2.5 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white resize-none"></textarea>
+          </div>
+
+          <!-- Warning Notice - Compact -->
+          <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-2">
+            <div class="flex">
+              <svg class="w-4 h-4 text-yellow-600 dark:text-yellow-400 mt-0.5 mr-1.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+              </svg>
+              <p class="text-xs text-yellow-700 dark:text-yellow-400">
+                This action will mark the item as sold and cannot be undone. Ensure all information is correct.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer - Compact -->
+      <div class="bg-gray-50 dark:bg-gray-700 px-4 py-2.5 flex justify-end space-x-2">
+        <button
+          (click)="confirmSale()"
+          [disabled]="!buyerName || !buyerName.trim() || isProcessingSale"
+          class="px-3 py-1.5 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center">
+          <svg *ngIf="isProcessingSale" class="animate-spin -ml-1 mr-1.5 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          <svg *ngIf="!isProcessingSale" class="-ml-1 mr-1.5 h-4 w-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+          </svg>
+          {{ isProcessingSale ? 'Processing...' : 'Confirm Sale' }}
+        </button>
+        <button
+          (click)="closeSaleDialog()"
+          class="px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-md hover:bg-gray-50 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors flex items-center">
+          <svg class="-ml-1 mr-1.5 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+          Cancel
+        </button>
+      </div>
+    </div>
   </div>
 </div>

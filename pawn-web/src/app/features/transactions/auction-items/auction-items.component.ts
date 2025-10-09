@@ -1,9 +1,10 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ElementRef, AfterViewChecked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { ItemService } from '../../../core/services/item.service';
 import { ToastService } from '../../../core/services/toast.service';
+import { CurrencyInputDirective } from '../../../shared/directives/currency-input.directive';
 
 interface AuctionItem {
   id: number;
@@ -22,14 +23,20 @@ interface AuctionItem {
 @Component({
   selector: 'app-auction-items',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule],
+  imports: [CommonModule, RouterModule, FormsModule, CurrencyInputDirective],
   templateUrl: './auction-items.html',
   styleUrl: './auction-items.css'
 })
-export class AuctionItemsComponent implements OnInit {
+export class AuctionItemsComponent implements OnInit, OnDestroy, AfterViewChecked {
+  @ViewChild('discountInput') discountInput?: ElementRef<HTMLInputElement>;
+  
   auctionItems: AuctionItem[] = [];
   filteredItems: AuctionItem[] = [];
   isLoading = true;
+  isRefreshing = false;
+  private refreshInterval: any;
+  private readonly AUTO_REFRESH_INTERVAL = 30000; // 30 seconds
+  private shouldFocusDiscount = false;
 
   // Filter properties
   searchQuery = '';
@@ -41,6 +48,18 @@ export class AuctionItemsComponent implements OnInit {
   categories: string[] = ['All'];
   statuses = ['All', 'Available', 'Bidding', 'Sold', 'Withdrawn'];
 
+  // Sale dialog properties
+  showSaleDialog = false;
+  selectedSaleItem: AuctionItem | null = null;
+  buyerName = '';
+  buyerContact = '';
+  saleNotes = '';
+  discountAmount: number = 0;
+  finalPrice: number = 0;
+  receivedAmount: number = 0;
+  changeAmount: number = 0;
+  isProcessingSale = false;
+
   constructor(
     private itemService: ItemService,
     private toastService: ToastService,
@@ -49,6 +68,32 @@ export class AuctionItemsComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadAuctionItems();
+    this.startAutoRefresh();
+  }
+
+  ngOnDestroy(): void {
+    this.stopAutoRefresh();
+  }
+
+  ngAfterViewChecked(): void {
+    if (this.shouldFocusDiscount && this.discountInput) {
+      this.discountInput.nativeElement.focus();
+      this.shouldFocusDiscount = false;
+    }
+  }
+
+  startAutoRefresh(): void {
+    // Auto-refresh every 30 seconds to keep data synchronized
+    this.refreshInterval = setInterval(() => {
+      this.refreshAuctionItems();
+    }, this.AUTO_REFRESH_INTERVAL);
+  }
+
+  stopAutoRefresh(): void {
+    if (this.refreshInterval) {
+      clearInterval(this.refreshInterval);
+      this.refreshInterval = null;
+    }
   }
 
   async loadAuctionItems(): Promise<void> {
@@ -61,7 +106,7 @@ export class AuctionItemsComponent implements OnInit {
         this.auctionItems = response.data.map((item: any) => ({
           id: item.id,
           ticketNumber: item.ticketNumber,
-          itemDescription: item.itemDescription,
+          itemDescription: item.itemDescription || item.descriptionName || item.category || 'Item',
           category: item.category,
           appraisedValue: item.appraisedValue,
           loanAmount: item.loanAmount,
@@ -91,6 +136,63 @@ export class AuctionItemsComponent implements OnInit {
     } finally {
       this.isLoading = false;
     }
+  }
+
+  async refreshAuctionItems(): Promise<void> {
+    // Manual refresh - doesn't show loading spinner, only refresh indicator
+    this.isRefreshing = true;
+
+    try {
+      const response = await this.itemService.getAuctionItems();
+
+      if (response.success && response.data) {
+        const previousCount = this.auctionItems.length;
+        
+        this.auctionItems = response.data.map((item: any) => ({
+          id: item.id,
+          ticketNumber: item.ticketNumber,
+          itemDescription: item.itemDescription || item.descriptionName || item.category || 'Item',
+          category: item.category,
+          appraisedValue: item.appraisedValue,
+          loanAmount: item.loanAmount,
+          auctionPrice: item.auctionPrice,
+          status: item.status || 'available',
+          expiredDate: item.expiredDate,
+          grantedDate: item.grantedDate,
+          pawnerName: item.pawnerName
+        }));
+
+        // Update categories
+        const uniqueCategories = [...new Set(this.auctionItems.map(item => item.category))];
+        this.categories = ['All', ...uniqueCategories.sort()];
+
+        this.filteredItems = [...this.auctionItems];
+        
+        // Show notification if items changed
+        const newCount = this.auctionItems.length;
+        if (newCount !== previousCount) {
+          const diff = newCount - previousCount;
+          if (diff > 0) {
+            this.toastService.showInfo('List Updated', `${diff} new item(s) added to auction`);
+          } else {
+            this.toastService.showWarning('List Updated', `${Math.abs(diff)} item(s) removed from auction`);
+          }
+        }
+        
+        console.log(`🔄 Refreshed: ${this.auctionItems.length} auction items`);
+      }
+    } catch (error) {
+      console.error('Error refreshing auction items:', error);
+      // Don't show error toast for background refresh
+    } finally {
+      this.isRefreshing = false;
+    }
+  }
+
+  manualRefresh(): void {
+    // User clicked refresh button
+    this.toastService.showInfo('Refreshing', 'Updating auction items list...');
+    this.refreshAuctionItems();
   }
 
   applyFilters(): void {
@@ -211,19 +313,148 @@ export class AuctionItemsComponent implements OnInit {
     }
   }
 
-  saleItem(item: AuctionItem): void {
-    if (confirm(`Process sale for "${item.itemDescription}"?`)) {
-      // Update item status to sold
-      item.status = 'sold';
+  async saleItem(item: AuctionItem): Promise<void> {
+    // First, verify the item is still available for auction
+    try {
+      // Re-fetch the specific item to check current status
+      const response = await this.itemService.validateAuctionItem(item.id);
+      
+      if (!response.success) {
+        this.toastService.showError(
+          'Item Not Available',
+          response.message || 'This item is no longer available for auction.'
+        );
+        // Remove from local list
+        this.auctionItems = this.auctionItems.filter(i => i.id !== item.id);
+        this.applyFilters();
+        return;
+      }
+    } catch (error) {
+      console.error('Error verifying item availability:', error);
+      this.toastService.showError(
+        'Verification Failed',
+        'Could not verify item availability. Please try again.'
+      );
+      return;
+    }
+    
+    // Open sale dialog
+    this.selectedSaleItem = item;
+    this.buyerName = '';
+    this.buyerContact = '';
+    this.saleNotes = '';
+    this.discountAmount = 0;
+    this.finalPrice = item.auctionPrice;
+    this.receivedAmount = 0;
+    this.changeAmount = 0;
+    this.showSaleDialog = true;
+    this.shouldFocusDiscount = true;
+  }
 
-      // Here you would typically call an API to process the sale
-      console.log('Processing sale for item:', item);
+  closeSaleDialog(): void {
+    this.showSaleDialog = false;
+    this.selectedSaleItem = null;
+    this.buyerName = '';
+    this.buyerContact = '';
+    this.saleNotes = '';
+    this.discountAmount = 0;
+    this.finalPrice = 0;
+    this.receivedAmount = 0;
+    this.changeAmount = 0;
+    this.isProcessingSale = false;
+  }
 
-      // Show success message or navigate to sale processing page
-      alert(`Sale processed for "${item.itemDescription}"`);
+  calculateFinalPrice(): void {
+    if (!this.selectedSaleItem) return;
+    
+    const discount = this.discountAmount || 0;
+    const auctionPrice = this.selectedSaleItem.auctionPrice;
+    
+    // Ensure discount doesn't exceed auction price
+    if (discount > auctionPrice) {
+      this.discountAmount = auctionPrice;
+      this.finalPrice = 0;
+    } else if (discount < 0) {
+      this.discountAmount = 0;
+      this.finalPrice = auctionPrice;
+    } else {
+      this.finalPrice = auctionPrice - discount;
+    }
+    
+    // Recalculate change when final price changes
+    this.calculateChange();
+  }
 
-      // Refresh the filtered items
-      this.applyFilters();
+  calculateChange(): void {
+    const received = this.receivedAmount || 0;
+    const change = received - this.finalPrice;
+    this.changeAmount = change >= 0 ? change : 0;
+  }
+
+  async confirmSale(): Promise<void> {
+    if (!this.selectedSaleItem || !this.buyerName || !this.buyerName.trim()) {
+      this.toastService.showWarning('Validation Error', 'Please enter buyer name');
+      return;
+    }
+
+    this.isProcessingSale = true;
+
+    try {
+      // Prepare sale data
+      const saleData = {
+        itemId: this.selectedSaleItem.id,
+        buyerName: this.buyerName.trim(),
+        buyerContact: this.buyerContact || undefined,
+        saleNotes: this.saleNotes || undefined,
+        discountAmount: this.discountAmount || 0,
+        finalPrice: this.finalPrice,
+        receivedAmount: this.receivedAmount || 0,
+        changeAmount: this.changeAmount || 0
+      };
+      
+      console.log('Processing sale:', saleData);
+
+      // Call API to save the sale
+      const response = await this.itemService.confirmAuctionSale(saleData);
+
+      if (!response.success) {
+        this.toastService.showError('Sale Failed', response.message);
+        return;
+      }
+
+      // Update item status in local list
+      const itemIndex = this.auctionItems.findIndex(i => i.id === this.selectedSaleItem!.id);
+      if (itemIndex !== -1) {
+        this.auctionItems.splice(itemIndex, 1); // Remove from auction list since it's sold
+      }
+
+      // Build success message
+      let successMessage = `Successfully sold "${this.selectedSaleItem.itemDescription}" to ${this.buyerName}`;
+      if (this.discountAmount > 0) {
+        successMessage += ` with ₱${this.discountAmount.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} discount`;
+      }
+      if (this.receivedAmount > 0) {
+        successMessage += `. Change: ₱${this.changeAmount.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      }
+
+      this.toastService.showSuccess(
+        'Sale Completed',
+        successMessage
+      );
+
+      // Close dialog
+      this.closeSaleDialog();
+
+      // Refresh the list to ensure sync with database
+      await this.refreshAuctionItems();
+    } catch (error) {
+      console.error('Error processing sale:', error);
+      this.toastService.showError(
+        'Sale Failed',
+        'An error occurred while processing the sale. Please try again.'
+      );
+    } finally {
+      this.isProcessingSale = false;
     }
   }
 }

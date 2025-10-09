@@ -36,6 +36,7 @@ interface ExpiredItem {
   trackingNumber?: string;
   loanId: string;
   itemDescription: string;
+  descriptionName?: string;  // Added for descriptions table name
   pawnerName: string;
   appraisedValue: number;
   loanAmount: number;
@@ -88,7 +89,7 @@ interface AuctionStats {
 })
 export class AuctioneerDashboard implements OnInit, AfterViewChecked {
   @ViewChild('auctionPriceInput') auctionPriceInput?: ElementRef<HTMLInputElement>;
-  
+
   currentDateTime = new Date();
   isLoading = false;
   dashboardCards: DashboardCard[] = [];
@@ -247,6 +248,7 @@ export class AuctioneerDashboard implements OnInit, AfterViewChecked {
         trackingNumber: item.trackingNumber || item.tracking_number || item.ticketNumber || item.ticket_number,
         loanId: item.loanId || item.loan_id || '',
         itemDescription: item.itemDescription || item.item_description || item.description || `Item #${item.id}`,
+        descriptionName: item.descriptionName || item.description_name || undefined,
         pawnerName: item.pawnerName || item.pawner_name || 'Unknown',
         appraisedValue: item.appraisedValue || item.appraised_value || item.appraisal_value || 0,
         loanAmount: item.loanAmount || item.loan_amount || item.principal_amount || 0,
@@ -381,7 +383,7 @@ export class AuctioneerDashboard implements OnInit, AfterViewChecked {
             // Store item description before updating
             const itemDescription = this.selectedExpiredItem!.itemDescription;
             const priceFormatted = price.toLocaleString();
-            
+
             // Update local data on successful save
             this.selectedExpiredItem!.auctionPrice = price;
             this.selectedExpiredItem!.isSetForAuction = true;
@@ -422,14 +424,14 @@ export class AuctioneerDashboard implements OnInit, AfterViewChecked {
     const itemInfo = `Item: ${item.itemDescription}\nCurrent Auction Price: ${priceDisplay}`;
     const warning = `\n\n⚠️ Warning: This action will:\n• Remove the auction price\n• Return the item to "Pending" status\n• Remove it from the auction list\n\nAre you sure you want to proceed?`;
     const confirmMessage = itemInfo + warning;
-    
+
     if (!confirm(confirmMessage)) {
       return;
     }
 
     try {
       console.log(`🚫 Removing auction price for item ${item.id}...`);
-      
+
       const apiUrl = 'http://localhost:3000/api/items/remove-auction-price';
       const payload = { itemId: item.id };
 

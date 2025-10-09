@@ -86,7 +86,8 @@ router.get('/expired', async (req, res) => {
         p.first_name, 
         p.last_name,
         c.name as category,
-        d.name as description_name
+        d.name as description_name,
+        d.description as description_text
       FROM pawn_items pi
       LEFT JOIN transactions t ON pi.transaction_id = t.id
       LEFT JOIN pawners p ON t.pawner_id = p.id
@@ -102,11 +103,8 @@ router.get('/expired', async (req, res) => {
       // Build item description from available fields
       let itemDesc = row.custom_description;
       if (!itemDesc || itemDesc.trim() === '') {
-        // Use category and description name if custom description is empty
-        const parts = [];
-        if (row.category) parts.push(row.category);
-        if (row.description_name) parts.push(row.description_name);
-        itemDesc = parts.length > 0 ? parts.join(' - ') : 'Item';
+        // Priority: description_name > description_text > category
+        itemDesc = row.description_name || row.description_text || row.category || 'Item';
       }
       
       return {
@@ -115,6 +113,7 @@ router.get('/expired', async (req, res) => {
         ticketNumber: row.ticket_number,
         trackingNumber: row.tracking_number || row.ticket_number,
         itemDescription: itemDesc,
+        descriptionName: row.description_name || null,  // Added for descriptions table
         pawnerName: row.first_name && row.last_name ? `${row.first_name} ${row.last_name}` : 'N/A',
         appraisedValue: row.appraised_value ? parseFloat(row.appraised_value) : 0,
         loanAmount: row.loan_amount ? parseFloat(row.loan_amount) : 0,
@@ -258,11 +257,14 @@ router.get('/for-auction/list', async (req, res) => {
         t.granted_date,
         p.first_name, 
         p.last_name,
-        c.name as category
+        c.name as category,
+        d.name as description_name,
+        d.description as description_text
       FROM pawn_items pi
       LEFT JOIN transactions t ON pi.transaction_id = t.id
       LEFT JOIN pawners p ON t.pawner_id = p.id
       LEFT JOIN categories c ON pi.category_id = c.id
+      LEFT JOIN descriptions d ON pi.description_id = d.id
       WHERE t.expiry_date < CURRENT_DATE
         AND pi.status = 'in_vault'
         AND t.status IN ('active', 'expired')
@@ -271,19 +273,29 @@ router.get('/for-auction/list', async (req, res) => {
       ORDER BY t.expiry_date DESC
     `);
     
-    const auctionItems = result.rows.map(row => ({
-      id: row.id,
-      ticketNumber: row.ticket_number,
-      itemDescription: row.custom_description || 'N/A',
-      pawnerName: row.first_name && row.last_name ? `${row.first_name} ${row.last_name}` : 'N/A',
-      appraisedValue: row.appraised_value ? parseFloat(row.appraised_value) : 0,
-      loanAmount: row.loan_amount ? parseFloat(row.loan_amount) : 0,
-      auctionPrice: row.auction_price ? parseFloat(row.auction_price) : 0,
-      expiredDate: row.expired_date,
-      grantedDate: row.granted_date,
-      category: row.category || 'N/A',
-      status: 'available' // Items set for auction are available for sale
-    }));
+    const auctionItems = result.rows.map(row => {
+      // Build item description from available fields
+      let itemDesc = row.custom_description;
+      if (!itemDesc || itemDesc.trim() === '') {
+        // Priority: description_name > description_text > category
+        itemDesc = row.description_name || row.description_text || row.category || 'Item';
+      }
+      
+      return {
+        id: row.id,
+        ticketNumber: row.ticket_number,
+        itemDescription: itemDesc,
+        descriptionName: row.description_name || null,
+        pawnerName: row.first_name && row.last_name ? `${row.first_name} ${row.last_name}` : 'N/A',
+        appraisedValue: row.appraised_value ? parseFloat(row.appraised_value) : 0,
+        loanAmount: row.loan_amount ? parseFloat(row.loan_amount) : 0,
+        auctionPrice: row.auction_price ? parseFloat(row.auction_price) : 0,
+        expiredDate: row.expired_date,
+        grantedDate: row.granted_date,
+        category: row.category || 'N/A',
+        status: 'available' // Items set for auction are available for sale
+      };
+    });
     
     console.log(`✅ Found ${auctionItems.length} items ready for auction`);
     
@@ -298,6 +310,88 @@ router.get('/for-auction/list', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch auction items',
+      error: error.message
+    });
+  }
+});
+
+// Validate auction item availability before sale
+router.get('/for-auction/validate/:itemId', async (req, res) => {
+  try {
+    const { itemId } = req.params;
+    
+    console.log(`✅ [${new Date().toISOString()}] Validating auction item ${itemId} - User: ${req.user.username}`);
+    
+    const result = await pool.query(`
+      SELECT 
+        pi.id, 
+        pi.custom_description,
+        pi.auction_price,
+        pi.status,
+        t.status as transaction_status,
+        t.expiry_date
+      FROM pawn_items pi
+      LEFT JOIN transactions t ON pi.transaction_id = t.id
+      WHERE pi.id = $1
+    `, [itemId]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Item not found',
+        code: 'ITEM_NOT_FOUND'
+      });
+    }
+    
+    const item = result.rows[0];
+    
+    // Validation checks
+    const validationErrors = [];
+    
+    if (!item.auction_price || item.auction_price <= 0) {
+      validationErrors.push('Item does not have a valid auction price set');
+    }
+    
+    if (item.status !== 'in_vault') {
+      validationErrors.push(`Item status is "${item.status}", expected "in_vault"`);
+    }
+    
+    if (!['active', 'expired'].includes(item.transaction_status)) {
+      validationErrors.push(`Transaction status is "${item.transaction_status}", expected "active" or "expired"`);
+    }
+    
+    const isExpired = new Date(item.expiry_date) < new Date();
+    if (!isExpired) {
+      validationErrors.push('Item is not expired yet');
+    }
+    
+    if (validationErrors.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Item is not available for auction',
+        code: 'VALIDATION_FAILED',
+        errors: validationErrors
+      });
+    }
+    
+    // Item is valid for auction
+    res.json({
+      success: true,
+      message: 'Item is valid for auction',
+      data: {
+        id: item.id,
+        description: item.custom_description,
+        auctionPrice: parseFloat(item.auction_price),
+        status: item.status,
+        isValid: true
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Error validating auction item:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to validate auction item',
       error: error.message
     });
   }
@@ -557,6 +651,160 @@ router.post('/remove-auction-price', authorizeRoles('administrator', 'admin', 'm
     res.status(500).json({
       success: false,
       message: 'Failed to remove auction price',
+      error: error.message
+    });
+  }
+});
+
+// Process auction sale
+router.post('/for-auction/confirm-sale', async (req, res) => {
+  try {
+    const {
+      itemId,
+      buyerName,
+      buyerContact,
+      saleNotes,
+      discountAmount,
+      finalPrice,
+      receivedAmount,
+      changeAmount
+    } = req.body;
+    
+    console.log(`✅ [${new Date().toISOString()}] Processing auction sale for item ${itemId} - User: ${req.user.username}`);
+    
+    // Validate required fields
+    if (!itemId || !buyerName || !buyerName.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Item ID and buyer name are required'
+      });
+    }
+    
+    if (finalPrice === undefined || finalPrice === null) {
+      return res.status(400).json({
+        success: false,
+        message: 'Final price is required'
+      });
+    }
+    
+    // Start transaction
+    const client = await pool.connect();
+    
+    try {
+      await client.query('BEGIN');
+      
+      // Verify item exists and is available for sale
+      const itemCheck = await client.query(`
+        SELECT 
+          pi.id,
+          pi.status,
+          pi.auction_price,
+          t.status as transaction_status
+        FROM pawn_items pi
+        LEFT JOIN transactions t ON pi.transaction_id = t.id
+        WHERE pi.id = $1
+      `, [itemId]);
+      
+      if (itemCheck.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return res.status(404).json({
+          success: false,
+          message: 'Item not found'
+        });
+      }
+      
+      const item = itemCheck.rows[0];
+      
+      // Validate item can be sold
+      if (item.status === 'sold') {
+        await client.query('ROLLBACK');
+        return res.status(400).json({
+          success: false,
+          message: 'Item has already been sold'
+        });
+      }
+      
+      if (item.status === 'redeemed') {
+        await client.query('ROLLBACK');
+        return res.status(400).json({
+          success: false,
+          message: 'Item has been redeemed and cannot be sold'
+        });
+      }
+      
+      // Update pawn_items with sale information
+      const updateResult = await client.query(`
+        UPDATE pawn_items
+        SET 
+          status = 'sold',
+          buyer_name = $1,
+          buyer_contact = $2,
+          sale_notes = $3,
+          discount_amount = $4,
+          final_price = $5,
+          received_amount = $6,
+          change_amount = $7,
+          sold_date = CURRENT_DATE,
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = $8
+        RETURNING *
+      `, [
+        buyerName.trim(),
+        buyerContact || null,
+        saleNotes || null,
+        discountAmount || 0,
+        finalPrice,
+        receivedAmount || 0,
+        changeAmount || 0,
+        itemId
+      ]);
+      
+      // Update transaction status if needed
+      if (item.transaction_status === 'active') {
+        await client.query(`
+          UPDATE transactions
+          SET 
+            status = 'closed',
+            updated_at = CURRENT_TIMESTAMP
+          WHERE id = (SELECT transaction_id FROM pawn_items WHERE id = $1)
+        `, [itemId]);
+      }
+      
+      await client.query('COMMIT');
+      
+      console.log(`✅ Sale completed for item ${itemId} - Buyer: ${buyerName}`);
+      
+      res.json({
+        success: true,
+        message: 'Sale completed successfully',
+        data: {
+          item: updateResult.rows[0],
+          saleDetails: {
+            itemId,
+            buyerName,
+            buyerContact,
+            auctionPrice: item.auction_price,
+            discountAmount: discountAmount || 0,
+            finalPrice,
+            receivedAmount: receivedAmount || 0,
+            changeAmount: changeAmount || 0,
+            soldDate: new Date().toISOString().split('T')[0]
+          }
+        }
+      });
+      
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+    
+  } catch (error) {
+    console.error('❌ Error processing auction sale:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to process sale',
       error: error.message
     });
   }

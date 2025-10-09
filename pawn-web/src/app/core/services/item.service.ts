@@ -133,4 +133,42 @@ export class ItemService {
       };
     }
   }
+
+  async validateAuctionItem(itemId: number): Promise<ApiResponse<any>> {
+    try {
+      const response = await this.http.get<ApiResponse<any>>(`${this.apiUrl}/for-auction/validate/${itemId}`).toPromise();
+      return response || { success: false, message: 'No response', data: null };
+    } catch (error: any) {
+      console.error('Error validating auction item:', error);
+      return {
+        success: false,
+        message: error?.error?.message || 'Failed to validate auction item',
+        data: null
+      };
+    }
+  }
+
+  async confirmAuctionSale(saleData: {
+    itemId: number;
+    buyerName: string;
+    buyerContact?: string;
+    saleNotes?: string;
+    discountAmount?: number;
+    finalPrice: number;
+    receivedAmount?: number;
+    changeAmount?: number;
+  }): Promise<ApiResponse<any>> {
+    try {
+      const response = await this.http.post<ApiResponse<any>>(`${this.apiUrl}/for-auction/confirm-sale`, saleData).toPromise();
+      return response || { success: false, message: 'No response', data: null };
+    } catch (error: any) {
+      console.error('Error confirming auction sale:', error);
+      return {
+        success: false,
+        message: error?.error?.message || 'Failed to confirm sale',
+        data: null
+      };
+    }
+  }
 }
+
