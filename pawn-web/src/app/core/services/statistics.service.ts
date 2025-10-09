@@ -12,6 +12,7 @@ export interface DailyStatistics {
   renew: TransactionStatistics;
   partial: TransactionStatistics;
   additional: TransactionStatistics;
+  newLoan: TransactionStatistics;
 }
 
 export interface ApiResponse<T> {
@@ -37,7 +38,8 @@ export class StatisticsService {
         redeem: { count: 0, totalAmount: 0 },
         renew: { count: 0, totalAmount: 0 },
         partial: { count: 0, totalAmount: 0 },
-        additional: { count: 0, totalAmount: 0 }
+        additional: { count: 0, totalAmount: 0 },
+        newLoan: { count: 0, totalAmount: 0 }
       }};
     } catch (error: any) {
       console.error('Error fetching today statistics:', error);
@@ -49,7 +51,8 @@ export class StatisticsService {
           redeem: { count: 0, totalAmount: 0 },
           renew: { count: 0, totalAmount: 0 },
           partial: { count: 0, totalAmount: 0 },
-          additional: { count: 0, totalAmount: 0 }
+          additional: { count: 0, totalAmount: 0 },
+          newLoan: { count: 0, totalAmount: 0 }
         }
       };
     }

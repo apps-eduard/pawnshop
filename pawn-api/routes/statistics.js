@@ -14,6 +14,16 @@ router.get('/today', async (req, res) => {
     
     const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
     
+    // Debug: Show all transaction types for today
+    const debugResult = await pool.query(`
+      SELECT transaction_type, COUNT(*) as count, SUM(principal_amount) as total
+      FROM transactions
+      WHERE DATE(transaction_date) = $1
+      GROUP BY transaction_type
+      ORDER BY transaction_type
+    `, [today]);
+    console.log(`🔍 DEBUG - Today's transaction types:`, debugResult.rows);
+    
     // Get Auction Sales (items sold today)
     const auctionSalesResult = await pool.query(`
       SELECT 
@@ -24,43 +34,53 @@ router.get('/today', async (req, res) => {
         AND DATE(sold_date) = $1
     `, [today]);
     
-    // Get Redeem transactions (today)
+    // Get Redeem transactions (today) - transaction_type is 'redemption' not 'redeem'
     const redeemResult = await pool.query(`
       SELECT 
         COUNT(*) as count,
         COALESCE(SUM(t.principal_amount), 0) as total_amount
       FROM transactions t
-      WHERE t.transaction_type = 'redeem'
+      WHERE t.transaction_type = 'redemption'
         AND DATE(t.transaction_date) = $1
     `, [today]);
     
-    // Get Renew transactions (today)
+    // Get Renew transactions (today) - transaction_type is 'renewal', use principal_amount not interest
     const renewResult = await pool.query(`
       SELECT 
         COUNT(*) as count,
-        COALESCE(SUM(t.interest_charged), 0) as total_amount
+        COALESCE(SUM(t.principal_amount), 0) as total_amount
       FROM transactions t
-      WHERE t.transaction_type = 'renew'
+      WHERE t.transaction_type = 'renewal'
         AND DATE(t.transaction_date) = $1
     `, [today]);
     
-    // Get Partial Payment transactions (today)
+    // Get Partial Payment transactions (today) - stored in transactions table with type 'partial_payment'
     const partialResult = await pool.query(`
       SELECT 
         COUNT(*) as count,
-        COALESCE(SUM(pp.amount), 0) as total_amount
-      FROM pawn_payments pp
-      WHERE pp.payment_type = 'partial_redemption'
-        AND DATE(pp.created_at) = $1
+        COALESCE(SUM(t.principal_amount), 0) as total_amount
+      FROM transactions t
+      WHERE t.transaction_type = 'partial_payment'
+        AND DATE(t.transaction_date) = $1
     `, [today]);
     
-    // Get Additional Loan transactions (today)
+    // Get Additional Loan transactions (today)  
     const additionalResult = await pool.query(`
       SELECT 
         COUNT(*) as count,
-        COALESCE(SUM(t.additional_amount), 0) as total_amount
+        COALESCE(SUM(t.principal_amount), 0) as total_amount
       FROM transactions t
       WHERE t.transaction_type = 'additional_loan'
+        AND DATE(t.transaction_date) = $1
+    `, [today]);
+    
+    // Get New Loan transactions (today)
+    const newLoanResult = await pool.query(`
+      SELECT 
+        COUNT(*) as count,
+        COALESCE(SUM(t.principal_amount), 0) as total_amount
+      FROM transactions t
+      WHERE t.transaction_type = 'new_loan'
         AND DATE(t.transaction_date) = $1
     `, [today]);
     
@@ -84,6 +104,10 @@ router.get('/today', async (req, res) => {
       additional: {
         count: parseInt(additionalResult.rows[0].count),
         totalAmount: parseFloat(additionalResult.rows[0].total_amount)
+      },
+      newLoan: {
+        count: parseInt(newLoanResult.rows[0].count),
+        totalAmount: parseFloat(newLoanResult.rows[0].total_amount)
       }
     };
     

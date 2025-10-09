@@ -1,8 +1,8 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { StatisticsService, DailyStatistics } from '../../../core/services/statistics.service';
+import { StatisticsService } from '../../../core/services/statistics.service';
 
 interface DashboardCard {
   title: string;
@@ -38,7 +38,7 @@ interface PerformanceMetric {
   standalone: true,
   imports: [CommonModule, RouterModule, FormsModule]
 })
-export class ManagerDashboard implements OnInit {
+export class ManagerDashboard implements OnInit, OnDestroy {
   currentDateTime = new Date();
   isLoading = false;
   dashboardCards: DashboardCard[] = [];
@@ -46,68 +46,95 @@ export class ManagerDashboard implements OnInit {
   branchData: BranchData[] = [];
   performanceMetrics: PerformanceMetric[] = [];
   selectedPeriod = 'month';
+  private refreshInterval: any;
 
   constructor(private statisticsService: StatisticsService) {}
 
   ngOnInit() {
     this.loadDashboardData();
     this.updateTime();
+    this.startAutoRefresh();
   }
 
-  private async loadDashboardData() {
+  ngOnDestroy() {
+    this.stopAutoRefresh();
+  }
+
+  private startAutoRefresh() {
+    // Refresh every 30 seconds
+    this.refreshInterval = setInterval(() => {
+      this.loadDashboardData();
+    }, 30000);
+  }
+
+  private stopAutoRefresh() {
+    if (this.refreshInterval) {
+      clearInterval(this.refreshInterval);
+    }
+  }
+
+  async loadDashboardData() {
     this.isLoading = true;
 
     try {
       // Fetch today's statistics from API
       const response = await this.statisticsService.getTodayStatistics();
-      
-      if (response.success) {
+
+      if (response.success && response.data) {
         const stats = response.data;
-        
-        // Create transaction cards from real data
+
+        // Create transaction cards from real data with safe property access
         this.transactionCards = [
           {
-            title: 'Auction Sales',
-            count: stats.auctionSales.count,
-            icon: 'auction',
-            color: 'green',
-            route: '/transactions/auction-items',
-            amount: stats.auctionSales.totalAmount
-          },
-          {
-            title: 'Redeem',
-            count: stats.redeem.count,
-            icon: 'redeem',
+            title: 'New Loan',
+            count: stats.newLoan?.count || 0,
+            icon: 'newloan',
             color: 'blue',
             route: '/transactions/list',
-            amount: stats.redeem.totalAmount
-          },
-          {
-            title: 'Renew',
-            count: stats.renew.count,
-            icon: 'renew',
-            color: 'purple',
-            route: '/transactions/list',
-            amount: stats.renew.totalAmount
-          },
-          {
-            title: 'Partial',
-            count: stats.partial.count,
-            icon: 'partial',
-            color: 'orange',
-            route: '/transactions/list',
-            amount: stats.partial.totalAmount
+            amount: stats.newLoan?.totalAmount || 0
           },
           {
             title: 'Additional',
-            count: stats.additional.count,
+            count: stats.additional?.count || 0,
             icon: 'additional',
             color: 'indigo',
             route: '/transactions/list',
-            amount: stats.additional.totalAmount
+            amount: stats.additional?.totalAmount || 0
+          },
+          {
+            title: 'Renew',
+            count: stats.renew?.count || 0,
+            icon: 'renew',
+            color: 'purple',
+            route: '/transactions/list',
+            amount: stats.renew?.totalAmount || 0
+          },
+          {
+            title: 'Partial',
+            count: stats.partial?.count || 0,
+            icon: 'partial',
+            color: 'orange',
+            route: '/transactions/list',
+            amount: stats.partial?.totalAmount || 0
+          },
+          {
+            title: 'Redeem',
+            count: stats.redeem?.count || 0,
+            icon: 'redeem',
+            color: 'teal',
+            route: '/transactions/list',
+            amount: stats.redeem?.totalAmount || 0
+          },
+          {
+            title: 'Auction Sales',
+            count: stats.auctionSales?.count || 0,
+            icon: 'auction',
+            color: 'green',
+            route: '/transactions/auction-items',
+            amount: stats.auctionSales?.totalAmount || 0
           }
         ];
-        
+
         console.log('✅ Loaded today\'s statistics:', stats);
       } else {
         console.error('❌ Failed to load statistics:', response.message);
@@ -193,6 +220,59 @@ export class ManagerDashboard implements OnInit {
     }, 500);
   }
 
+  private getEmptyTransactionCards(): DashboardCard[] {
+    return [
+      {
+        title: 'New Loan',
+        count: 0,
+        icon: 'newloan',
+        color: 'blue',
+        route: '/transactions/list',
+        amount: 0
+      },
+      {
+        title: 'Additional',
+        count: 0,
+        icon: 'additional',
+        color: 'indigo',
+        route: '/transactions/list',
+        amount: 0
+      },
+      {
+        title: 'Renew',
+        count: 0,
+        icon: 'renew',
+        color: 'purple',
+        route: '/transactions/list',
+        amount: 0
+      },
+      {
+        title: 'Partial',
+        count: 0,
+        icon: 'partial',
+        color: 'orange',
+        route: '/transactions/list',
+        amount: 0
+      },
+      {
+        title: 'Redeem',
+        count: 0,
+        icon: 'redeem',
+        color: 'teal',
+        route: '/transactions/list',
+        amount: 0
+      },
+      {
+        title: 'Auction Sales',
+        count: 0,
+        icon: 'auction',
+        color: 'green',
+        route: '/transactions/auction-items',
+        amount: 0
+      }
+    ];
+  }
+
   private updateTime() {
     setInterval(() => {
       this.currentDateTime = new Date();
@@ -213,7 +293,8 @@ export class ManagerDashboard implements OnInit {
       orange: 'bg-orange-100 dark:bg-orange-900 text-orange-600 dark:text-orange-400',
       red: 'bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-400',
       purple: 'bg-purple-100 dark:bg-purple-900 text-purple-600 dark:text-purple-400',
-      indigo: 'bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-400'
+      indigo: 'bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-400',
+      teal: 'bg-teal-100 dark:bg-teal-900 text-teal-600 dark:text-teal-400'
     };
 
     return colorMap[color] || colorMap['blue'];

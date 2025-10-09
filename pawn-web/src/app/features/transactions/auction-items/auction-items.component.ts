@@ -29,7 +29,7 @@ interface AuctionItem {
 })
 export class AuctionItemsComponent implements OnInit, OnDestroy, AfterViewChecked {
   @ViewChild('discountInput') discountInput?: ElementRef<HTMLInputElement>;
-  
+
   auctionItems: AuctionItem[] = [];
   filteredItems: AuctionItem[] = [];
   isLoading = true;
@@ -147,7 +147,7 @@ export class AuctionItemsComponent implements OnInit, OnDestroy, AfterViewChecke
 
       if (response.success && response.data) {
         const previousCount = this.auctionItems.length;
-        
+
         this.auctionItems = response.data.map((item: any) => ({
           id: item.id,
           ticketNumber: item.ticketNumber,
@@ -167,7 +167,7 @@ export class AuctionItemsComponent implements OnInit, OnDestroy, AfterViewChecke
         this.categories = ['All', ...uniqueCategories.sort()];
 
         this.filteredItems = [...this.auctionItems];
-        
+
         // Show notification if items changed
         const newCount = this.auctionItems.length;
         if (newCount !== previousCount) {
@@ -178,7 +178,7 @@ export class AuctionItemsComponent implements OnInit, OnDestroy, AfterViewChecke
             this.toastService.showWarning('List Updated', `${Math.abs(diff)} item(s) removed from auction`);
           }
         }
-        
+
         console.log(`🔄 Refreshed: ${this.auctionItems.length} auction items`);
       }
     } catch (error) {
@@ -318,7 +318,7 @@ export class AuctionItemsComponent implements OnInit, OnDestroy, AfterViewChecke
     try {
       // Re-fetch the specific item to check current status
       const response = await this.itemService.validateAuctionItem(item.id);
-      
+
       if (!response.success) {
         this.toastService.showError(
           'Item Not Available',
@@ -337,7 +337,7 @@ export class AuctionItemsComponent implements OnInit, OnDestroy, AfterViewChecke
       );
       return;
     }
-    
+
     // Open sale dialog
     this.selectedSaleItem = item;
     this.buyerName = '';
@@ -366,10 +366,10 @@ export class AuctionItemsComponent implements OnInit, OnDestroy, AfterViewChecke
 
   calculateFinalPrice(): void {
     if (!this.selectedSaleItem) return;
-    
+
     const discount = this.discountAmount || 0;
     const auctionPrice = this.selectedSaleItem.auctionPrice;
-    
+
     // Ensure discount doesn't exceed auction price
     if (discount > auctionPrice) {
       this.discountAmount = auctionPrice;
@@ -380,7 +380,7 @@ export class AuctionItemsComponent implements OnInit, OnDestroy, AfterViewChecke
     } else {
       this.finalPrice = auctionPrice - discount;
     }
-    
+
     // Recalculate change when final price changes
     this.calculateChange();
   }
@@ -411,7 +411,7 @@ export class AuctionItemsComponent implements OnInit, OnDestroy, AfterViewChecke
         receivedAmount: this.receivedAmount || 0,
         changeAmount: this.changeAmount || 0
       };
-      
+
       console.log('Processing sale:', saleData);
 
       // Call API to save the sale

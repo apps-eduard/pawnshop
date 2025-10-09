@@ -1,15 +1,84 @@
 <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
 
   <!-- Dashboard Content -->
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
 
     <!-- Loading State -->
-    <div *ngIf="isLoading" class="flex items-center justify-center py-12">
+    <!-- <div *ngIf="isLoading" class="flex items-center justify-center py-12">
       <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+    </div> -->
+
+    <!-- Today's Transactions - 6 Column Grid -->
+    <div *ngIf="!isLoading" class="mb-6">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Today's Transactions</h2>
+        </div>
+        <button
+          (click)="loadDashboardData()"
+          class="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+          title="Refresh">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+          </svg>
+        </button>
+      </div>
+
+      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div
+          *ngFor="let card of transactionCards"
+          [routerLink]="card.route"
+          class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-3 hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600 transition-all cursor-pointer group">
+
+          <!-- Row 1: Icon (left) + Title (right) -->
+          <div class="flex items-center justify-between mb-2">
+            <!-- Icon -->
+            <div [class]="'p-2 rounded-lg ' + getCardColorClasses(card.color)">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <!-- New Loan Icon -->
+                <path *ngIf="card.icon === 'newloan'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+
+                <!-- Auction Icon -->
+                <path *ngIf="card.icon === 'auction'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path>
+
+                <!-- Redeem Icon -->
+                <path *ngIf="card.icon === 'redeem'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
+
+                <!-- Renew Icon -->
+                <path *ngIf="card.icon === 'renew'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+
+                <!-- Partial Icon -->
+                <path *ngIf="card.icon === 'partial'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+
+                <!-- Additional Icon -->
+                <path *ngIf="card.icon === 'additional'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+            </div>
+
+            <!-- Title -->
+            <h3 class="text-sm text-gray-900 dark:text-white">{{ card.title }}</h3>
+          </div>
+
+          <!-- Row 2: Count (left) + Amount (right) -->
+          <div class="flex items-center justify-between">
+            <!-- Count -->
+            <div class="flex flex-col">
+              <span class="text-xl ml-2 font-bold text-gray-900 dark:text-white">{{ card.count }}</span>
+            </div>
+
+            <!-- Amount -->
+            <div class="flex flex-col text-right">
+              <span class="text-sm  text-gray-900 dark:text-white">
+                {{ formatCurrency(card.amount || 0) }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <!-- Dashboard Cards Grid -->
-    <div *ngIf="!isLoading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <!-- Dashboard Cards Grid (Old mock cards - will be removed or replaced) -->
+    <div *ngIf="!isLoading && dashboardCards.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
       <div
         *ngFor="let card of dashboardCards"
         [routerLink]="card.route"
