@@ -1,9 +1,12 @@
 import { Component, OnInit, OnDestroy, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
+import { FormsModule } from '@angular/forms';
 import { Subject, takeUntil } from 'rxjs';
 import { AuthService } from '../../core/auth/auth';
+import { VoucherService } from '../../core/services/voucher.service';
 import { User } from '../../core/models/interfaces';
+import { CurrencyInputDirective } from '../directives/currency-input.directive';
 
 interface NavigationItem {
   label: string;
@@ -12,10 +15,23 @@ interface NavigationItem {
   roles: string[];
 }
 
+interface VoucherForm {
+  type: 'cash' | 'cheque';
+  date: string;
+  amount: number;
+  notes: string;
+}
+
+interface VoucherEntry extends VoucherForm {
+  id: number;
+  createdAt: Date;
+}
+
 @Component({
   selector: 'app-sidebar',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, FormsModule, CurrencyInputDirective],
+  providers: [VoucherService],
   templateUrl: './sidebar.html',
   styleUrl: './sidebar.css'
 })
@@ -80,12 +96,27 @@ export class SidebarComponent implements OnInit, OnDestroy {
     { label: 'New Loan', action: 'newLoan', icon: '🏦', roles: ['cashier'] },
     { label: 'New Appraisal', action: 'newAppraisal', icon: '💎', roles: ['appraiser'] },
     { label: 'New Auction', action: 'newAuction', icon: '🔨', roles: ['auctioneer'] },
+    { label: 'Voucher', action: 'voucher', icon: '🎟️', roles: ['admin', 'administrator', 'manager'] },
     { label: 'Generate Report', action: 'generateReport', icon: '📄', roles: ['admin', 'administrator', 'manager'] },
   ];
 
+  // Voucher modal state
+  showVoucherModal = false;
+  voucherForm: VoucherForm = {
+    type: 'cash',
+    date: '',
+    amount: 0,
+    notes: ''
+  };
+  voucherList: VoucherEntry[] = [];
+  showToast = false;
+  toastMessage = '';
+  nextVoucherId = 1;
+
   constructor(
     private authService: AuthService,
-    private router: Router
+    private router: Router,
+    private voucherService: VoucherService
   ) {}
 
   ngOnInit(): void {
@@ -167,6 +198,9 @@ export class SidebarComponent implements OnInit, OnDestroy {
       case 'newAuction':
         this.router.navigate(['/auctions/new']);
         break;
+      case 'voucher':
+        this.openVoucherModal();
+        break;
       case 'generateReport':
         this.router.navigate(['/reports/generate']);
         break;
@@ -182,5 +216,137 @@ export class SidebarComponent implements OnInit, OnDestroy {
   // Get current date for display
   getCurrentDate(): Date {
     return new Date();
+  }
+
+  // Voucher modal methods
+  openVoucherModal(): void {
+    this.showVoucherModal = true;
+    const today = new Date().toISOString().split('T')[0];
+    this.voucherForm.date = today;
+    
+    // Focus on date input after modal opens
+    setTimeout(() => {
+      const dateInput = document.querySelector('input[name="voucherDate"]') as HTMLInputElement;
+      if (dateInput) {
+        dateInput.focus();
+      }
+    }, 100);
+  }
+
+  closeVoucherModal(): void {
+    this.showVoucherModal = false;
+    this.resetVoucherForm();
+    this.voucherList = [];
+    this.nextVoucherId = 1;
+  }
+
+  resetVoucherForm(): void {
+    this.voucherForm = {
+      type: 'cash',
+      date: new Date().toISOString().split('T')[0],
+      amount: 0,
+      notes: ''
+    };
+  }
+
+  addVoucher(): void {
+    if (!this.validateVoucherForm()) {
+      return;
+    }
+
+    // Add voucher to list
+    const newVoucher: VoucherEntry = {
+      id: this.nextVoucherId++,
+      ...this.voucherForm,
+      createdAt: new Date()
+    };
+
+    this.voucherList.unshift(newVoucher);
+
+    // Show toast notification
+    this.showSuccessToast(`Voucher added: ${this.voucherForm.type.toUpperCase()} - ₱${this.voucherForm.amount.toLocaleString()}`);
+
+    // Reset form but keep date
+    const currentDate = this.voucherForm.date;
+    this.resetVoucherForm();
+    this.voucherForm.date = currentDate;
+
+    // Focus back to date input
+    setTimeout(() => {
+      const dateInput = document.querySelector('input[name="voucherDate"]') as HTMLInputElement;
+      if (dateInput) {
+        dateInput.focus();
+      }
+    }, 100);
+  }
+
+  removeVoucher(id: number): void {
+    this.voucherList = this.voucherList.filter(v => v.id !== id);
+    this.showSuccessToast('Voucher removed from list');
+  }
+
+  saveAllVouchers(): void {
+    if (this.voucherList.length === 0) {
+      alert('No vouchers to save');
+      return;
+    }
+
+    // Convert VoucherEntry[] to VoucherForm[] for API
+    const vouchersToSave = this.voucherList.map(v => ({
+      type: v.type,
+      date: v.date,
+      amount: v.amount,
+      notes: v.notes
+    }));
+
+    // Call API to save vouchers in batch
+    this.voucherService.createVouchersBatch(vouchersToSave).subscribe({
+      next: (response) => {
+        if (response.success) {
+          this.showSuccessToast(`Successfully saved ${this.voucherList.length} voucher(s)!`);
+          this.voucherList = [];
+          this.nextVoucherId = 1;
+          this.closeVoucherModal();
+        } else {
+          alert(`Failed to save vouchers: ${response.message}`);
+        }
+      },
+      error: (error) => {
+        console.error('Error saving vouchers:', error);
+        const errorMessage = error.error?.message || error.message || 'Unknown error occurred';
+        alert(`Failed to save vouchers: ${errorMessage}`);
+      }
+    });
+  }
+
+  validateVoucherForm(): boolean {
+    if (!this.voucherForm.date) {
+      alert('Date is required');
+      return false;
+    }
+
+    if (this.voucherForm.amount <= 0) {
+      alert('Amount must be greater than 0');
+      return false;
+    }
+
+    if (!this.voucherForm.notes.trim()) {
+      alert('Notes are required');
+      return false;
+    }
+
+    return true;
+  }
+
+  showSuccessToast(message: string): void {
+    this.toastMessage = message;
+    this.showToast = true;
+    setTimeout(() => {
+      this.showToast = false;
+    }, 2000);
+  }
+
+  getTotalAmount(): number {
+    return this.voucherList.reduce((sum, v) => sum + v.amount, 0);
   }
 }

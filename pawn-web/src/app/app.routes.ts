@@ -10,7 +10,6 @@ import { LoginComponent } from './auth/login/login';
 // Import layout component
 import { LayoutComponent } from './shared/layout/layout';
 // Import vouchers component
-import { VouchersComponent } from './features/vouchers/vouchers';
 
 export const routes: Routes = [
   { path: '', redirectTo: '/login', pathMatch: 'full' },
@@ -48,12 +47,6 @@ export const routes: Routes = [
       {
         path: 'transactions',
         children: transactionRoutes
-      },
-
-      // Vouchers Route
-      {
-        path: 'vouchers',
-        component: VouchersComponent
       },
 
       // Legacy redirects for management
