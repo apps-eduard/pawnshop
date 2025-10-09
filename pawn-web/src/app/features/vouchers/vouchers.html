@@ -1,0 +1,367 @@
+<div class="min-h-screen bg-gray-50 dark:bg-gray-900">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    
+    <!-- Page Header -->
+    <div class="flex items-center justify-between mb-6">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Voucher Management</h1>
+        <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">Create and manage discount vouchers</p>
+      </div>
+      
+      <button
+        (click)="openCreateModal()"
+        class="flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors shadow-sm">
+        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+        </svg>
+        Create Voucher
+      </button>
+    </div>
+
+    <!-- Vouchers Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div
+        *ngFor="let voucher of vouchers"
+        class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-md transition-shadow">
+        
+        <!-- Voucher Header -->
+        <div class="p-6 bg-gradient-to-br from-primary-50 to-primary-100 dark:from-primary-900/20 dark:to-primary-800/20 border-b border-primary-200 dark:border-primary-700">
+          <div class="flex items-start justify-between mb-3">
+            <div class="flex-1">
+              <div class="flex items-center gap-2 mb-2">
+                <span class="px-3 py-1 bg-white dark:bg-gray-800 text-primary-700 dark:text-primary-300 font-mono font-bold text-sm rounded-md border-2 border-dashed border-primary-400 dark:border-primary-600">
+                  {{ voucher.code }}
+                </span>
+                
+                <!-- Status Badges -->
+                <span
+                  *ngIf="isExpired(voucher)"
+                  class="px-2 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 text-xs font-medium rounded">
+                  Expired
+                </span>
+                <span
+                  *ngIf="isUpcoming(voucher)"
+                  class="px-2 py-0.5 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 text-xs font-medium rounded">
+                  Upcoming
+                </span>
+                <span
+                  *ngIf="!voucher.isActive"
+                  class="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs font-medium rounded">
+                  Inactive
+                </span>
+              </div>
+              
+              <h3 class="text-lg font-bold text-primary-700 dark:text-primary-300">
+                {{ getDiscountDisplay(voucher) }}
+              </h3>
+            </div>
+          </div>
+          
+          <p class="text-sm text-gray-700 dark:text-gray-300">
+            {{ voucher.description }}
+          </p>
+        </div>
+
+        <!-- Voucher Details -->
+        <div class="p-6 space-y-4">
+          <!-- Discount Details -->
+          <div class="grid grid-cols-2 gap-4 text-sm">
+            <div>
+              <span class="text-gray-500 dark:text-gray-400">Min. Purchase</span>
+              <p class="font-semibold text-gray-900 dark:text-white">₱{{ voucher.minPurchaseAmount.toLocaleString() }}</p>
+            </div>
+            <div *ngIf="voucher.discountType === 'percentage' && voucher.maxDiscountAmount">
+              <span class="text-gray-500 dark:text-gray-400">Max. Discount</span>
+              <p class="font-semibold text-gray-900 dark:text-white">₱{{ voucher.maxDiscountAmount.toLocaleString() }}</p>
+            </div>
+          </div>
+
+          <!-- Validity Period -->
+          <div class="text-sm">
+            <span class="text-gray-500 dark:text-gray-400">Valid Period</span>
+            <p class="font-medium text-gray-900 dark:text-white">
+              {{ voucher.validFrom | date:'MMM d, y' }} - {{ voucher.validUntil | date:'MMM d, y' }}
+            </p>
+          </div>
+
+          <!-- Usage Stats -->
+          <div>
+            <div class="flex items-center justify-between text-sm mb-2">
+              <span class="text-gray-500 dark:text-gray-400">Usage</span>
+              <span class="font-semibold text-gray-900 dark:text-white">
+                {{ voucher.usedCount }} / {{ voucher.usageLimit }}
+              </span>
+            </div>
+            
+            <!-- Usage Progress Bar -->
+            <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+              <div
+                class="h-2 rounded-full transition-all"
+                [class.bg-green-500]="getUsagePercentage(voucher) < 50"
+                [class.bg-yellow-500]="getUsagePercentage(voucher) >= 50 && getUsagePercentage(voucher) < 80"
+                [class.bg-red-500]="getUsagePercentage(voucher) >= 80"
+                [style.width.%]="getUsagePercentage(voucher)">
+              </div>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div class="flex items-center gap-2 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <button
+              (click)="toggleVoucherStatus(voucher)"
+              [class.bg-green-100]="voucher.isActive"
+              [class.text-green-700]="voucher.isActive"
+              [class.hover:bg-green-200]="voucher.isActive"
+              [class.bg-gray-100]="!voucher.isActive"
+              [class.text-gray-700]="!voucher.isActive"
+              [class.hover:bg-gray-200]="!voucher.isActive"
+              class="flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600">
+              {{ voucher.isActive ? 'Active' : 'Inactive' }}
+            </button>
+            
+            <button
+              (click)="openEditModal(voucher)"
+              class="p-2 text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/30 rounded-lg transition-colors">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+              </svg>
+            </button>
+            
+            <button
+              (click)="deleteVoucher(voucher)"
+              class="p-2 text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/30 rounded-lg transition-colors">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Empty State -->
+    <div *ngIf="vouchers.length === 0" class="text-center py-16">
+      <svg class="mx-auto h-24 w-24 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2zM10 8.5a.5.5 0 11-1 0 .5.5 0 011 0zm5 5a.5.5 0 11-1 0 .5.5 0 011 0z"></path>
+      </svg>
+      <h3 class="mt-4 text-lg font-medium text-gray-900 dark:text-white">No vouchers yet</h3>
+      <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">Get started by creating your first voucher</p>
+      <button
+        (click)="openCreateModal()"
+        class="mt-6 px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors">
+        Create Voucher
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Create/Edit Voucher Modal -->
+<div
+  *ngIf="showModal"
+  class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
+  (click)="closeModal()">
+  
+  <div
+    class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+    (click)="$event.stopPropagation()">
+    
+    <!-- Modal Header -->
+    <div class="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between z-10">
+      <h2 class="text-xl font-bold text-gray-900 dark:text-white">
+        {{ isEditing ? 'Edit Voucher' : 'Create New Voucher' }}
+      </h2>
+      <button
+        (click)="closeModal()"
+        class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Modal Body -->
+    <form (ngSubmit)="saveVoucher()" class="p-6 space-y-6">
+      
+      <!-- Row 1: Code and Description -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Voucher Code -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Voucher Code <span class="text-red-500">*</span>
+          </label>
+          <div class="flex gap-2">
+            <input
+              type="text"
+              [(ngModel)]="voucherForm.code"
+              name="code"
+              placeholder="e.g., WELCOME2025"
+              class="flex-1 px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white uppercase"
+              required>
+            <button
+              type="button"
+              (click)="generateVoucherCode()"
+              class="px-4 py-2.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+              title="Generate Random Code">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Active Status -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Status
+          </label>
+          <label class="flex items-center space-x-3 cursor-pointer">
+            <input
+              type="checkbox"
+              [(ngModel)]="voucherForm.isActive"
+              name="isActive"
+              class="w-5 h-5 text-primary-600 border-gray-300 rounded focus:ring-primary-500">
+            <span class="text-sm text-gray-900 dark:text-white">Active</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Description -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          Description <span class="text-red-500">*</span>
+        </label>
+        <textarea
+          [(ngModel)]="voucherForm.description"
+          name="description"
+          rows="2"
+          placeholder="Enter voucher description"
+          class="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+          required></textarea>
+      </div>
+
+      <!-- Row 2: Discount Details -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- Discount Type -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Discount Type <span class="text-red-500">*</span>
+          </label>
+          <select
+            [(ngModel)]="voucherForm.discountType"
+            name="discountType"
+            class="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+            required>
+            <option value="percentage">Percentage (%)</option>
+            <option value="fixed">Fixed Amount (₱)</option>
+          </select>
+        </div>
+
+        <!-- Discount Value -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Discount Value <span class="text-red-500">*</span>
+          </label>
+          <input
+            type="number"
+            [(ngModel)]="voucherForm.discountValue"
+            name="discountValue"
+            [placeholder]="voucherForm.discountType === 'percentage' ? 'e.g., 10' : 'e.g., 500'"
+            class="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+            min="0"
+            required>
+        </div>
+
+        <!-- Max Discount (for percentage only) -->
+        <div *ngIf="voucherForm.discountType === 'percentage'">
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Max Discount (₱)
+          </label>
+          <input
+            type="number"
+            [(ngModel)]="voucherForm.maxDiscountAmount"
+            name="maxDiscountAmount"
+            placeholder="Optional"
+            class="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+            min="0">
+        </div>
+      </div>
+
+      <!-- Row 3: Conditions -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Min Purchase Amount -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Minimum Purchase Amount (₱) <span class="text-red-500">*</span>
+          </label>
+          <input
+            type="number"
+            [(ngModel)]="voucherForm.minPurchaseAmount"
+            name="minPurchaseAmount"
+            placeholder="e.g., 1000"
+            class="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+            min="0"
+            required>
+        </div>
+
+        <!-- Usage Limit -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Usage Limit <span class="text-red-500">*</span>
+          </label>
+          <input
+            type="number"
+            [(ngModel)]="voucherForm.usageLimit"
+            name="usageLimit"
+            placeholder="e.g., 100"
+            class="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+            min="1"
+            required>
+        </div>
+      </div>
+
+      <!-- Row 4: Validity Period -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Valid From -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Valid From <span class="text-red-500">*</span>
+          </label>
+          <input
+            type="date"
+            [(ngModel)]="voucherForm.validFrom"
+            name="validFrom"
+            class="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+            required>
+        </div>
+
+        <!-- Valid Until -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Valid Until <span class="text-red-500">*</span>
+          </label>
+          <input
+            type="date"
+            [(ngModel)]="voucherForm.validUntil"
+            name="validUntil"
+            class="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+            required>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="flex items-center justify-end gap-3 pt-6 border-t border-gray-200 dark:border-gray-700">
+        <button
+          type="button"
+          (click)="closeModal()"
+          class="px-6 py-2.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+          Cancel
+        </button>
+        <button
+          type="submit"
+          class="px-6 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors shadow-sm">
+          {{ isEditing ? 'Update Voucher' : 'Create Voucher' }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

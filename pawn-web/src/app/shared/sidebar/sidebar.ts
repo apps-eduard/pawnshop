@@ -67,6 +67,9 @@ export class SidebarComponent implements OnInit, OnDestroy {
     // Reports
     { label: 'Reports', route: '/reports', icon: '📈', roles: ['admin', 'administrator', 'manager', 'appraiser'] },
 
+    // Vouchers (Manager only)
+    { label: 'Vouchers', route: '/vouchers', icon: '🎟️', roles: ['manager', 'admin', 'administrator'] },
+
     // Settings (Admin only)
     { label: 'Settings', route: '/admin-settings', icon: '⚙️', roles: ['admin', 'administrator'] },
   ];
