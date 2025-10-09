@@ -223,7 +223,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
     this.showVoucherModal = true;
     const today = new Date().toISOString().split('T')[0];
     this.voucherForm.date = today;
-    
+
     // Focus on date input after modal opens
     setTimeout(() => {
       const dateInput = document.querySelector('input[name="voucherDate"]') as HTMLInputElement;
