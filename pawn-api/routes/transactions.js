@@ -844,7 +844,7 @@ router.post('/new-loan', async (req, res) => {
       const totalAppraisal = items.reduce((sum, item) => sum + parseFloat(item.appraisalValue || 0), 0);
       const principalAmount = parseFloat(loanData.principalLoan);
       const interestRatePercent = parseFloat(loanData.interestRate || 3.0);
-      const interestRate = interestRatePercent / 100; // Convert percentage to decimal (10% -> 0.10)
+      const interestRate = interestRatePercent; // Store as percentage (10% -> 10, not 0.10)
       const interestAmount = parseFloat(loanData.interestAmount || 0);
       const serviceCharge = parseFloat(loanData.serviceCharge || 0);
       const netProceeds = parseFloat(loanData.netProceeds || 0);
@@ -1519,9 +1519,9 @@ router.post('/additional-loan', async (req, res) => {
       const addAmount = parseFloat(additionalAmount);
       const currentPrincipal = parseFloat(previousTransaction.principal_amount);
       const newPrincipal = currentPrincipal + addAmount;
-      const interestRateDecimal = newInterestRate ? parseFloat(newInterestRate) / 100 : parseFloat(previousTransaction.interest_rate);
+      const interestRatePercent = newInterestRate ? parseFloat(newInterestRate) : parseFloat(previousTransaction.interest_rate);
       const serviceCharge = parseFloat(newServiceCharge || 0);
-      const interestAmount = newPrincipal * interestRateDecimal;
+      const interestAmount = (newPrincipal * interestRatePercent) / 100; // Calculate interest from percentage
       const totalAmount = newPrincipal + interestAmount + serviceCharge;
       const netProceeds = addAmount - serviceCharge;
       
@@ -1571,7 +1571,7 @@ router.post('/additional-loan', async (req, res) => {
         previousTransaction.tracking_number,          // SAME tracking number as previous
         previousTransaction.transaction_number,       // Link to previous transaction
         previousTransaction.pawner_id, previousTransaction.branch_id, 'additional_loan', 'active',
-        newPrincipal, interestRateDecimal, interestAmount, serviceCharge,
+        newPrincipal, interestRatePercent, interestAmount, serviceCharge,
         totalAmount, totalAmount, new Date(), previousTransaction.granted_date, maturityDate, gracePeriodDate, expiryDate,
         notes || `Additional loan of ${addAmount} on ticket ${previousTransaction.transaction_number}. Previous principal: ${currentPrincipal}, New principal: ${newPrincipal}`,
         req.user.id, new Date(), new Date()

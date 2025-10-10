@@ -1049,7 +1049,7 @@ export class NewLoan implements OnInit, OnDestroy {
       }
     }, 100);
 
-    this.toastService.showInfo('Reset', 'All form data has been reset to pristine state');
+    // Toast removed - no need to notify user about form reset
   }
 
   goBack() {
