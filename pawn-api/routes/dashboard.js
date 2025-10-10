@@ -8,7 +8,7 @@ const router = express.Router();
 router.use(authenticateToken);
 
 // Get dashboard data for different roles
-router.get('/:role', authorizeRoles('ADMIN', 'CASHIER', 'APPRAISER', 'MANAGER', 'AUCTIONEER'), 
+router.get('/:role', authorizeRoles('admin', 'administrator', 'cashier', 'appraiser', 'manager', 'auctioneer'), 
   async (req, res) => {
     try {
       const { role } = req.params;

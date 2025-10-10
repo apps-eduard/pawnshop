@@ -11,7 +11,7 @@ router.get('/', (req, res) => {
   res.json({ success: true, message: 'Auctions endpoint - Coming soon' });
 });
 
-router.post('/', authorizeRoles('AUCTIONEER', 'ADMIN'), (req, res) => {
+router.post('/', authorizeRoles('auctioneer', 'admin', 'administrator'), (req, res) => {
   res.json({ success: true, message: 'Create auction endpoint - Coming soon' });
 });
 

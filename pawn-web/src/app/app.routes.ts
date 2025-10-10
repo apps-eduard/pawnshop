@@ -9,7 +9,8 @@ import { settingsRoutes } from './features/settings/routes/settings.routes';
 import { LoginComponent } from './auth/login/login';
 // Import layout component
 import { LayoutComponent } from './shared/layout/layout';
-// Import vouchers component
+// Import reports component
+import { ReportsComponent } from './features/reports/reports.component';
 
 export const routes: Routes = [
   { path: '', redirectTo: '/login', pathMatch: 'full' },
@@ -47,6 +48,12 @@ export const routes: Routes = [
       {
         path: 'transactions',
         children: transactionRoutes
+      },
+
+      // Reports Route
+      {
+        path: 'reports',
+        component: ReportsComponent
       },
 
       // Legacy redirects for management

@@ -1,0 +1,435 @@
+<div class="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
+  <div class="max-w-7xl mx-auto">
+
+    <!-- Header -->
+    <div class="mb-6">
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">Reports</h1>
+      <p class="text-gray-600 dark:text-gray-400">View and analyze business reports</p>
+    </div>
+
+    <!-- Date Range Filters -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-6">
+      <div class="flex flex-wrap items-center gap-4">
+        <!-- Quick Filters -->
+        <div class="flex gap-2">
+          <button
+            (click)="setDateRange('today')"
+            [class.bg-primary-600]="activeDateRange === 'today'"
+            [class.text-white]="activeDateRange === 'today'"
+            [class.border-primary-600]="activeDateRange === 'today'"
+            class="px-4 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+            Today
+          </button>
+          <button
+            (click)="setDateRange('week')"
+            [class.bg-primary-600]="activeDateRange === 'week'"
+            [class.text-white]="activeDateRange === 'week'"
+            [class.border-primary-600]="activeDateRange === 'week'"
+            class="px-4 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+            This Week
+          </button>
+          <button
+            (click)="setDateRange('month')"
+            [class.bg-primary-600]="activeDateRange === 'month'"
+            [class.text-white]="activeDateRange === 'month'"
+            [class.border-primary-600]="activeDateRange === 'month'"
+            class="px-4 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+            This Month
+          </button>
+          <button
+            (click)="setDateRange('year')"
+            [class.bg-primary-600]="activeDateRange === 'year'"
+            [class.text-white]="activeDateRange === 'year'"
+            [class.border-primary-600]="activeDateRange === 'year'"
+            class="px-4 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+            This Year
+          </button>
+        </div>
+
+        <!-- Custom Date Range -->
+        <div class="flex items-center gap-2 ml-auto">
+          <label class="text-sm text-gray-700 dark:text-gray-300">From:</label>
+          <input
+            type="date"
+            [(ngModel)]="startDate"
+            (change)="onCustomDateChange()"
+            class="px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+
+          <label class="text-sm text-gray-700 dark:text-gray-300">To:</label>
+          <input
+            type="date"
+            [(ngModel)]="endDate"
+            (change)="onCustomDateChange()"
+            class="px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+
+          <button
+            (click)="loadReport()"
+            class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+            </svg>
+            Refresh
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 mb-6">
+      <div class="border-b border-gray-200 dark:border-gray-700">
+        <nav class="flex -mb-px">
+          <button
+            (click)="switchTab('transactions')"
+            [class.border-primary-600]="activeTab === 'transactions'"
+            [class.text-primary-600]="activeTab === 'transactions'"
+            class="px-6 py-3 text-sm font-medium border-b-2 transition-colors hover:text-primary-600">
+            Transactions
+          </button>
+          <button
+            (click)="switchTab('revenue')"
+            [class.border-primary-600]="activeTab === 'revenue'"
+            [class.text-primary-600]="activeTab === 'revenue'"
+            class="px-6 py-3 text-sm font-medium border-b-2 transition-colors hover:text-primary-600">
+            Revenue
+          </button>
+          <button
+            (click)="switchTab('categories')"
+            [class.border-primary-600]="activeTab === 'categories'"
+            [class.text-primary-600]="activeTab === 'categories'"
+            class="px-6 py-3 text-sm font-medium border-b-2 transition-colors hover:text-primary-600">
+            Categories
+          </button>
+          <button
+            (click)="switchTab('vouchers')"
+            [class.border-primary-600]="activeTab === 'vouchers'"
+            [class.text-primary-600]="activeTab === 'vouchers'"
+            class="px-6 py-3 text-sm font-medium border-b-2 transition-colors hover:text-primary-600">
+            Vouchers
+          </button>
+          <button
+            (click)="switchTab('expired')"
+            [class.border-primary-600]="activeTab === 'expired'"
+            [class.text-primary-600]="activeTab === 'expired'"
+            class="px-6 py-3 text-sm font-medium border-b-2 transition-colors hover:text-primary-600">
+            Expired Items
+          </button>
+        </nav>
+      </div>
+    </div>
+
+    <!-- Loading State -->
+    <div *ngIf="isLoading" class="flex items-center justify-center py-12">
+      <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+    </div>
+
+    <!-- Transaction Report -->
+    <div *ngIf="!isLoading && activeTab === 'transactions' && transactionReport" class="space-y-6">
+      <!-- Summary Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+          <h3 class="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Total Transactions</h3>
+          <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ transactionReport.transactions?.length || 0 }}</p>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6" *ngFor="let summary of transactionReport.summary">
+          <h3 class="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">{{ summary.transaction_type }}</h3>
+          <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ summary.count }}</p>
+          <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">{{ formatCurrency(summary.total_amount) }}</p>
+        </div>
+      </div>
+
+      <!-- Transactions Table -->
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+          <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Transaction Details</h3>
+        </div>
+
+        <!-- Empty State -->
+        <div *ngIf="!transactionReport.transactions || transactionReport.transactions.length === 0" class="px-6 py-12 text-center">
+          <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+          </svg>
+          <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-white">No transactions found</h3>
+          <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">No transactions were recorded for the selected date range.</p>
+          <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">Try adjusting the date filter or selecting a different period.</p>
+        </div>
+
+        <div *ngIf="transactionReport.transactions && transactionReport.transactions.length > 0" class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead class="bg-gray-50 dark:bg-gray-700">
+              <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Transaction #</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Type</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Pawner</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Employee</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Date</th>
+                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Amount</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Status</th>
+              </tr>
+            </thead>
+            <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+              <tr *ngFor="let tx of transactionReport.transactions">
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{{ tx.transaction_number }}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                  <span class="capitalize">{{ tx.transaction_type.replace('_', ' ') }}</span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                  <div *ngIf="tx.pawner_first_name">{{ tx.pawner_first_name }} {{ tx.pawner_last_name }}</div>
+                  <div *ngIf="!tx.pawner_first_name" class="text-gray-400 italic">N/A</div>
+                  <div *ngIf="tx.customer_code" class="text-xs text-gray-500">{{ tx.customer_code }}</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                  <div *ngIf="tx.employee_first_name">{{ tx.employee_first_name }} {{ tx.employee_last_name }}</div>
+                  <div *ngIf="!tx.employee_first_name" class="text-gray-400 italic">N/A</div>
+                  <div *ngIf="tx.employee_role" class="text-xs text-gray-500 capitalize">{{ tx.employee_role }}</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{{ formatDate(tx.transaction_date) }}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-right font-medium text-gray-900 dark:text-white">{{ formatCurrency(tx.total_amount) }}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm capitalize">
+                  <span [class]="'inline-flex px-2 py-1 text-xs font-medium rounded-full ' +
+                    (tx.status === 'active' ? 'bg-green-100 text-green-800' :
+                     tx.status === 'redeemed' ? 'bg-blue-100 text-blue-800' :
+                     tx.status === 'expired' ? 'bg-red-100 text-red-800' :
+                     'bg-gray-100 text-gray-800')">
+                    {{ tx.status }}
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Auction Sales -->
+      <div *ngIf="transactionReport.auctionSales?.length > 0" class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+          <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Auction Sales</h3>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead class="bg-gray-50 dark:bg-gray-700">
+              <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Date</th>
+                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Count</th>
+                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Total Amount</th>
+              </tr>
+            </thead>
+            <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+              <tr *ngFor="let auction of transactionReport.auctionSales" class="bg-green-50 dark:bg-green-900/20">
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{{ formatDate(auction.sale_date) }}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-green-700 dark:text-green-400">{{ auction.count }}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-right font-medium text-green-700 dark:text-green-400">{{ formatCurrency(auction.total_amount) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Revenue Report -->
+    <div *ngIf="!isLoading && activeTab === 'revenue' && revenueReport" class="space-y-6">
+      <!-- Summary Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+          <h3 class="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Total Revenue</h3>
+          <p class="text-2xl font-bold text-green-600">{{ formatCurrency(getTotalRevenue() + getTotalAuctionRevenue()) }}</p>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+          <h3 class="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Transaction Revenue</h3>
+          <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ formatCurrency(getTotalRevenue()) }}</p>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+          <h3 class="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Auction Revenue</h3>
+          <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ formatCurrency(getTotalAuctionRevenue()) }}</p>
+        </div>
+      </div>
+
+      <!-- Revenue Table -->
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+          <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Revenue Breakdown</h3>
+        </div>
+
+        <!-- Empty State -->
+        <div *ngIf="!revenueReport.revenue || revenueReport.revenue.length === 0" class="px-6 py-12 text-center">
+          <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-white">No revenue data</h3>
+          <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">No revenue was generated for the selected date range.</p>
+        </div>
+
+        <div *ngIf="revenueReport.revenue && revenueReport.revenue.length > 0" class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead class="bg-gray-50 dark:bg-gray-700">
+              <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Date</th>
+                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Interest</th>
+                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Service Charge</th>
+                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Penalty</th>
+                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Total</th>
+              </tr>
+            </thead>
+            <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+              <tr *ngFor="let rev of revenueReport.revenue">
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{{ formatDate(rev.date) }}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900 dark:text-white">{{ formatCurrency(rev.interest_revenue) }}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900 dark:text-white">{{ formatCurrency(rev.service_charge_revenue) }}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900 dark:text-white">{{ formatCurrency(rev.penalty_revenue) }}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-right font-medium text-green-600">{{ formatCurrency(rev.total_revenue) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Category Report -->
+    <div *ngIf="!isLoading && activeTab === 'categories' && categoryReport" class="space-y-6">
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+          <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Item Categories</h3>
+        </div>
+
+        <!-- Empty State -->
+        <div *ngIf="!categoryReport || categoryReport.length === 0" class="px-6 py-12 text-center">
+          <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
+          </svg>
+          <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-white">No category data</h3>
+          <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">No items were recorded for the selected date range.</p>
+        </div>
+
+        <div *ngIf="categoryReport && categoryReport.length > 0" class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead class="bg-gray-50 dark:bg-gray-700">
+              <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Category</th>
+                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Items</th>
+                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Total Appraised</th>
+                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Total Loan</th>
+                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Avg Loan</th>
+              </tr>
+            </thead>
+            <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+              <tr *ngFor="let cat of categoryReport">
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{{ cat.category }}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900 dark:text-white">{{ cat.item_count }}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900 dark:text-white">{{ formatCurrency(cat.total_appraised_value) }}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-right font-medium text-gray-900 dark:text-white">{{ formatCurrency(cat.total_loan_amount) }}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-500 dark:text-gray-400">{{ formatCurrency(cat.avg_loan_amount) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Voucher Report -->
+    <div *ngIf="!isLoading && activeTab === 'vouchers' && voucherReport" class="space-y-6">
+      <!-- Summary Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+          <h3 class="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Total Vouchers</h3>
+          <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ getTotalVouchers() }}</p>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+          <h3 class="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Total Amount</h3>
+          <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ formatCurrency(getTotalVoucherAmount()) }}</p>
+        </div>
+      </div>
+
+      <!-- Vouchers Table -->
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+          <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Voucher Details</h3>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead class="bg-gray-50 dark:bg-gray-700">
+              <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Type</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Date</th>
+                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Count</th>
+                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Total</th>
+                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Average</th>
+              </tr>
+            </thead>
+            <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+              <tr *ngFor="let voucher of voucherReport">
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white capitalize">{{ voucher.voucher_type }}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{{ formatDate(voucher.date) }}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900 dark:text-white">{{ voucher.count }}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-right font-medium text-gray-900 dark:text-white">{{ formatCurrency(voucher.total_amount) }}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-500 dark:text-gray-400">{{ formatCurrency(voucher.avg_amount) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Expired Items Report -->
+    <div *ngIf="!isLoading && activeTab === 'expired' && expiredItemsReport" class="space-y-6">
+      <!-- Summary Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div *ngFor="let summary of expiredItemsReport.summary" class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+          <h3 class="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2 capitalize">{{ summary.status }}</h3>
+          <p class="text-2xl font-bold text-gray-900 dark:text-white mb-1">{{ summary.count }} items</p>
+          <p class="text-sm text-gray-500 dark:text-gray-400">{{ formatCurrency(summary.total_appraised_value) }}</p>
+        </div>
+      </div>
+
+      <!-- Expired Items Table -->
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+          <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Expired Items List</h3>
+        </div>
+
+        <!-- Empty State -->
+        <div *ngIf="!expiredItemsReport.items || expiredItemsReport.items.length === 0" class="px-6 py-12 text-center">
+          <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-white">No expired items</h3>
+          <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">There are no expired or items for auction.</p>
+          <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">All loans are current or have been resolved.</p>
+        </div>
+
+        <div *ngIf="expiredItemsReport.items && expiredItemsReport.items.length > 0" class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead class="bg-gray-50 dark:bg-gray-700">
+              <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Ticket</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Item</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Pawner</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Expired Date</th>
+                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Days</th>
+                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Appraised</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Status</th>
+              </tr>
+            </thead>
+            <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+              <tr *ngFor="let item of expiredItemsReport.items">
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{{ item.ticket_number }}</td>
+                <td class="px-6 py-4 text-sm text-gray-900 dark:text-white">{{ item.category }} - {{ item.description }}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{{ item.first_name }} {{ item.last_name }}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{{ formatDate(item.expiry_date) }}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-red-600">{{ item.days_expired }}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900 dark:text-white">{{ formatCurrency(item.appraised_value) }}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm capitalize">
+                  <span [class]="'inline-flex px-2 py-1 text-xs font-medium rounded-full ' +
+                    (item.status === 'sold' ? 'bg-green-100 text-green-800' :
+                     item.status === 'for_auction' ? 'bg-yellow-100 text-yellow-800' :
+                     'bg-red-100 text-red-800')">
+                    {{ item.status.replace('_', ' ') }}
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>

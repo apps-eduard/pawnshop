@@ -28,7 +28,7 @@ router.get('/today', async (req, res) => {
     const auctionSalesResult = await pool.query(`
       SELECT 
         COUNT(*) as count,
-        COALESCE(SUM(final_price), 0) as total_amount
+        COALESCE(SUM(auction_price), 0) as total_amount
       FROM pawn_items
       WHERE status = 'sold'
         AND DATE(sold_date) = $1

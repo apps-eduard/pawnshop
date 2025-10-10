@@ -11,11 +11,11 @@ router.get('/', (req, res) => {
   res.json({ success: true, message: 'Loans endpoint - Coming soon' });
 });
 
-router.post('/', authorizeRoles('CASHIER', 'ADMIN'), (req, res) => {
+router.post('/', authorizeRoles('cashier', 'admin', 'administrator'), (req, res) => {
   res.json({ success: true, message: 'Create loan endpoint - Coming soon' });
 });
 
-router.put('/:id', authorizeRoles('CASHIER', 'ADMIN'), (req, res) => {
+router.put('/:id', authorizeRoles('cashier', 'admin', 'administrator'), (req, res) => {
   res.json({ success: true, message: 'Update loan endpoint - Coming soon' });
 });
 

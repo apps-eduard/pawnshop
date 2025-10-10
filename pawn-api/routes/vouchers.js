@@ -175,7 +175,7 @@ router.get('/:id', async (req, res) => {
  * Create multiple vouchers at once
  * Body: { vouchers: [{ type, date, amount, notes }, ...] }
  */
-router.post('/batch', authorizeRoles('MANAGER', 'ADMIN'), async (req, res) => {
+router.post('/batch', authorizeRoles('manager', 'admin', 'administrator'), async (req, res) => {
   const client = await pool.connect();
   
   try {
@@ -270,7 +270,7 @@ router.post('/batch', authorizeRoles('MANAGER', 'ADMIN'), async (req, res) => {
  * Create a single voucher
  * Body: { type, date, amount, notes }
  */
-router.post('/', authorizeRoles('MANAGER', 'ADMIN'), async (req, res) => {
+router.post('/', authorizeRoles('manager', 'admin', 'administrator'), async (req, res) => {
   const client = await pool.connect();
   
   try {
@@ -342,7 +342,7 @@ router.post('/', authorizeRoles('MANAGER', 'ADMIN'), async (req, res) => {
  * DELETE /api/vouchers/:id
  * Delete a voucher by ID
  */
-router.delete('/:id', authorizeRoles('ADMIN'), async (req, res) => {
+router.delete('/:id', authorizeRoles('admin', 'administrator'), async (req, res) => {
   const client = await pool.connect();
   
   try {

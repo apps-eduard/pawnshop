@@ -48,6 +48,11 @@ export class ManagerDashboard implements OnInit, OnDestroy {
   selectedPeriod = 'month';
   private refreshInterval: any;
 
+  // Toast notification properties
+  showToast = false;
+  toastMessage = '';
+  toastType: 'success' | 'error' | 'warning' | 'info' = 'info';
+
   constructor(private statisticsService: StatisticsService) {}
 
   ngOnInit() {
@@ -138,11 +143,13 @@ export class ManagerDashboard implements OnInit, OnDestroy {
         console.log('✅ Loaded today\'s statistics:', stats);
       } else {
         console.error('❌ Failed to load statistics:', response.message);
+        this.showErrorToast('Failed to load statistics: ' + response.message);
         // Initialize with empty data
         this.transactionCards = this.getEmptyTransactionCards();
       }
     } catch (error) {
       console.error('❌ Error loading statistics:', error);
+      this.showErrorToast('Error loading statistics. Please try again later.');
       // Initialize with empty data
       this.transactionCards = this.getEmptyTransactionCards();
     }
@@ -332,6 +339,38 @@ export class ManagerDashboard implements OnInit, OnDestroy {
   onPeriodChange(event: any) {
     this.selectedPeriod = event.target.value;
     this.loadDashboardData(); // Reload data for new period
+  }
+
+  // Toast notification methods
+  showErrorToast(message: string): void {
+    this.toastType = 'error';
+    this.toastMessage = message;
+    this.showToast = true;
+    setTimeout(() => {
+      this.showToast = false;
+    }, 5000);
+  }
+
+  showSuccessToast(message: string): void {
+    this.toastType = 'success';
+    this.toastMessage = message;
+    this.showToast = true;
+    setTimeout(() => {
+      this.showToast = false;
+    }, 3000);
+  }
+
+  showWarningToast(message: string): void {
+    this.toastType = 'warning';
+    this.toastMessage = message;
+    this.showToast = true;
+    setTimeout(() => {
+      this.showToast = false;
+    }, 4000);
+  }
+
+  closeToast(): void {
+    this.showToast = false;
   }
 }
 

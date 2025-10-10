@@ -224,11 +224,12 @@ export class SidebarComponent implements OnInit, OnDestroy {
     const today = new Date().toISOString().split('T')[0];
     this.voucherForm.date = today;
 
-    // Focus on date input after modal opens
+    // Focus on amount input after modal opens and select text
     setTimeout(() => {
-      const dateInput = document.querySelector('input[name="voucherDate"]') as HTMLInputElement;
-      if (dateInput) {
-        dateInput.focus();
+      const amountInput = document.getElementById('voucherAmount') as HTMLInputElement;
+      if (amountInput) {
+        amountInput.focus();
+        amountInput.select();
       }
     }, 100);
   }
@@ -266,18 +267,29 @@ export class SidebarComponent implements OnInit, OnDestroy {
     // Show toast notification
     this.showSuccessToast(`Voucher added: ${this.voucherForm.type.toUpperCase()} - ₱${this.voucherForm.amount.toLocaleString()}`);
 
-    // Reset form but keep date
+    // Store current date and type
     const currentDate = this.voucherForm.date;
-    this.resetVoucherForm();
-    this.voucherForm.date = currentDate;
+    const currentType = this.voucherForm.type;
 
-    // Focus back to date input
+    // Reset form completely
+    this.resetVoucherForm();
+
+    // Restore date and type only
+    this.voucherForm.date = currentDate;
+    this.voucherForm.type = currentType;
+
+    // Focus back to amount input and clear it
     setTimeout(() => {
-      const dateInput = document.querySelector('input[name="voucherDate"]') as HTMLInputElement;
-      if (dateInput) {
-        dateInput.focus();
+      const amountInput = document.getElementById('voucherAmount') as HTMLInputElement;
+      if (amountInput) {
+        // Clear the input value directly
+        amountInput.value = '';
+        // Trigger input event to update ngModel
+        amountInput.dispatchEvent(new Event('input', { bubbles: true }));
+        // Focus on the input
+        amountInput.focus();
       }
-    }, 100);
+    }, 50);
   }
 
   removeVoucher(id: number): void {
@@ -308,13 +320,21 @@ export class SidebarComponent implements OnInit, OnDestroy {
           this.nextVoucherId = 1;
           this.closeVoucherModal();
         } else {
-          alert(`Failed to save vouchers: ${response.message}`);
+          this.showErrorToast(`Failed to save vouchers: ${response.message}`);
         }
       },
       error: (error) => {
         console.error('Error saving vouchers:', error);
         const errorMessage = error.error?.message || error.message || 'Unknown error occurred';
-        alert(`Failed to save vouchers: ${errorMessage}`);
+        const statusCode = error.status;
+
+        if (statusCode === 403) {
+          this.showErrorToast('Access denied: You do not have permission to save vouchers');
+        } else if (statusCode === 500) {
+          this.showErrorToast('Server error: Failed to save vouchers. Please try again later.');
+        } else {
+          this.showErrorToast(`Failed to save vouchers: ${errorMessage}`);
+        }
       }
     });
   }
@@ -344,6 +364,14 @@ export class SidebarComponent implements OnInit, OnDestroy {
     setTimeout(() => {
       this.showToast = false;
     }, 2000);
+  }
+
+  showErrorToast(message: string): void {
+    this.toastMessage = message;
+    this.showToast = true;
+    setTimeout(() => {
+      this.showToast = false;
+    }, 5000); // Show error messages longer (5 seconds)
   }
 
   getTotalAmount(): number {

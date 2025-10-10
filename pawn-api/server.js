@@ -26,6 +26,7 @@ const penaltyConfigRoutes = require('./routes/penalty-config');
 const serviceChargeConfigRoutes = require('./routes/service-charge-config');
 const adminCalculationsRoutes = require('./routes/admin-calculations');
 const statisticsRoutes = require('./routes/statistics');
+const reportsRoutes = require('./routes/reports');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -212,6 +213,7 @@ app.use('/api/penalty-config', penaltyConfigRoutes);
 app.use('/api/service-charge-config', serviceChargeConfigRoutes);
 app.use('/api/admin-calculations', adminCalculationsRoutes);
 app.use('/api/statistics', statisticsRoutes);
+app.use('/api/reports', reportsRoutes);
 
 // Enhanced error handling middleware with CORS support
 app.use((err, req, res, next) => {

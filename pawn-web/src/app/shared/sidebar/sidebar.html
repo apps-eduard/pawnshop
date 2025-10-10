@@ -141,30 +141,30 @@
 <!-- Voucher Modal -->
 <div
   *ngIf="showVoucherModal"
-  class="fixed inset-0 bg-black bg-opacity-60 z-[60] flex items-center justify-center p-4"
+  class="fixed inset-0 bg-black bg-opacity-60 z-[60] flex items-center justify-center p-3"
   (click)="closeVoucherModal()">
 
   <div
-    class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col"
+    class="bg-white dark:bg-gray-800 rounded-lg shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col"
     (click)="$event.stopPropagation()">
 
-    <!-- Modal Header -->
-    <div class="bg-gradient-to-r from-primary-600 to-primary-700 px-4 py-3 rounded-t-xl flex-shrink-0">
+    <!-- Modal Header - More Compact -->
+    <div class="bg-gradient-to-r from-primary-600 to-primary-700 px-4 py-2.5 rounded-t-lg flex-shrink-0">
       <div class="flex items-center justify-between">
-        <div class="flex items-center space-x-3">
-          <div class="w-10 h-10 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
-            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="flex items-center space-x-2">
+          <div class="w-8 h-8 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2zM10 8.5a.5.5 0 11-1 0 .5.5 0 011 0zm5 5a.5.5 0 11-1 0 .5.5 0 011 0z"></path>
             </svg>
           </div>
           <div>
-            <h2 class="text-lg font-bold text-white">Create Voucher</h2>
+            <h2 class="text-base font-bold text-white">Create Voucher</h2>
             <p class="text-xs text-primary-100">Cash or Cheque Payment</p>
           </div>
         </div>
         <button
           (click)="closeVoucherModal()"
-          class="p-1.5 text-white hover:bg-white hover:bg-opacity-20 rounded-lg transition-colors">
+          class="p-1 text-white hover:bg-white hover:bg-opacity-20 rounded-lg transition-colors">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
           </svg>
@@ -172,14 +172,14 @@
       </div>
     </div>
 
-    <!-- Modal Body -->
-    <div class="p-4 space-y-3 max-h-[calc(100vh-200px)] overflow-y-auto">
+    <!-- Modal Body - More Compact -->
+    <div class="p-3 space-y-2.5 max-h-[calc(85vh-140px)] overflow-y-auto">
 
       <!-- First Row: Date and Payment Type -->
-      <div class="flex items-center gap-3">
+      <div class="flex items-center gap-2">
         <!-- Date Field with Icon -->
-        <div class="relative w-48">
-          <div class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+        <div class="relative w-44">
+          <div class="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
             </svg>
@@ -189,8 +189,8 @@
             type="date"
             [(ngModel)]="voucherForm.date"
             name="voucherDate"
-            tabindex="1"
-            class="w-full pl-9 pr-3 py-2 text-sm border-2 border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+
+            class="w-full pl-8 pr-2 py-1.5 text-sm border-2 border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             required>
         </div>
 
@@ -206,9 +206,9 @@
               tabindex="7"
               title="Cash Payment"
               class="peer sr-only">
-            <div class="p-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg hover:border-primary-500 peer-checked:border-green-500 peer-checked:bg-green-50 dark:peer-checked:bg-green-900/20 transition-all h-full">
-              <div class="flex flex-col items-center justify-center space-y-1">
-                <svg class="w-5 h-5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="p-1.5 border-2 border-gray-300 dark:border-gray-600 rounded-lg hover:border-primary-500 peer-checked:border-green-500 peer-checked:bg-green-50 dark:peer-checked:bg-green-900/20 transition-all h-full">
+              <div class="flex flex-col items-center justify-center space-y-0.5">
+                <svg class="w-4 h-4 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path>
                 </svg>
                 <span class="text-xs font-bold text-gray-900 dark:text-white">Cash</span>
@@ -226,9 +226,9 @@
               tabindex="8"
               title="Cheque Payment"
               class="peer sr-only">
-            <div class="p-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg hover:border-primary-500 peer-checked:border-blue-500 peer-checked:bg-blue-50 dark:peer-checked:bg-blue-900/20 transition-all h-full">
-              <div class="flex flex-col items-center justify-center space-y-1">
-                <svg class="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="p-1.5 border-2 border-gray-300 dark:border-gray-600 rounded-lg hover:border-primary-500 peer-checked:border-blue-500 peer-checked:bg-blue-50 dark:peer-checked:bg-blue-900/20 transition-all h-full">
+              <div class="flex flex-col items-center justify-center space-y-0.5">
+                <svg class="w-4 h-4 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                 </svg>
                 <span class="text-xs font-bold text-gray-900 dark:text-white">Cheque</span>
@@ -241,8 +241,8 @@
       <!-- Second Row: Amount, Notes, and Add Button -->
       <div class="flex items-center gap-2">
         <!-- Amount with Icon -->
-        <div class="relative w-48">
-          <div class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+        <div class="relative w-44">
+          <div class="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
             </svg>
@@ -255,13 +255,13 @@
             appCurrencyInput
             placeholder="Amount"
             tabindex="2"
-            class="w-full pl-9 pr-3 py-2 text-sm border-2 border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+            class="w-full pl-8 pr-2 py-1.5 text-sm border-2 border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             required>
         </div>
 
         <!-- Notes with Icon -->
         <div class="relative flex-1">
-          <div class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+          <div class="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
             </svg>
@@ -273,7 +273,7 @@
             name="notes"
             placeholder="Enter notes..."
             tabindex="3"
-            class="w-full pl-9 pr-3 py-2 text-sm border-2 border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+            class="w-full pl-8 pr-2 py-1.5 text-sm border-2 border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             required>
         </div>
 
@@ -283,7 +283,7 @@
           (click)="addVoucher()"
           tabindex="4"
           title="Add Voucher"
-          class="p-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors shadow-sm flex items-center justify-center flex-shrink-0">
+          class="p-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors shadow-sm flex items-center justify-center flex-shrink-0">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"></path>
           </svg>
@@ -291,21 +291,21 @@
       </div>
 
       <!-- Added Vouchers List -->
-      <div *ngIf="voucherList.length > 0" class="border-t-2 border-gray-200 dark:border-gray-700 pt-3 space-y-3">
+      <div *ngIf="voucherList.length > 0" class="border-t-2 border-gray-200 dark:border-gray-700 pt-2.5 space-y-2">
         <div class="flex items-center justify-between">
-          <h3 class="text-sm font-bold text-gray-700 dark:text-gray-300">
+          <h3 class="text-xs font-bold text-gray-700 dark:text-gray-300">
             Added Vouchers ({{ voucherList.length }})
           </h3>
-          <span class="text-base font-bold text-primary-600 dark:text-primary-400">
+          <span class="text-sm font-bold text-primary-600 dark:text-primary-400">
             Total: ₱{{ getTotalAmount().toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
           </span>
         </div>
-        <div class="max-h-48 overflow-y-auto space-y-2">
+        <div class="max-h-40 overflow-y-auto space-y-1.5">
           <div *ngFor="let voucher of voucherList"
-               class="flex items-start justify-between p-2.5 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600 hover:border-primary-400 transition-colors">
-            <div class="flex-1 min-w-0 space-y-1">
-              <div class="flex items-center gap-2 flex-wrap">
-                <span class="px-2 py-0.5 text-xs font-bold rounded-md"
+               class="flex items-start justify-between p-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600 hover:border-primary-400 transition-colors">
+            <div class="flex-1 min-w-0 space-y-0.5">
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <span class="px-1.5 py-0.5 text-xs font-bold rounded-md"
                       [ngClass]="{
                         'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400': voucher.type === 'cash',
                         'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400': voucher.type === 'cheque'
@@ -334,13 +334,13 @@
       </div>
     </div>
 
-      <!-- Modal Footer -->
-      <div class="flex items-center justify-end gap-3 px-4 py-3 border-t-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+      <!-- Modal Footer - More Compact -->
+      <div class="flex items-center justify-end gap-2 px-3 py-2.5 border-t-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
         <button
           type="button"
           (click)="closeVoucherModal()"
           tabindex="6"
-          class="px-5 py-2 text-sm font-medium border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+          class="px-4 py-1.5 text-sm font-medium border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
           Close
         </button>
         <button
@@ -348,7 +348,7 @@
           type="button"
           (click)="saveAllVouchers()"
           tabindex="5"
-          class="px-5 py-2 text-sm font-medium bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-sm flex items-center space-x-2">
+          class="px-4 py-1.5 text-sm font-medium bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-sm flex items-center space-x-1.5">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path>
           </svg>

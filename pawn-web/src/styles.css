@@ -215,7 +215,55 @@ body.dark {
 /* 🎯 ENHANCED GLOBAL FOCUS ANIMATION FOR ALL TEXT INPUTS           */
 /* ================================================================= */
 
-/* Enhanced global input focus styles with thicker borders, larger font, and smooth animations */
+/* Heartbeat border animation keyframes - Reduced by 25% */
+@keyframes heartbeat-border {
+  0%, 100% {
+    border-color: rgb(59, 130, 246);
+    border-width: 2.25px;
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.375);
+  }
+  25% {
+    border-color: rgb(37, 99, 235);
+    border-width: 3px;
+    box-shadow: 0 0 0 6px rgba(59, 130, 246, 0.225);
+  }
+  50% {
+    border-color: rgb(59, 130, 246);
+    border-width: 3.75px;
+    box-shadow: 0 0 0 9px rgba(59, 130, 246, 0.1125);
+  }
+  75% {
+    border-color: rgb(37, 99, 235);
+    border-width: 3px;
+    box-shadow: 0 0 0 6px rgba(59, 130, 246, 0.225);
+  }
+}
+
+/* Dark mode heartbeat animation - Reduced by 25% */
+@keyframes heartbeat-border-dark {
+  0%, 100% {
+    border-color: rgb(96, 165, 250);
+    border-width: 2.25px;
+    box-shadow: 0 0 0 0 rgba(96, 165, 250, 0.375);
+  }
+  25% {
+    border-color: rgb(59, 130, 246);
+    border-width: 3px;
+    box-shadow: 0 0 0 6px rgba(96, 165, 250, 0.225);
+  }
+  50% {
+    border-color: rgb(96, 165, 250);
+    border-width: 3.75px;
+    box-shadow: 0 0 0 9px rgba(96, 165, 250, 0.1125);
+  }
+  75% {
+    border-color: rgb(59, 130, 246);
+    border-width: 3px;
+    box-shadow: 0 0 0 6px rgba(96, 165, 250, 0.225);
+  }
+}
+
+/* Enhanced global input focus styles with heartbeat border animation */
 input[type="text"],
 input[type="number"],
 input[type="email"],
@@ -225,8 +273,8 @@ input[type="date"],
 input[type="search"],
 textarea,
 select {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  border-width: 1px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  border-width: 2px;
   /* Removed font-size: inherit to allow individual components to set their own font size */
 }
 
@@ -239,17 +287,8 @@ input[type="date"]:focus,
 input[type="search"]:focus,
 textarea:focus,
 select:focus {
-  /* Thicker border on focus */
-  border-width: 2px !important;
-
-  /* Increase font size on focus */
-  font-size: 1.05em !important;
-
-  /* Enhanced box shadow for better visual feedback */
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15) !important;
-
-  /* Subtle scale animation */
-  transform: scale(1.02);
+  /* Apply heartbeat animation to border */
+  animation: heartbeat-border 1.5s ease-in-out infinite;
 
   /* Ensure higher z-index to prevent clipping */
   position: relative;
@@ -269,7 +308,7 @@ input[type="date"]:not(:focus),
 input[type="search"]:not(:focus),
 textarea:not(:focus),
 select:not(:focus) {
-  transform: scale(1);
+  animation: none;
   box-shadow: none;
   z-index: 1;
 }
@@ -284,7 +323,8 @@ select:not(:focus) {
 .dark input[type="search"]:focus,
 .dark textarea:focus,
 .dark select:focus {
-  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.25) !important;
+  /* Apply dark mode heartbeat animation */
+  animation: heartbeat-border-dark 1.5s ease-in-out infinite;
 }
 
 /* Enhanced focus for search inputs with white ring (on colored backgrounds) */

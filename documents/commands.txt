@@ -1,3 +1,65 @@
+═══════════════════════════════════════════════════════════════════
+📦 MIGRATION COMMANDS (Similar to dotnet ef)
+═══════════════════════════════════════════════════════════════════
+
+🔹 KNEX MIGRATIONS (migrations_knex folder) - Recommended
+   Location: pawn-api/migrations_knex/
+   Similar to: dotnet ef migrations
+   
+   ✅ Run all pending migrations (like dotnet ef database update):
+      cd "x:\Programming 2025\pawnshop\pawn-api"
+      npx knex migrate:latest
+   
+   ✅ Rollback last migration (like dotnet ef migrations remove):
+      npx knex migrate:rollback
+   
+   ✅ Rollback all migrations:
+      npx knex migrate:rollback --all
+   
+   ✅ Check migration status (like dotnet ef migrations list):
+      npx knex migrate:status
+   
+   ✅ Create new migration (like dotnet ef migrations add):
+      npx knex migrate:make migration_name
+   
+   ✅ Run specific migration version:
+      npx knex migrate:up [migration_name]
+   
+   ✅ Rollback specific migration:
+      npx knex migrate:down [migration_name]
+
+─────────────────────────────────────────────────────────────────
+
+🔹 MANUAL JS MIGRATIONS (migrations folder) - Legacy
+   Location: pawn-api/migrations/*.js
+   Run individually with Node:
+   
+   cd "x:\Programming 2025\pawnshop\pawn-api"
+   node migrations/create-vouchers-table.js
+   node migrations/add-auction-price-column.js
+   node migrations/add-tracking-number-column.js
+
+─────────────────────────────────────────────────────────────────
+
+🔹 SQL MIGRATIONS (migrations folder) - Direct SQL
+   Location: pawn-api/migrations/*.sql
+   Run with psql command:
+   
+   cd "x:\Programming 2025\pawnshop\pawn-api\migrations"
+   psql -U postgres -d pawnshop_db -f admin_settings.sql
+   psql -U postgres -d pawnshop_db -f pawn_shop_core_tables.sql
+   psql -U postgres -d pawnshop_db -f add-auction-sale-fields.sql
+
+─────────────────────────────────────────────────────────────────
+
+🔹 CHECK DATABASE TABLES
+   cd "x:\Programming 2025\pawnshop\pawn-api"
+   node -e "const { pool } = require('./config/database'); pool.query('SELECT table_name FROM information_schema.tables WHERE table_schema = \'public\' ORDER BY table_name').then(r => { console.log(r.rows); process.exit(); });"
+
+═══════════════════════════════════════════════════════════════════
+
+
+
 Invoke-WebRequest -Uri "http://localhost:3000/api/health" -Method GET
 
 curl -H "Content-Type: application/json" http://localhost:3000/api/health
