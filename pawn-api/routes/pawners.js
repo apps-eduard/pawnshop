@@ -258,6 +258,24 @@ router.post('/', async (req, res) => {
     
     const row = result.rows[0];
     
+    // Assign 'pawner' role to the newly created pawner
+    try {
+      const pawnerRoleResult = await pool.query(`SELECT id FROM roles WHERE name = 'pawner'`);
+      if (pawnerRoleResult.rows.length > 0) {
+        const pawnerRoleId = pawnerRoleResult.rows[0].id;
+        await pool.query(`
+          INSERT INTO pawner_roles (pawner_id, role_id, assigned_by, is_primary)
+          VALUES ($1, $2, $3, true)
+        `, [row.id, pawnerRoleId, req.user.id]);
+        console.log(`✅ Assigned 'pawner' role to pawner ${row.id}`);
+      } else {
+        console.warn(`⚠️ Warning: 'pawner' role not found in system. Run migrations to add it.`);
+      }
+    } catch (roleError) {
+      console.error(`⚠️ Error assigning pawner role (non-critical):`, roleError.message);
+      // Don't fail the whole operation if role assignment fails
+    }
+    
     console.log(`✅ Pawner created: ${firstName} ${lastName} (ID: ${row.id})`);
     
     res.status(201).json({

@@ -194,7 +194,7 @@ router.get('/roles', authorizeRoles('admin', 'administrator', 'manager'), async 
   try {
     const query = `
       SELECT 
-        r.id, r.name, r.display_name, r.description, r.is_system_role,
+        r.id, r.name, r.display_name, r.description, r.is_active,
         COUNT(DISTINCT er.employee_id) as user_count,
         json_agg(DISTINCT e.username) FILTER (WHERE e.username IS NOT NULL) as users
       FROM roles r
@@ -229,8 +229,8 @@ router.post('/roles', authorizeRoles('admin', 'administrator'), async (req, res)
     const { name, display_name, description } = req.body;
     
     const query = `
-      INSERT INTO roles (name, display_name, description, is_system_role)
-      VALUES ($1, $2, $3, false)
+      INSERT INTO roles (name, display_name, description, is_active)
+      VALUES ($1, $2, $3, true)
       RETURNING *
     `;
     
@@ -263,7 +263,7 @@ router.put('/roles/:id', authorizeRoles('admin', 'administrator'), async (req, r
     const query = `
       UPDATE roles
       SET display_name = $1, description = $2, updated_at = CURRENT_TIMESTAMP
-      WHERE id = $3 AND is_system_role = false
+      WHERE id = $3
       RETURNING *
     `;
     
@@ -300,14 +300,14 @@ router.delete('/roles/:id', authorizeRoles('admin', 'administrator'), async (req
     const { id } = req.params;
     
     const result = await pool.query(
-      'DELETE FROM roles WHERE id = $1 AND is_system_role = false RETURNING *',
+      'DELETE FROM roles WHERE id = $1 RETURNING *',
       [id]
     );
     
     if (result.rows.length === 0) {
       return res.status(404).json({
         success: false,
-        message: 'Role not found or is a system role'
+        message: 'Role not found'
       });
     }
     
@@ -371,7 +371,7 @@ router.get('/permissions/matrix', authorizeRoles('admin', 'administrator', 'mana
   try {
     // Get all roles
     const rolesResult = await pool.query(`
-      SELECT id, name, display_name, description, is_system_role, created_at
+      SELECT id, name, display_name, description, is_active, created_at
       FROM roles
       ORDER BY display_name
     `);

@@ -47,6 +47,10 @@ try {
     npm install
     if ($LASTEXITCODE -ne 0) { throw "Failed to install API dependencies" }
 
+    Write-Host "Running Knex migrations..." -ForegroundColor Cyan
+    npx knex migrate:latest
+    if ($LASTEXITCODE -ne 0) { throw "Failed to run Knex migrations" }
+
     Write-Host "Setting up complete database..." -ForegroundColor Cyan
     Write-Host "  - Creating admin tables and categories..." -ForegroundColor Gray
     Write-Host "  - Creating core pawn shop tables..." -ForegroundColor Gray
@@ -64,6 +68,14 @@ try {
     npm install
     if ($LASTEXITCODE -ne 0) { throw "Failed to install frontend dependencies" }
 
+    Set-Location ".."
+
+    Write-Host "Resetting employee passwords to default..." -ForegroundColor Cyan
+    Set-Location "pawn-api"
+    node reset-user-passwords.js
+    if ($LASTEXITCODE -ne 0) { 
+        Write-Host "⚠️  Warning: Password reset failed, but continuing..." -ForegroundColor Yellow
+    }
     Set-Location ".."
 
     Write-Host "Verifying complete database setup..." -ForegroundColor Cyan
@@ -86,12 +98,18 @@ try {
         Write-Host "  * Service charge brackets seeded (P1-P5)" -ForegroundColor Green
         Write-Host "  * Cities and barangays data seeded" -ForegroundColor Green
         Write-Host "  * Item descriptions seeded" -ForegroundColor Green
-        Write-Host "  * Demo accounts created" -ForegroundColor Green
+        Write-Host "  * Demo accounts created with password: password123" -ForegroundColor Green
+        Write-Host "  * RBAC system configured (5 roles, 8 menus)" -ForegroundColor Green
+        Write-Host "  * Employee roles assigned (7 employees)" -ForegroundColor Green
         Write-Host ""
         Write-Host "To start the application:" -ForegroundColor Cyan
         Write-Host "1. Terminal 1: cd pawn-api; npm start" -ForegroundColor Yellow
         Write-Host "2. Terminal 2: cd pawn-web; ng serve" -ForegroundColor Yellow
         Write-Host "3. Browser: http://localhost:4200" -ForegroundColor Yellow
+        Write-Host ""
+        Write-Host "Login Credentials (all users):" -ForegroundColor Cyan
+        Write-Host "  Username: admin, cashier1, cashier2, manager1, etc." -ForegroundColor Yellow
+        Write-Host "  Password: password123" -ForegroundColor Yellow
         Write-Host ""
         Read-Host "Press Enter to exit"
     } else {

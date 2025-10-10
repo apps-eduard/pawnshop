@@ -6,12 +6,13 @@ async function resetUserPasswords() {
   console.log('═'.repeat(60));
   
   const demoAccounts = [
-    { username: 'admin', password: 'admin123', role: 'Administrator' },
-    { username: 'manager1', password: 'manager123', role: 'Manager' },
-    { username: 'cashier1', password: 'cashier123', role: 'Cashier' },
-    { username: 'auctioneer1', password: 'auctioneer123', role: 'Auctioneer' },
-    { username: 'appraiser1', password: 'appraiser123', role: 'Appraiser' },
-    { username: 'pawner1', password: 'pawner123', role: 'Pawner' }
+    { username: 'admin', password: 'password123', role: 'Administrator' },
+    { username: 'cashier1', password: 'password123', role: 'Cashier' },
+    { username: 'cashier2', password: 'password123', role: 'Cashier' },
+    { username: 'manager1', password: 'password123', role: 'Manager' },
+    { username: 'appraiser1', password: 'password123', role: 'Appraiser' },
+    { username: 'appraiser2', password: 'password123', role: 'Appraiser' },
+    { username: 'auctioneer1', password: 'password123', role: 'Auctioneer' }
   ];
 
   try {
@@ -66,7 +67,7 @@ async function resetUserPasswords() {
     console.log('\n🧪 Testing password verification...');
     const testUser = await pool.query('SELECT password_hash FROM employees WHERE username = $1', ['admin']);
     if (testUser.rows.length > 0) {
-      const isValid = await bcrypt.compare('admin123', testUser.rows[0].password_hash);
+      const isValid = await bcrypt.compare('password123', testUser.rows[0].password_hash);
       console.log(`Admin password test: ${isValid ? '✅ SUCCESS' : '❌ FAILED'}`);
     }
     

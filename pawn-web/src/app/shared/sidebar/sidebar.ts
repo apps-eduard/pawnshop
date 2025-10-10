@@ -51,53 +51,9 @@ export class SidebarComponent implements OnInit, OnDestroy {
   // Cache navigation items to prevent infinite loops
   cachedNavigationItems: NavigationItem[] = [];
 
-  // Navigation items for different roles
-  navigationItems: NavigationItem[] = [
-    // Dashboard items
-    { label: 'Dashboard', route: '/dashboard/admin', icon: '📊', roles: ['admin', 'administrator'] },
-    { label: 'Dashboard', route: '/dashboard/manager', icon: '📊', roles: ['manager'] },
-    { label: 'Dashboard', route: '/dashboard/cashier', icon: '📊', roles: ['cashier'] },
-    { label: 'Dashboard', route: '/dashboard/appraiser', icon: '📊', roles: ['appraiser'] },
-    { label: 'Dashboard', route: '/dashboard/auctioneer', icon: '📊', roles: ['auctioneer'] },
-    { label: 'Dashboard', route: '/dashboard/pawner', icon: '📊', roles: ['pawner'] },
-
-    // Transactions
-    { label: 'Transactions', route: '/transactions', icon: '💳', roles: ['admin', 'administrator', 'manager', 'cashier'] },
-
-    // Users & Staff Management
-    { label: 'User Management', route: '/user-management', icon: '👥', roles: ['admin', 'administrator'] },
-    { label: 'Address Management', route: '/address-management', icon: '🏠', roles: ['admin', 'administrator'] },
-    { label: 'Staff', route: '/staff', icon: '👨‍💼', roles: ['manager'] },
-
-    // Customer Management
-    { label: 'Pawner Management', route: '/pawner-management', icon: '🧑‍🤝‍🧑', roles: ['admin', 'administrator', 'manager', 'cashier'] },
-    { label: 'Customers', route: '/customers', icon: '👤', roles: ['cashier'] },
-
-    // Loans & Pawning
-    { label: 'Loans', route: '/loans', icon: '🏦', roles: ['cashier', 'manager'] },
-    { label: 'My Loans', route: '/my-loans', icon: '🏦', roles: ['pawner'] },
-    { label: 'Make Payment', route: '/payments', icon: '💳', roles: ['pawner'] },
-    { label: 'Loan History', route: '/loan-history', icon: '📋', roles: ['pawner'] },
-
-    // Appraisals
-    { label: 'Appraisals', route: '/appraisals', icon: '💎', roles: ['appraiser'] },
-
-    // Items Management
-    { label: 'Item Management', route: '/item-management', icon: '📦', roles: ['admin', 'administrator', 'manager'] },
-
-    // Auctions
-    { label: 'Auctions', route: '/auctions', icon: '🔨', roles: ['auctioneer', 'manager'] },
-    { label: 'Bidders', route: '/bidders', icon: '🙋', roles: ['auctioneer'] },
-
-    // Reports
-    { label: 'Reports', route: '/reports', icon: '📈', roles: ['admin', 'administrator', 'manager', 'appraiser'] },
-
-    // Vouchers (Manager only)
-    { label: 'Vouchers', route: '/vouchers', icon: '🎟️', roles: ['manager', 'admin', 'administrator'] },
-
-    // Settings (Admin only)
-    { label: 'Settings', route: '/admin-settings', icon: '⚙️', roles: ['admin', 'administrator'] },
-  ];
+  // Static navigation items - REMOVED (now using database menus only)
+  // Keep minimal fallback for emergency access
+  navigationItems: NavigationItem[] = [];
 
   // Voucher modal state
   showVoucherModal = false;

@@ -47,6 +47,19 @@ if not exist "reset-user-passwords.js" (
 echo 🚀 Starting password reset...
 echo.
 
+:: Run Knex migrations first
+echo 📦 Running database migrations...
+npx knex migrate:latest
+if errorlevel 1 (
+    echo ❌ Migration failed!
+    echo 💡 Check the error messages above
+    echo.
+    pause
+    exit /b 1
+)
+echo ✅ Migrations completed
+echo.
+
 :: Run the password reset script
 node reset-user-passwords.js
 

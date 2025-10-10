@@ -9,6 +9,7 @@ import { AddressService } from '../../../core/services/address.service';
 import { AppraisalService } from '../../../core/services/appraisal.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { CategoriesService, Category } from '../../../core/services/categories.service';
+import { QueueWidget } from '../../../shared/components/queue-widget/queue-widget';
 
 
 interface Pawner {
@@ -62,7 +63,7 @@ interface Barangay {
   templateUrl: './appraiser-dashboard.html',
   styleUrl: './appraiser-dashboard.css',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule]
+  imports: [CommonModule, FormsModule, RouterModule, QueueWidget]
 })
 export class AppraiserDashboard implements OnInit {
   @ViewChild('searchInput') searchInput!: ElementRef<HTMLInputElement>;
@@ -426,6 +427,41 @@ export class AppraiserDashboard implements OnInit {
       this.currentUser = null;
       console.log(`❌ [${new Date().toISOString()}] Not authenticated - missing credentials`);
     }
+  }
+
+  // Handle pawner selected from queue
+  onPawnerSelectedFromQueue(event: any) {
+    console.log('Pawner selected from queue for appraisal:', event);
+    
+    // Populate pawner information
+    this.newPawner = {
+      firstName: event.pawner.firstName,
+      lastName: event.pawner.lastName,
+      contactNumber: event.pawner.mobileNumber,
+      email: event.pawner.email || '',
+      addressDetails: event.pawner.address || '',
+      cityId: event.pawner.cityId,
+      barangayId: event.pawner.barangayId
+    };
+    
+    // Set selected pawner for existing flow
+    this.selectedPawner = event.pawner;
+    
+    // Show toast notification
+    this.toastService.showSuccess(
+      'Queue Selection',
+      `${event.pawner.firstName} ${event.pawner.lastName} selected for appraisal. Add items to begin.`
+    );
+    
+    // Navigate to appraisal page if needed
+    this.router.navigate(['/transactions/appraisal'], {
+      state: {
+        pawnerId: event.pawnerId,
+        pawner: event.pawner,
+        queueId: event.queueId,
+        fromQueue: true
+      }
+    });
   }
 
   ngOnInit() {

@@ -35,6 +35,11 @@
       <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
     </div>
 
+    <!-- Queue Widget -->
+    <div *ngIf="!isLoading" class="mb-8">
+      <app-queue-widget (pawnerSelected)="onPawnerSelectedFromQueue($event)"></app-queue-widget>
+    </div>
+
     <!-- Transaction Types Section (Transaction Cards) -->
     <div *ngIf="!isLoading"
       class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-8">

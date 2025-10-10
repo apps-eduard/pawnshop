@@ -28,6 +28,7 @@ const adminCalculationsRoutes = require('./routes/admin-calculations');
 const statisticsRoutes = require('./routes/statistics');
 const reportsRoutes = require('./routes/reports');
 const rbacRoutes = require('./routes/rbac');
+const queueRoutes = require('./routes/queue');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -216,6 +217,7 @@ app.use('/api/admin-calculations', adminCalculationsRoutes);
 app.use('/api/statistics', statisticsRoutes);
 app.use('/api/reports', reportsRoutes);
 app.use('/api/rbac', rbacRoutes);
+app.use('/api/queue', queueRoutes);
 
 // New Dynamic RBAC v2 routes
 const rbacV2Routes = require('./routes/rbac-v2');

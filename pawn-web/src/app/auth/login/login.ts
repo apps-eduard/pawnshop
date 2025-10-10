@@ -23,7 +23,7 @@ export class LoginComponent implements OnInit {
     {
       role: 'Administrator',
       username: 'admin',
-      password: 'admin123',
+      password: 'password123',
       color: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
       icon: '⚡',
       description: 'Full system access'
@@ -31,7 +31,7 @@ export class LoginComponent implements OnInit {
     {
       role: 'Manager',
       username: 'manager1',
-      password: 'manager123',
+      password: 'password123',
       color: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
       icon: '👔',
       description: 'Branch management'
@@ -39,7 +39,7 @@ export class LoginComponent implements OnInit {
     {
       role: 'Cashier',
       username: 'cashier1',
-      password: 'cashier123',
+      password: 'password123',
       color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
       icon: '💰',
       description: 'Process transactions'
@@ -47,7 +47,7 @@ export class LoginComponent implements OnInit {
     {
       role: 'Auctioneer',
       username: 'auctioneer1',
-      password: 'auctioneer123',
+      password: 'password123',
       color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
       icon: '🔨',
       description: 'Manage auctions'
@@ -55,18 +55,18 @@ export class LoginComponent implements OnInit {
     {
       role: 'Appraiser',
       username: 'appraiser1',
-      password: 'appraiser123',
+      password: 'password123',
       color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
       icon: '💎',
       description: 'Item appraisal'
     },
     {
       role: 'Pawner',
-      username: 'pawner1',
-      password: 'pawner123',
-      color: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200',
-      icon: '👤',
-      description: 'Customer access'
+      username: 'pawner',
+      password: 'password123',
+      color: 'bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200',
+      icon: '🎫',
+      description: 'Queue check-in kiosk'
     }
   ];
 
@@ -160,7 +160,7 @@ export class LoginComponent implements OnInit {
   loginAsAdmin(): void {
     this.loginForm.patchValue({
       username: 'admin',
-      password: 'admin123'
+      password: 'password123'
     });
     this.onSubmit();
   }
@@ -168,15 +168,7 @@ export class LoginComponent implements OnInit {
   loginAsCashier(): void {
     this.loginForm.patchValue({
       username: 'cashier1',
-      password: 'cashier123'
-    });
-    this.onSubmit();
-  }
-
-  loginAsPawner(): void {
-    this.loginForm.patchValue({
-      username: 'pawner1',
-      password: 'pawner123'
+      password: 'password123'
     });
     this.onSubmit();
   }
