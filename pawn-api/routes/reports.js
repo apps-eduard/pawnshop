@@ -335,8 +335,8 @@ router.get('/expired-items', authorizeRoles('manager', 'admin', 'administrator')
       LEFT JOIN categories c ON i.category_id = c.id
       INNER JOIN pawners p ON t.pawner_id = p.id
       WHERE t.expiry_date < CURRENT_DATE
-        AND i.status IN ('expired', 'for_auction')
-        AND t.status = 'active'
+        AND t.status IN ('expired', 'active')
+        AND i.status NOT IN ('redeemed', 'sold')
       ORDER BY t.expiry_date ASC
     `;
     
@@ -352,8 +352,8 @@ router.get('/expired-items', authorizeRoles('manager', 'admin', 'administrator')
       FROM pawn_items i
       INNER JOIN transactions t ON i.transaction_id = t.id
       WHERE t.expiry_date < CURRENT_DATE
-        AND i.status IN ('expired', 'for_auction', 'sold')
-        AND t.status = 'active'
+        AND t.status IN ('expired', 'active')
+        AND i.status NOT IN ('redeemed')
       GROUP BY i.status
     `;
     

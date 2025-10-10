@@ -27,6 +27,7 @@ const serviceChargeConfigRoutes = require('./routes/service-charge-config');
 const adminCalculationsRoutes = require('./routes/admin-calculations');
 const statisticsRoutes = require('./routes/statistics');
 const reportsRoutes = require('./routes/reports');
+const rbacRoutes = require('./routes/rbac');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -214,6 +215,11 @@ app.use('/api/service-charge-config', serviceChargeConfigRoutes);
 app.use('/api/admin-calculations', adminCalculationsRoutes);
 app.use('/api/statistics', statisticsRoutes);
 app.use('/api/reports', reportsRoutes);
+app.use('/api/rbac', rbacRoutes);
+
+// New Dynamic RBAC v2 routes
+const rbacV2Routes = require('./routes/rbac-v2');
+app.use('/api/rbac-v2', rbacV2Routes);
 
 // Enhanced error handling middleware with CORS support
 app.use((err, req, res, next) => {

@@ -1,10 +1,11 @@
-import { Component, OnInit, OnDestroy, Input, Output, EventEmitter } from '@angular/core';
+import { Component, OnInit, OnDestroy, Input, Output, EventEmitter, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { Subject, takeUntil } from 'rxjs';
 import { AuthService } from '../../core/auth/auth';
 import { VoucherService } from '../../core/services/voucher.service';
+import { RbacV2Service, MenuItem } from '../../core/services/rbac-v2.service';
 import { User } from '../../core/models/interfaces';
 import { CurrencyInputDirective } from '../directives/currency-input.directive';
 
@@ -41,6 +42,14 @@ export class SidebarComponent implements OnInit, OnDestroy {
 
   currentUser: User | null = null;
   private destroy$ = new Subject<void>();
+
+  // 🆕 Dynamic menu support
+  dynamicMenuItems: MenuItem[] = [];
+  useDynamicMenus = false;
+  isLoadingMenus = false;
+
+  // Cache navigation items to prevent infinite loops
+  cachedNavigationItems: NavigationItem[] = [];
 
   // Navigation items for different roles
   navigationItems: NavigationItem[] = [
@@ -90,16 +99,6 @@ export class SidebarComponent implements OnInit, OnDestroy {
     { label: 'Settings', route: '/admin-settings', icon: '⚙️', roles: ['admin', 'administrator'] },
   ];
 
-  // Quick action items
-  quickActions = [
-    { label: 'New User', action: 'newUser', icon: '➕', roles: ['admin', 'administrator'] },
-    { label: 'New Loan', action: 'newLoan', icon: '🏦', roles: ['cashier'] },
-    { label: 'New Appraisal', action: 'newAppraisal', icon: '💎', roles: ['appraiser'] },
-    { label: 'New Auction', action: 'newAuction', icon: '🔨', roles: ['auctioneer'] },
-    { label: 'Voucher', action: 'voucher', icon: '🎟️', roles: ['admin', 'administrator', 'manager'] },
-    { label: 'Generate Report', action: 'generateReport', icon: '📄', roles: ['admin', 'administrator', 'manager'] },
-  ];
-
   // Voucher modal state
   showVoucherModal = false;
   voucherForm: VoucherForm = {
@@ -116,21 +115,24 @@ export class SidebarComponent implements OnInit, OnDestroy {
   constructor(
     private authService: AuthService,
     private router: Router,
-    private voucherService: VoucherService
+    private voucherService: VoucherService,
+    private rbacService: RbacV2Service,
+    private cdr: ChangeDetectorRef
   ) {}
 
-  ngOnInit(): void {
+  async ngOnInit(): Promise<void> {
     // Subscribe to current user changes
     this.authService.currentUser$
       .pipe(takeUntil(this.destroy$))
-      .subscribe(user => {
+      .subscribe(async user => {
         this.currentUser = user;
-        // console.log('Sidebar received user update:', user);
+        if (user && !this.isLoadingMenus) {
+          await this.loadDynamicMenus(user.id);
+        }
       });
 
     // For testing - simulate admin user if none exists
     if (!this.currentUser) {
-      // console.log('No user found - creating test admin user');
       this.currentUser = {
         id: 1,
         username: 'admin',
@@ -140,12 +142,72 @@ export class SidebarComponent implements OnInit, OnDestroy {
         role: 'administrator',
         isActive: true
       };
+      if (!this.useDynamicMenus && !this.isLoadingMenus) {
+        await this.loadDynamicMenus(1);
+      }
+    }
+  }
+
+  async loadDynamicMenus(userId: number): Promise<void> {
+    this.isLoadingMenus = true;
+    try {
+      const menus = await this.rbacService.getMenusByUser(userId).toPromise();
+      if (menus && Array.isArray(menus)) {
+        this.dynamicMenuItems = menus;
+        this.useDynamicMenus = true;
+        console.log('✅ Loaded dynamic menus for user:', userId, `(${menus.length})`);
+        // Update cached navigation
+        this.updateNavigationCache();
+      } else {
+        throw new Error('Invalid menu response');
+      }
+    } catch (error) {
+      console.error('❌ Failed to load dynamic menus, using static:', error);
+      this.useDynamicMenus = false;
+      this.dynamicMenuItems = [];
+      this.updateNavigationCache();
+    } finally {
+      this.isLoadingMenus = false;
+    }
+  }
+
+  updateNavigationCache(): void {
+    if (this.useDynamicMenus && this.dynamicMenuItems && this.dynamicMenuItems.length > 0) {
+      const dynamicItems = this.getDynamicNavigation();
+      this.cachedNavigationItems = dynamicItems.map(menu => this.convertToNavigationItem(menu));
+    } else {
+      this.cachedNavigationItems = this.getFilteredNavigation();
     }
   }
 
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+  }
+
+  getDynamicNavigation(): MenuItem[] {
+    // Show all items without filtering for now
+    return this.dynamicMenuItems.sort((a, b) => a.order_index - b.order_index);
+  }  convertToNavigationItem(menu: MenuItem): NavigationItem {
+    return {
+      label: menu.name,
+      route: menu.route,
+      icon: menu.icon,
+      roles: []
+    };
+  }
+
+  getNavigation(): NavigationItem[] {
+    try {
+      if (this.useDynamicMenus && this.dynamicMenuItems && this.dynamicMenuItems.length > 0) {
+        const dynamicItems = this.getDynamicNavigation();
+        return dynamicItems.map(menu => this.convertToNavigationItem(menu));
+      }
+      return this.getFilteredNavigation();
+    } catch (error) {
+      console.error('❌ Error in getNavigation:', error);
+      return [];
+    }
   }
 
   // Filter navigation items based on user role
@@ -168,43 +230,9 @@ export class SidebarComponent implements OnInit, OnDestroy {
     return filteredItems;
   }
 
-  // Filter quick actions based on user role
-  getFilteredQuickActions() {
-    if (!this.currentUser) return [];
-
-    return this.quickActions.filter(action =>
-      action.roles.includes(this.currentUser!.role)
-    );
-  }
-
   // Handle navigation
   navigateTo(route: string): void {
     this.router.navigate([route]);
-    this.closeSidebar.emit();
-  }
-
-  // Handle quick actions
-  handleQuickAction(action: string): void {
-    switch (action) {
-      case 'newUser':
-        this.router.navigate(['/user-management']);
-        break;
-      case 'newLoan':
-        this.router.navigate(['/loans/new']);
-        break;
-      case 'newAppraisal':
-        this.router.navigate(['/appraisals/new']);
-        break;
-      case 'newAuction':
-        this.router.navigate(['/auctions/new']);
-        break;
-      case 'voucher':
-        this.openVoucherModal();
-        break;
-      case 'generateReport':
-        this.router.navigate(['/reports/generate']);
-        break;
-    }
     this.closeSidebar.emit();
   }
 

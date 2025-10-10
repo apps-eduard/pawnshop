@@ -11,6 +11,8 @@ import { LoginComponent } from './auth/login/login';
 import { LayoutComponent } from './shared/layout/layout';
 // Import reports component
 import { ReportsComponent } from './features/reports/reports.component';
+// Import RBAC component
+import { RbacComponent } from './features/rbac/rbac.component';
 
 export const routes: Routes = [
   { path: '', redirectTo: '/login', pathMatch: 'full' },
@@ -54,6 +56,12 @@ export const routes: Routes = [
       {
         path: 'reports',
         component: ReportsComponent
+      },
+
+      // RBAC Route (User & Role Management)
+      {
+        path: 'rbac',
+        component: RbacComponent
       },
 
       // Legacy redirects for management
