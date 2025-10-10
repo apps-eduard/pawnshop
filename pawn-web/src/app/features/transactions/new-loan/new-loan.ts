@@ -1166,12 +1166,13 @@ export class NewLoan implements OnInit, OnDestroy {
     }
   }
 
-  // Close invoice modal and navigate back
+  // Close invoice modal and navigate back to cashier dashboard
   closeInvoiceModal(): void {
     this.showInvoiceModal = false;
     this.invoiceData = null;
     this.resetForm();
-    this.goBack();
+    // Navigate directly to cashier dashboard without delay
+    this.router.navigate(['/cashier-dashboard']);
   }
 
   // Pawner form management

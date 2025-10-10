@@ -219,7 +219,7 @@ router.get('/search/:ticketNumber', async (req, res) => {
         principalAmount: currentPrincipal, // Current principal after partial payments
         principalLoan: currentPrincipal, // Current principal after partial payments
         originalPrincipalAmount: parseFloat(row.principal_amount || 0), // Keep original for reference
-        interestRate: parseFloat(row.interest_rate || 0) * 100, // Convert decimal to percentage for display
+        interestRate: parseFloat(row.interest_rate || 0), // Already stored as percentage (3, 6, etc.)
         interestAmount: parseFloat(row.interest_amount || 0),
         serviceCharge: parseFloat(row.service_charge || 0),
         netProceeds: parseFloat(row.net_proceeds || 0),
@@ -288,7 +288,7 @@ router.get('/search/:ticketNumber', async (req, res) => {
           gracePeriodDate: history.grace_period_date ? formatDateForResponse(history.grace_period_date, true) : null,
           expiryDate: history.expiry_date ? formatDateForResponse(history.expiry_date, true) : null,
           principalAmount: parseFloat(history.principal_amount || 0),
-          interestRate: parseFloat(history.interest_rate || 0) * 100, // Convert to percentage
+          interestRate: parseFloat(history.interest_rate || 0), // Already stored as percentage (3, 6, etc.)
           interestAmount: parseFloat(history.interest_amount || 0),
           penaltyAmount: parseFloat(history.penalty_amount || 0),
           serviceCharge: parseFloat(history.service_charge || 0),
@@ -534,8 +534,8 @@ router.get('/', async (req, res) => {
         dateExpired: row.expiry_date,
         principalAmount: parseFloat(row.principal_amount || 0),
         principalLoan: parseFloat(row.principal_amount || 0),
-        interestRate: parseFloat(row.interest_rate || 0) * 100,
-        interest_rate: parseFloat(row.interest_rate || 0), // Raw decimal value
+        interestRate: parseFloat(row.interest_rate || 0), // Already stored as percentage (3, 6, etc.)
+        interest_rate: parseFloat(row.interest_rate || 0), // Same value, not decimal
         interestAmount: parseFloat(row.interest_amount || 0),
         interest_amount: parseFloat(row.interest_amount || 0),
         serviceCharge: parseFloat(row.service_charge || 0),
@@ -663,7 +663,7 @@ router.get('/:id', async (req, res) => {
         dateExpired: row.expiry_date, // For compatibility
         principalAmount: parseFloat(row.principal_amount || 0),
         principalLoan: parseFloat(row.principal_amount || 0), // For compatibility
-        interestRate: parseFloat(row.interest_rate || 0) * 100, // Convert decimal to percentage for display
+        interestRate: parseFloat(row.interest_rate || 0), // Already stored as percentage (3, 6, etc.)
         interestAmount: parseFloat(row.interest_amount || 0),
         serviceCharge: parseFloat(row.service_charge || 0),
         netProceeds: parseFloat(row.net_proceeds || 0),

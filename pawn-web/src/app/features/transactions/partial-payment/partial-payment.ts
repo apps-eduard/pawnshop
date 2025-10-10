@@ -249,6 +249,7 @@ export class PartialPayment implements OnInit, AfterViewInit {
       this.partialComputation.newPrincipalLoan = Math.max(0, this.partialComputation.principalLoan - this.partialComputation.partialPay);
 
       // Calculate advance interest for 1 month on new principal
+      // Rate is already a percentage (3, 6, etc.) so divide by 100 to get decimal
       const monthlyRate = this.partialComputation.interestRate / 100;
       this.partialComputation.advanceInterest = this.partialComputation.newPrincipalLoan * monthlyRate;
 

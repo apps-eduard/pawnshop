@@ -129,33 +129,64 @@ export class NavbarComponent implements OnInit, OnDestroy {
 
   // Set page title based on URL
   private setPageTitle(url: string): void {
-    if (url.includes('/appraiser-dashboard')) {
-      this.currentPageTitle = 'Appraiser Dashboard';
-    } else if (url.includes('/manager-dashboard')) {
-      this.currentPageTitle = 'Manager Dashboard';
-    } else if (url.includes('/auctioneer-dashboard')) {
-      this.currentPageTitle = 'Auctioneer Dashboard';
-    } else if (url.includes('/cashier-dashboard')) {
-      this.currentPageTitle = 'Cashier Dashboard';
-    } else if (url.includes('/admin-dashboard')) {
+    // Dashboard pages
+    if (url.includes('/dashboard/admin') || url.includes('/admin-dashboard')) {
       this.currentPageTitle = 'Admin Dashboard';
-    } else if (url.includes('/admin-settings')) {
+    } else if (url.includes('/dashboard/manager') || url.includes('/manager-dashboard')) {
+      this.currentPageTitle = 'Manager Dashboard';
+    } else if (url.includes('/dashboard/cashier') || url.includes('/cashier-dashboard')) {
+      this.currentPageTitle = 'Cashier Dashboard';
+    } else if (url.includes('/dashboard/appraiser') || url.includes('/appraiser-dashboard')) {
+      this.currentPageTitle = 'Appraiser Dashboard';
+    } else if (url.includes('/dashboard/auctioneer') || url.includes('/auctioneer-dashboard')) {
+      this.currentPageTitle = 'Auctioneer Dashboard';
+    } else if (url.includes('/dashboard/pawner') || url.includes('/pawner-dashboard')) {
+      this.currentPageTitle = 'Pawner Dashboard';
+    }
+    // Settings pages
+    else if (url.includes('/settings/admin') || url.includes('/admin-settings')) {
       this.currentPageTitle = 'Admin Settings';
-    } else if (url.includes('/transactions/appraisal')) {
+    } else if (url.includes('/settings/')) {
+      this.currentPageTitle = 'Settings';
+    }
+    // Management pages
+    else if (url.includes('/management/pawner') || url.includes('/pawner-management')) {
+      this.currentPageTitle = 'Pawner Management';
+    } else if (url.includes('/management/item') || url.includes('/item-management')) {
+      this.currentPageTitle = 'Item Management';
+    } else if (url.includes('/management/user') || url.includes('/user-management')) {
+      this.currentPageTitle = 'User Management';
+    } else if (url.includes('/management/address') || url.includes('/address-management')) {
+      this.currentPageTitle = 'Address Management';
+    } else if (url.includes('/management/')) {
+      this.currentPageTitle = 'Management';
+    }
+    // Transaction pages
+    else if (url.includes('/transactions/appraisal')) {
       this.currentPageTitle = 'Create Appraisal';
     } else if (url.includes('/transactions/redeem')) {
-      this.currentPageTitle = 'Redeem';
+      this.currentPageTitle = 'Redeem Transaction';
     } else if (url.includes('/transactions/new-loan')) {
       this.currentPageTitle = 'New Loan';
     } else if (url.includes('/transactions/additional-loan')) {
-      this.currentPageTitle = 'Additional';
+      this.currentPageTitle = 'Additional Loan';
     } else if (url.includes('/transactions/partial-payment')) {
-      this.currentPageTitle = 'Partial';
+      this.currentPageTitle = 'Partial Payment';
     } else if (url.includes('/transactions/renew')) {
-      this.currentPageTitle = 'Renew';
-    } else if (url.includes('/transactions/')) {
-      this.currentPageTitle = 'Transaction';
-    } else {
+      this.currentPageTitle = 'Renew Transaction';
+    } else if (url.includes('/transactions')) {
+      this.currentPageTitle = 'Transaction Management';
+    }
+    // RBAC page
+    else if (url.includes('/rbac')) {
+      this.currentPageTitle = 'User & Role Management';
+    }
+    // Reports page
+    else if (url.includes('/reports')) {
+      this.currentPageTitle = 'Reports';
+    }
+    // Default - no title
+    else {
       this.currentPageTitle = '';
     }
   }

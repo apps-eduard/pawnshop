@@ -2,8 +2,9 @@ import { Component, OnInit, OnDestroy, ViewChild, ElementRef, ChangeDetectorRef 
 import { trigger, state, style, animate, transition } from '@angular/animations';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterModule, Router } from '@angular/router';
+import { RouterModule, Router, NavigationEnd, ActivatedRoute } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
+import { filter } from 'rxjs/operators';
 import { AppraisalService } from '../../../core/services/appraisal.service';
 import { PawnerService } from '../../../core/services/pawner.service';
 import { ItemService } from '../../../core/services/item.service';
@@ -65,6 +66,10 @@ export class CashierDashboard implements OnInit, OnDestroy {
   recentTransactions: Transaction[] = [];
   pendingAppraisals: Appraisal[] = [];
   expandedTransactions = new Set<number>(); // Track which transactions are expanded
+
+  // Router subscription for handling navigation
+  private routerSubscription: any;
+  private isInitialLoad = true;
 
   // Time update mechanism to prevent ExpressionChangedAfterItHasBeenCheckedError
   private timeUpdateInterval: any;
@@ -285,14 +290,51 @@ export class CashierDashboard implements OnInit, OnDestroy {
     private transactionService: TransactionService,
     private http: HttpClient,
     private router: Router,
+    private route: ActivatedRoute,
     private cdr: ChangeDetectorRef,
     public statusColorService: StatusColorService
   ) {}
 
   ngOnInit() {
+    console.log('🚀 Cashier Dashboard ngOnInit - Initial load');
     this.loadDashboardData();
     this.loadRecentTransactions();
     this.loadPendingAppraisals();
+
+    // Subscribe to route params to detect when route becomes active
+    this.route.params.subscribe(() => {
+      // Skip on initial load to avoid double loading
+      if (this.isInitialLoad) {
+        this.isInitialLoad = false;
+        return;
+      }
+
+      console.log('📍 Route params changed - checking if dashboard is active');
+      const url = this.router.url;
+      // Check for both new route (/dashboard/cashier) and legacy route (/cashier-dashboard)
+      if (url === '/dashboard/cashier' || url.startsWith('/dashboard/cashier?') || url.startsWith('/dashboard/cashier#') ||
+          url === '/cashier-dashboard' || url.startsWith('/cashier-dashboard?') || url.startsWith('/cashier-dashboard#')) {
+        console.log('🔄 Dashboard route active - reloading data...');
+        this.loadDashboardData();
+        this.loadRecentTransactions();
+        this.loadPendingAppraisals();
+      }
+    });
+
+    // Subscribe to router events to reload data when returning to dashboard
+    this.routerSubscription = this.router.events
+      .pipe(filter((event: any) => event instanceof NavigationEnd))
+      .subscribe((event: NavigationEnd) => {
+        console.log('🌐 Navigation event:', event.url);
+        // Check if we're navigating TO the cashier dashboard (both new and legacy routes)
+        if (event.url === '/dashboard/cashier' || event.url.startsWith('/dashboard/cashier?') || event.url.startsWith('/dashboard/cashier#') ||
+            event.url === '/cashier-dashboard' || event.url.startsWith('/cashier-dashboard?') || event.url.startsWith('/cashier-dashboard#')) {
+          console.log('🔄 Returned to dashboard - reloading data...');
+          this.loadDashboardData();
+          this.loadRecentTransactions();
+          this.loadPendingAppraisals();
+        }
+      });
 
     // Update clock every second
     this.clockUpdateInterval = setInterval(() => {
@@ -315,6 +357,11 @@ export class CashierDashboard implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
+    // Clean up router subscription
+    if (this.routerSubscription) {
+      this.routerSubscription.unsubscribe();
+    }
+
     // Clean up intervals to prevent memory leaks
     if (this.timeUpdateInterval) {
       clearInterval(this.timeUpdateInterval);
@@ -735,9 +782,9 @@ export class CashierDashboard implements OnInit, OnDestroy {
   private lastClickTime = 0;
 
   onTransactionTypeSelect(transactionType: any) {
-    // Prevent rapid successive clicks (debounce with 1 second interval)
+    // Prevent rapid successive clicks (debounce with 300ms interval for snappy response)
     const now = Date.now();
-    if (now - this.lastClickTime < 1000) {
+    if (now - this.lastClickTime < 300) {
       console.log('Navigation request ignored - too fast clicking');
       return;
     }
@@ -792,10 +839,10 @@ export class CashierDashboard implements OnInit, OnDestroy {
         console.error('Navigation error:', error);
         this.toastService.showError('Navigation Error', 'Failed to navigate. Please try again.');
       }).finally(() => {
-        // Reset navigation flag after a delay
+        // Reset navigation flag after a short delay
         setTimeout(() => {
           this.isNavigating = false;
-        }, 500);
+        }, 100);
       });
 
     } catch (error) {
@@ -846,10 +893,10 @@ export class CashierDashboard implements OnInit, OnDestroy {
         console.error('🚨 Navigation error:', error);
         this.toastService.showError('Navigation Error', 'Failed to navigate to New Loan page. Please try again.');
       }).finally(() => {
-        // Reset navigation flag after a delay
+        // Reset navigation flag after a short delay
         setTimeout(() => {
           this.isNavigating = false;
-        }, 500);
+        }, 100);
       });
 
       console.log('✅ Navigation command executed');
@@ -2035,7 +2082,7 @@ export class CashierDashboard implements OnInit, OnDestroy {
         { description: '24K Gold Bracelet' }
       ];
       this.isLoadingDescriptions = false;
-    }, 500);
+    }, 50); // Reduced from 500ms to 50ms for instant response
   }
 
   openAddCategoryDescriptionDialog() {

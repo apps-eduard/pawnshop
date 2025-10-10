@@ -18,7 +18,7 @@ export class ToastService {
 
   private toasts: Toast[] = [];
 
-  showSuccess(title: string, message: string, duration: number = 5000): void {
+  showSuccess(title: string, message: string, duration: number = 2500): void {
     this.addToast({
       id: this.generateId(),
       type: 'success',
@@ -28,7 +28,7 @@ export class ToastService {
     });
   }
 
-  showError(title: string, message: string, duration: number = 5000): void {
+  showError(title: string, message: string, duration: number = 2500): void {
     this.addToast({
       id: this.generateId(),
       type: 'error',
@@ -38,7 +38,7 @@ export class ToastService {
     });
   }
 
-  showWarning(title: string, message: string, duration: number = 5000): void {
+  showWarning(title: string, message: string, duration: number = 2500): void {
     this.addToast({
       id: this.generateId(),
       type: 'warning',
@@ -48,7 +48,7 @@ export class ToastService {
     });
   }
 
-  showInfo(title: string, message: string, duration: number = 5000): void {
+  showInfo(title: string, message: string, duration: number = 2500): void {
     this.addToast({
       id: this.generateId(),
       type: 'info',

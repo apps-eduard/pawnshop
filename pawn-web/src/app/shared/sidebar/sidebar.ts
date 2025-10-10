@@ -154,6 +154,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
       const menus = await this.rbacService.getMenusByUser(userId).toPromise();
       if (menus && Array.isArray(menus)) {
         this.dynamicMenuItems = menus;
+        // ✅ Use dynamic menus from database (re-enabled)
         this.useDynamicMenus = true;
         console.log('✅ Loaded dynamic menus for user:', userId, `(${menus.length})`);
         // Update cached navigation
@@ -188,10 +189,21 @@ export class SidebarComponent implements OnInit, OnDestroy {
   getDynamicNavigation(): MenuItem[] {
     // Show all items without filtering for now
     return this.dynamicMenuItems.sort((a, b) => a.order_index - b.order_index);
-  }  convertToNavigationItem(menu: MenuItem): NavigationItem {
+  }
+
+  convertToNavigationItem(menu: MenuItem): NavigationItem {
+    let route = menu.route;
+
+    // 🔧 FIX: Convert generic /dashboard to role-specific dashboard routes
+    if (route === '/dashboard' && this.currentUser?.role) {
+      const role = this.currentUser.role.toLowerCase();
+      route = `/dashboard/${role}`;
+      console.log(`🔄 Converted dashboard route for ${role}: ${route}`);
+    }
+
     return {
       label: menu.name,
-      route: menu.route,
+      route: route,
       icon: menu.icon,
       roles: []
     };
@@ -232,7 +244,28 @@ export class SidebarComponent implements OnInit, OnDestroy {
 
   // Handle navigation
   navigateTo(route: string): void {
+    // Special handling for Vouchers - open modal instead of navigating
+    if (route === '/vouchers') {
+      this.openVoucherModal();
+      return;
+    }
+
     this.router.navigate([route]);
+    this.closeSidebar.emit();
+  }
+
+  // Handle menu click with event for proper control
+  handleMenuClick(event: Event, route: string): void {
+    // Special handling for Vouchers - prevent default and open modal
+    if (route === '/vouchers') {
+      event.preventDefault();
+      event.stopPropagation();
+      this.openVoucherModal();
+      return;
+    }
+
+    // For other routes, let routerLink handle navigation
+    // Just close the sidebar
     this.closeSidebar.emit();
   }
 

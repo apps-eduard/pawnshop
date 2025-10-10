@@ -83,7 +83,7 @@ export class TransactionManagement implements OnInit {
 
   // Pagination
   currentPage = 1;
-  pageSize = 50;
+  pageSize = 50; // Optimal balance between performance and usability
   totalTransactions = 0;
 
   // Filter options
