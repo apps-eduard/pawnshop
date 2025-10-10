@@ -75,6 +75,10 @@ export class Redeem implements OnInit, AfterViewInit {
   showInvoiceModal: boolean = false;
   invoiceData: LoanInvoiceData | null = null;
 
+  // Queue state (from navigation)
+  queueId: number | null = null;
+  fromQueue: boolean = false;
+
   constructor(
     private router: Router,
     private location: Location,
@@ -92,6 +96,27 @@ export class Redeem implements OnInit, AfterViewInit {
   ngOnInit() {
     // Start with empty form - no initial calculation
     console.log('Redeem page loaded - form cleared');
+
+    // Check if coming from queue with auto-search
+    const navigation = this.router.lastSuccessfulNavigation;
+    const state = navigation?.extras?.state || (window.history.state as any);
+
+    // Capture queue information
+    if (state?.queueId) {
+      this.queueId = state.queueId;
+      this.fromQueue = true;
+      console.log('📋 Queue ID captured:', this.queueId);
+    }
+
+    if (state?.autoSearch && state?.ticketNumber) {
+      console.log('🎯 Auto-search triggered for ticket:', state.ticketNumber);
+      // Set the ticket number and trigger search
+      this.searchTicketNumber = state.ticketNumber;
+      // Small delay to ensure view is initialized
+      setTimeout(() => {
+        this.searchTransaction();
+      }, 100);
+    }
   }
 
   ngAfterViewInit() {
@@ -579,6 +604,11 @@ export class Redeem implements OnInit, AfterViewInit {
 
         // Show invoice modal
         this.showInvoiceModal = true;
+
+        // Complete queue entry if came from queue
+        if (this.fromQueue && this.queueId) {
+          this.completeQueue();
+        }
       } else {
         this.toastService.showError('Error', result.message || 'Failed to process redeem transaction');
       }
@@ -587,6 +617,30 @@ export class Redeem implements OnInit, AfterViewInit {
       this.toastService.showError('Error', 'Failed to process redeem transaction');
     } finally {
       this.isProcessing = false;
+    }
+  }
+
+  // Complete the queue entry after successful transaction
+  async completeQueue() {
+    if (!this.queueId) return;
+
+    try {
+      console.log('✅ Completing queue entry:', this.queueId);
+      const response = await fetch(`http://localhost:3000/api/queue/${this.queueId}/complete`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      if (response.ok) {
+        console.log('✅ Queue entry marked as completed');
+      } else {
+        console.error('Failed to complete queue entry');
+      }
+    } catch (error) {
+      console.error('Error completing queue:', error);
     }
   }
 

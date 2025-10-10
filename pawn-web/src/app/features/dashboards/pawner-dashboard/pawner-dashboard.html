@@ -1,197 +1,721 @@
 <div class="min-h-screen bg-gray-100 dark:bg-gray-900">
-  <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-
+  <div class="w-full px-4 py-6">
     <!-- Header -->
-    <div class="mb-8">
-      <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">Welcome to Goldwin Pawnshop</h1>
-      <p class="text-gray-600 dark:text-gray-400">Search your information and join the queue for faster service</p>
+    <div class="mb-6 text-center">
+      <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+        Welcome to Goldwin Pawnshop
+      </h1>
+      <p class="text-gray-600 dark:text-gray-400">Self-Service Kiosk</p>
     </div>
 
-    <!-- Already in Queue -->
-    <div *ngIf="queueEntry" class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mb-8 border-l-4 border-green-500">
-      <div class="flex items-start justify-between mb-4">
-        <div>
-          <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-            You're in Queue!
-          </h2>
-          <p class="text-gray-600 dark:text-gray-400">Please wait for your turn</p>
-        </div>
-        <button
-          (click)="leaveQueue()"
-          class="px-4 py-2 text-sm text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 font-medium">
-          Leave Queue
-        </button>
-      </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-        <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-          <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Queue Number</p>
-          <p class="text-3xl font-bold text-green-600 dark:text-green-400">{{queueEntry.queueNumber}}</p>
-        </div>
-        <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-          <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Service Type</p>
-          <p class="text-lg font-semibold text-gray-900 dark:text-white">{{getServiceTypeLabel(queueEntry.serviceType)}}</p>
-        </div>
-        <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-          <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Waiting Time</p>
-          <p class="text-lg font-semibold text-gray-900 dark:text-white">{{getQueueTime(queueEntry.joinedAt)}}</p>
-        </div>
-      </div>
-
-      <div class="flex items-center justify-between p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
-        <div class="flex items-center">
-          <svg class="w-5 h-5 text-yellow-600 dark:text-yellow-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
-            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
-          </svg>
-          <span class="text-sm text-yellow-800 dark:text-yellow-200">Status: {{queueEntry.status | titlecase}}</span>
-        </div>
-        <span *ngIf="queueEntry.isNewPawner" class="px-3 py-1 text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded-full">
-          🆕 New Pawner
-        </span>
-        <span *ngIf="!queueEntry.isNewPawner" class="px-3 py-1 text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200 rounded-full">
-          👤 Returning Customer
-        </span>
-      </div>
-    </div>
-
-    <!-- Search & Join Queue (Only show if not in queue) -->
-    <div *ngIf="!queueEntry" class="space-y-6">
-
-      <!-- Search Section -->
+    <!-- 3-Column Layout: 25% - 50% - 25% -->
+    <div class="grid grid-cols-[25%_50%_25%] gap-4">
+      <!-- LEFT COLUMN: How it Works (25%) -->
       <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-        <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-4">
-          Step 1: Find Your Information
-        </h2>
-        <p class="text-gray-600 dark:text-gray-400 mb-4">
-          Search by your name or mobile number to check if you're already registered
-        </p>
+        <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-4">📌 How it Works</h2>
+        <div class="space-y-4">
+          <div class="flex items-start">
+            <div
+              class="flex-shrink-0 w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold mr-3"
+            >
+              1
+            </div>
+            <div>
+              <p class="text-sm font-semibold text-gray-900 dark:text-white">Select Transaction</p>
+              <p class="text-xs text-gray-600 dark:text-gray-400">
+                Choose what you need to do today
+              </p>
+            </div>
+          </div>
+          <div class="flex items-start">
+            <div
+              class="flex-shrink-0 w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold mr-3"
+            >
+              2
+            </div>
+            <div>
+              <p class="text-sm font-semibold text-gray-900 dark:text-white">Search/Register</p>
+              <p class="text-xs text-gray-600 dark:text-gray-400">
+                Find your info or register as new
+              </p>
+            </div>
+          </div>
+          <div class="flex items-start">
+            <div
+              class="flex-shrink-0 w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold mr-3"
+            >
+              3
+            </div>
+            <div>
+              <p class="text-sm font-semibold text-gray-900 dark:text-white">Join Queue</p>
+              <p class="text-xs text-gray-600 dark:text-gray-400">Get your queue number and wait</p>
+            </div>
+          </div>
+          <div class="flex items-start">
+            <div
+              class="flex-shrink-0 w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center font-bold mr-3"
+            >
+              4
+            </div>
+            <div>
+              <p class="text-sm font-semibold text-gray-900 dark:text-white">Wait for Your Turn</p>
+              <p class="text-xs text-gray-600 dark:text-gray-400">Staff will call you when ready</p>
+            </div>
+          </div>
+        </div>
 
-        <div class="flex gap-3 mb-4">
-          <input
-            type="text"
-            [(ngModel)]="searchTerm"
-            (keyup.enter)="searchPawner()"
-            placeholder="Enter your name or mobile number..."
-            class="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-            [disabled]="isSearching || !!selectedPawner">
+        <div class="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+          <p class="text-xs text-blue-900 dark:text-blue-200 font-medium">
+            💡 Tip: Have your pawn ticket or mobile number ready for faster service!
+          </p>
+        </div>
+      </div>
+      <!-- End LEFT COLUMN -->
+
+      <!-- MIDDLE COLUMN: Transaction Selection (50%) -->
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+        <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-4 text-center">
+          🆕 New Customer? Select Your Transaction
+        </h2>
+
+        <div *ngIf="currentStep === 'select_transaction'" class="space-y-3">
           <button
-            (click)="searchPawner()"
-            [disabled]="isSearching || !!selectedPawner"
-            class="px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-medium rounded-lg transition-colors">
-            <span *ngIf="!isSearching">🔍 Search</span>
-            <span *ngIf="isSearching">Searching...</span>
+            (click)="selectTransactionType('new_loan')"
+            class="w-full p-4 border-2 border-gray-200 dark:border-gray-600 rounded-lg hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all text-left group"
+          >
+            <div class="flex items-center">
+              <span class="text-3xl mr-3">💰</span>
+              <div>
+                <span class="text-lg font-semibold text-gray-900 dark:text-white block"
+                  >New Loan</span
+                >
+                <p class="text-xs text-gray-600 dark:text-gray-400">Pawn an item</p>
+              </div>
+            </div>
+          </button>
+
+          <button
+            (click)="selectTransactionType('renew')"
+            class="w-full p-4 border-2 border-gray-200 dark:border-gray-600 rounded-lg hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all text-left group"
+          >
+            <div class="flex items-center">
+              <span class="text-3xl mr-3">🔄</span>
+              <div>
+                <span class="text-lg font-semibold text-gray-900 dark:text-white block"
+                  >Renew Loan</span
+                >
+                <p class="text-xs text-gray-600 dark:text-gray-400">Extend loan</p>
+              </div>
+            </div>
+          </button>
+
+          <button
+            (click)="selectTransactionType('redeem')"
+            class="w-full p-4 border-2 border-gray-200 dark:border-gray-600 rounded-lg hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all text-left group"
+          >
+            <div class="flex items-center">
+              <span class="text-3xl mr-3">🎁</span>
+              <div>
+                <span class="text-lg font-semibold text-gray-900 dark:text-white block"
+                  >Redeem Item</span
+                >
+                <p class="text-xs text-gray-600 dark:text-gray-400">Get item back</p>
+              </div>
+            </div>
+          </button>
+
+          <button
+            (click)="selectTransactionType('additional_loan')"
+            class="w-full p-4 border-2 border-gray-200 dark:border-gray-600 rounded-lg hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all text-left group"
+          >
+            <div class="flex items-center">
+              <span class="text-3xl mr-3">➕</span>
+              <div>
+                <span class="text-lg font-semibold text-gray-900 dark:text-white block"
+                  >Additional Loan</span
+                >
+                <p class="text-xs text-gray-600 dark:text-gray-400">Add to loan</p>
+              </div>
+            </div>
+          </button>
+
+          <button
+            (click)="selectTransactionType('partial_payment')"
+            class="w-full p-4 border-2 border-gray-200 dark:border-gray-600 rounded-lg hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all text-left group"
+          >
+            <div class="flex items-center">
+              <span class="text-3xl mr-3">💵</span>
+              <div>
+                <span class="text-lg font-semibold text-gray-900 dark:text-white block"
+                  >Partial Payment</span
+                >
+                <p class="text-xs text-gray-600 dark:text-gray-400">Part payment</p>
+              </div>
+            </div>
+          </button>
+
+          <button
+            (click)="selectTransactionType('inquiry')"
+            class="w-full p-4 border-2 border-gray-200 dark:border-gray-600 rounded-lg hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all text-left group"
+          >
+            <div class="flex items-center">
+              <span class="text-3xl mr-3">❓</span>
+              <div>
+                <span class="text-lg font-semibold text-gray-900 dark:text-white block"
+                  >Inquiry</span
+                >
+                <p class="text-xs text-gray-600 dark:text-gray-400">Check details</p>
+              </div>
+            </div>
           </button>
         </div>
 
-        <!-- Error Message -->
-        <div *ngIf="errorMessage" class="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg mb-4">
-          <p class="text-sm text-red-800 dark:text-red-200">{{errorMessage}}</p>
+        <!-- All other steps shown here in middle column -->
+        <div *ngIf="currentStep !== 'select_transaction'" class="mt-6">
+          <!-- STEP 2: Customer Type (New Loan Only) -->
+          <div *ngIf="currentStep === 'customer_type'">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-lg font-bold text-gray-900 dark:text-white">Step 2: Customer Type</h3>
+              <button
+                (click)="resetFlow()"
+                class="text-sm text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+              >
+                ← Back
+              </button>
+            </div>
+            <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+              Are you a new or existing customer?
+            </p>
+
+            <div class="space-y-3">
+              <button
+                (click)="selectCustomerType('new')"
+                class="w-full p-6 border-2 border-gray-200 dark:border-gray-600 rounded-lg hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all"
+              >
+                <span class="text-4xl mb-2 block">🆕</span>
+                <span class="text-lg font-semibold text-gray-900 dark:text-white block mb-1"
+                  >New Customer</span
+                >
+                <span class="text-xs text-gray-600 dark:text-gray-400"
+                  >Register your information</span
+                >
+              </button>
+
+              <button
+                (click)="selectCustomerType('existing')"
+                class="w-full p-6 border-2 border-gray-200 dark:border-gray-600 rounded-lg hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all"
+              >
+                <span class="text-4xl mb-2 block">👤</span>
+                <span class="text-lg font-semibold text-gray-900 dark:text-white block mb-1"
+                  >Existing Customer</span
+                >
+                <span class="text-xs text-gray-600 dark:text-gray-400"
+                  >Search your information</span
+                >
+              </button>
+            </div>
+          </div>
+
+          <!-- STEP 3: Search -->
+          <div *ngIf="currentStep === 'search'">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-lg font-bold text-gray-900 dark:text-white">
+                {{ selectedServiceType === 'new_loan' ? 'Step 3' : 'Step 2' }}: Find Your Info
+              </h3>
+              <button
+                (click)="resetFlow()"
+                class="text-sm text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+              >
+                ← Back
+              </button>
+            </div>
+
+            <!-- Search Type Toggle -->
+            <!-- Only show ticket search for renew, redeem, additional_loan, partial_payment -->
+            <!-- Show both ticket and mobile search for new_loan and inquiry -->
+            <div *ngIf="selectedServiceType === 'new_loan' || selectedServiceType === 'inquiry'" class="flex gap-2 mb-4">
+              <button
+                (click)="changeSearchType('ticket')"
+                [class.bg-blue-600]="searchType === 'ticket'"
+                [class.text-white]="searchType === 'ticket'"
+                [class.bg-gray-200]="searchType !== 'ticket'"
+                [class.dark:bg-gray-700]="searchType !== 'ticket'"
+                class="flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
+              >
+                🎫 Ticket
+              </button>
+              <button
+                (click)="changeSearchType('mobile')"
+                [class.bg-blue-600]="searchType === 'mobile'"
+                [class.text-white]="searchType === 'mobile'"
+                [class.bg-gray-200]="searchType !== 'mobile'"
+                [class.dark:bg-gray-700]="searchType !== 'mobile'"
+                class="flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
+              >
+                📱 Mobile
+              </button>
+            </div>
+
+            <!-- For renew, redeem, additional_loan, partial_payment: Only Pawn Ticket -->
+            <div *ngIf="selectedServiceType === 'renew' || selectedServiceType === 'redeem' || selectedServiceType === 'additional_loan' || selectedServiceType === 'partial_payment'" class="mb-4">
+              <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg px-4 py-3">
+                <p class="text-sm font-semibold text-blue-900 dark:text-blue-200">
+                  🎫 Search by Pawn Ticket Number Only
+                </p>
+                <p class="text-xs text-blue-700 dark:text-blue-300 mt-1">
+                  These transactions require a valid pawn ticket number
+                </p>
+              </div>
+            </div>
+
+            <p class="text-gray-600 dark:text-gray-400 mb-4">
+              <span *ngIf="searchType === 'ticket' || selectedServiceType === 'renew' || selectedServiceType === 'redeem' || selectedServiceType === 'additional_loan' || selectedServiceType === 'partial_payment'">Enter your pawn ticket number</span>
+              <span *ngIf="searchType === 'mobile' && (selectedServiceType === 'new_loan' || selectedServiceType === 'inquiry')">Enter your mobile number or name</span>
+            </p>
+
+            <!-- Search Input -->
+            <div class="flex gap-3 mb-4">
+              <input
+                type="text"
+                [(ngModel)]="searchTerm"
+                (keyup.enter)="searchPawner()"
+                [placeholder]="
+                  searchType === 'ticket'
+                    ? 'Enter ticket number (e.g., PT-001)'
+                    : 'Enter mobile or name'
+                "
+                class="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                [disabled]="isSearching || !!selectedPawner"
+              />
+              <button
+                (click)="searchPawner()"
+                [disabled]="isSearching || !!selectedPawner"
+                class="px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-medium rounded-lg transition-colors"
+              >
+                <span *ngIf="!isSearching">🔍 Search</span>
+                <span *ngIf="isSearching">Searching...</span>
+              </button>
+            </div>
+
+            <!-- Error Message -->
+            <div
+              *ngIf="errorMessage"
+              class="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg mb-4"
+            >
+              <p class="text-sm text-red-800 dark:text-red-200">{{ errorMessage }}</p>
+            </div>
+
+            <!-- Search Results -->
+            <div *ngIf="searchResults.length > 0" class="space-y-2 mb-4">
+              <p class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Select your profile:
+              </p>
+              <div
+                *ngFor="let pawner of searchResults"
+                (click)="selectPawner(pawner)"
+                (keyup.enter)="selectPawner(pawner)"
+                tabindex="0"
+                role="button"
+                class="p-4 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors focus:ring-2 focus:ring-blue-500 outline-none"
+              >
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="font-semibold text-gray-900 dark:text-white">
+                      {{ pawner.firstName }} {{ pawner.lastName }}
+                    </p>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">
+                      {{ pawner.mobileNumber }}
+                    </p>
+                  </div>
+                  <span
+                    class="px-3 py-1 text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-full"
+                  >
+                    Select →
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Selected Pawner -->
+            <div
+              *ngIf="selectedPawner"
+              class="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg mb-4"
+            >
+              <div class="flex items-start justify-between mb-4">
+                <div>
+                  <p class="font-semibold text-gray-900 dark:text-white mb-1">
+                    ✅ Profile Selected
+                  </p>
+                  <p class="text-sm text-gray-600 dark:text-gray-400">
+                    {{ selectedPawner.firstName }} {{ selectedPawner.lastName }}
+                  </p>
+                  <p class="text-sm text-gray-600 dark:text-gray-400">
+                    {{ selectedPawner.mobileNumber }}
+                  </p>
+                </div>
+                <button
+                  (click)="clearSelection()"
+                  class="text-sm text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+                >
+                  Change
+                </button>
+              </div>
+
+              <!-- Join Queue Button -->
+              <button
+                *ngIf="!queueEntry && !queueCompleted"
+                (click)="joinQueue()"
+                [disabled]="isJoiningQueue"
+                class="w-full px-6 py-4 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-bold text-lg rounded-lg transition-colors"
+              >
+                <span *ngIf="!isJoiningQueue">🎫 Join Queue</span>
+                <span *ngIf="isJoiningQueue">Joining...</span>
+              </button>
+
+              <!-- Success Message (after joining) -->
+              <div
+                *ngIf="queueEntry && !queueCompleted"
+                class="w-full p-4 bg-green-100 dark:bg-green-900 border-2 border-green-500 rounded-lg"
+              >
+                <p class="text-green-800 dark:text-green-100 font-bold text-center">
+                  ✅ Successfully joined queue!
+                </p>
+                <p class="text-green-700 dark:text-green-200 text-sm text-center mt-2">
+                  Queue Number: <span class="font-bold">{{ queueEntry.queueNumber }}</span>
+                </p>
+                <p class="text-green-600 dark:text-green-300 text-xs text-center mt-2">
+                  Please wait for the cashier to call your number
+                </p>
+              </div>
+
+              <!-- Completion Message -->
+              <div
+                *ngIf="queueCompleted"
+                class="w-full p-6 bg-blue-100 dark:bg-blue-900 border-2 border-blue-500 rounded-lg animate-pulse"
+              >
+                <p class="text-blue-800 dark:text-blue-100 font-bold text-center text-xl">
+                  🎉 Service Completed!
+                </p>
+                <p class="text-blue-700 dark:text-blue-200 text-sm text-center mt-2">
+                  Thank you for using our service
+                </p>
+                <p class="text-blue-600 dark:text-blue-300 text-xs text-center mt-2">
+                  Resetting for next customer...
+                </p>
+              </div>
+            </div>
+
+            <!-- No Results -->
+            <div
+              *ngIf="
+                searchPerformed &&
+                searchResults.length === 0 &&
+                !errorMessage &&
+                !isSearching &&
+                !selectedPawner
+              "
+              class="text-center py-6"
+            >
+              <svg
+                class="w-12 h-12 text-gray-400 mx-auto mb-3"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                ></path>
+              </svg>
+              <p class="text-gray-600 dark:text-gray-400 mb-1">No matching records found</p>
+              <p class="text-sm text-gray-500 dark:text-gray-500">
+                Please try a different search term
+              </p>
+            </div>
+          </div>
+
+          <!-- STEP 4: Registration Form (New Loan + New Customer) -->
+          <div
+            *ngIf="currentStep === 'register'"
+            class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6"
+          >
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="text-xl font-bold text-gray-900 dark:text-white">
+                Step 3: Register Your Information
+              </h2>
+              <button
+                (click)="resetFlow()"
+                class="text-sm text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+              >
+                ← Back
+              </button>
+            </div>
+            <p class="text-gray-600 dark:text-gray-400 mb-6">
+              Please fill in your information to continue
+            </p>
+
+            <!-- Error Message -->
+            <div
+              *ngIf="errorMessage"
+              class="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg mb-4"
+            >
+              <p class="text-sm text-red-800 dark:text-red-200">{{ errorMessage }}</p>
+            </div>
+
+            <div class="space-y-4">
+              <!-- First Name -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  First Name <span class="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  [(ngModel)]="newPawnerForm.firstName"
+                  placeholder="Enter your first name"
+                  class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+
+              <!-- Last Name -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Last Name <span class="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  [(ngModel)]="newPawnerForm.lastName"
+                  placeholder="Enter your last name"
+                  class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+
+              <!-- Mobile Number -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Mobile Number <span class="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  [(ngModel)]="newPawnerForm.mobileNumber"
+                  placeholder="09XX-XXX-XXXX"
+                  class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+
+              <!-- City -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  City <span class="text-red-500">*</span>
+                </label>
+                <select
+                  [(ngModel)]="newPawnerForm.cityId"
+                  (ngModelChange)="onCityChange()"
+                  [disabled]="loadingCities"
+                  class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                >
+                  <option [ngValue]="null">
+                    {{ loadingCities ? 'Loading cities...' : 'Select City' }}
+                  </option>
+                  <option *ngFor="let city of cities" [ngValue]="city.id">{{ city.name }}</option>
+                </select>
+              </div>
+
+              <!-- Barangay -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Barangay <span class="text-red-500">*</span>
+                </label>
+                <select
+                  [(ngModel)]="newPawnerForm.barangayId"
+                  [disabled]="!newPawnerForm.cityId || loadingBarangays"
+                  class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                >
+                  <option [ngValue]="null">
+                    {{
+                      !newPawnerForm.cityId
+                        ? 'Select city first'
+                        : loadingBarangays
+                        ? 'Loading barangays...'
+                        : 'Select Barangay'
+                    }}
+                  </option>
+                  <option *ngFor="let barangay of barangays" [ngValue]="barangay.id">
+                    {{ barangay.name }}
+                  </option>
+                </select>
+              </div>
+
+              <!-- Email (Optional) -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Email (Optional)
+                </label>
+                <input
+                  type="email"
+                  [(ngModel)]="newPawnerForm.email"
+                  placeholder="your.email@example.com"
+                  class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+
+              <!-- Address (Optional) -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Address (Optional)
+                </label>
+                <textarea
+                  [(ngModel)]="newPawnerForm.address"
+                  placeholder="Enter your complete address"
+                  rows="2"
+                  class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                ></textarea>
+              </div>
+
+              <!-- Register Button -->
+              <button
+                (click)="registerNewPawner()"
+                [disabled]="isRegistering || !isNewPawnerFormValid()"
+                class="w-full px-6 py-4 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-bold text-lg rounded-lg transition-colors"
+              >
+                <span *ngIf="!isRegistering">✅ Register & Join Queue</span>
+                <span *ngIf="isRegistering">Registering...</span>
+              </button>
+            </div>
+            <!-- End Registration Form -->
+          </div>
+          <!-- End "All other steps" wrapper -->
+        </div>
+        <!-- End MIDDLE COLUMN -->
+      </div>
+      <!-- End 3-column grid -->
+      <!-- RIGHT COLUMN: Current Queue (25%) -->
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mr-8" >
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-1">📋 Current Queue</h2>
+            <p class="text-xs text-gray-600 dark:text-gray-400">See who's waiting</p>
+          </div>
+          <div class="flex items-center text-xs text-gray-500 dark:text-gray-400">
+            <svg
+              class="w-4 h-4 mr-1 animate-spin"
+              *ngIf="loadingQueueList"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                class="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                stroke-width="4"
+              ></circle>
+              <path
+                class="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+              ></path>
+            </svg>
+            <span>{{ queueList.length }}</span>
+          </div>
         </div>
 
-        <!-- Search Results -->
-        <div *ngIf="searchResults.length > 0" class="space-y-2">
-          <p class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Select your profile:</p>
-          <div *ngFor="let pawner of searchResults"
-               (click)="selectPawner(pawner)"
-               (keyup.enter)="selectPawner(pawner)"
-               tabindex="0"
-               role="button"
-               class="p-4 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors focus:ring-2 focus:ring-blue-500 outline-none">
-            <div class="flex items-center justify-between">
-              <div>
-                <p class="font-semibold text-gray-900 dark:text-white">{{pawner.firstName}} {{pawner.lastName}}</p>
-                <p class="text-sm text-gray-600 dark:text-gray-400">{{pawner.mobileNumber}}</p>
+        <!-- Empty Queue -->
+        <div *ngIf="!loadingQueueList && queueList.length === 0" class="text-center py-8">
+          <svg
+            class="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-2"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+            ></path>
+          </svg>
+          <p class="text-sm text-gray-500 dark:text-gray-400">No one in queue</p>
+          <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">Be the first!</p>
+        </div>
+
+        <!-- Queue List -->
+        <div *ngIf="!loadingQueueList && queueList.length > 0" class="space-y-2">
+          <div *ngFor="let entry of queueList; let i = index"
+          [class.border-yellow-400]="entry.status === 'processing'"
+          [class.bg-yellow-50]="entry.status === 'processing'"
+          [class.dark:bg-yellow-900/20]="entry.status === 'processing'"
+          [class.border-green-200]="entry.queueNumber === queueEntry?.queueNumber"
+          [class.bg-green-50]="entry.queueNumber === queueEntry?.queueNumber"
+          [class.dark:bg-green-900/20]="entry.queueNumber === queueEntry?.queueNumber" class="p-3
+          border-2 border-gray-200 dark:border-gray-700 rounded-lg transition-all">
+
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+              <!-- Position Badge -->
+              <div class="flex flex-col items-center">
+                <div
+                  class="w-8 h-8 rounded-full bg-blue-600 dark:bg-blue-500 text-white font-bold text-sm flex items-center justify-center"
+                >
+                  {{ i + 1 }}
+                </div>
+                <span class="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5">Position</span>
               </div>
-              <span class="px-3 py-1 text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-full">
-                👤 Old Pawner
+
+              <!-- Queue Info -->
+              <div>
+                <div class="flex items-center gap-2 mb-0.5">
+                  <p class="text-base font-bold text-gray-900 dark:text-white">
+                    {{ entry.queueNumber }}
+                  </p>
+                  <span
+                    *ngIf="entry.queueNumber === queueEntry?.queueNumber"
+                    class="px-2 py-0.5 text-[10px] font-medium bg-green-600 text-white rounded-full"
+                  >
+                    You
+                  </span>
+                  <span
+                    *ngIf="entry.status === 'processing'"
+                    class="px-2 py-0.5 text-[10px] font-medium bg-yellow-600 text-white rounded-full animate-pulse"
+                  >
+                    🔄 Serving
+                  </span>
+                </div>
+                <p class="text-xs text-gray-600 dark:text-gray-400">
+                  {{ getServiceTypeLabel(entry.serviceType) }}
+                </p>
+                <p class="text-[10px] text-gray-500 dark:text-gray-500 mt-0.5">
+                  {{ getQueueTime(entry.joinedAt) }}
+                </p>
+              </div>
+            </div>
+
+            <!-- Customer Type Badge -->
+            <div>
+              <span
+                *ngIf="entry.isNewPawner"
+                class="px-2 py-1 text-[10px] font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded-full"
+              >
+                🆕 New
+              </span>
+              <span
+                *ngIf="!entry.isNewPawner"
+                class="px-2 py-1 text-[10px] font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200 rounded-full"
+              >
+                👤
               </span>
             </div>
           </div>
         </div>
-
-        <!-- No Results -->
-        <div *ngIf="searchPerformed && searchResults.length === 0 && !errorMessage && !isSearching" class="text-center py-8">
-          <svg class="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-          </svg>
-          <p class="text-gray-600 dark:text-gray-400 mb-4">No matching records found</p>
-          <p class="text-sm text-gray-500 dark:text-gray-500">Please ask staff to register you as a new pawner</p>
-        </div>
-
-        <!-- Selected Pawner -->
-        <div *ngIf="selectedPawner" class="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-          <div class="flex items-start justify-between">
-            <div>
-              <p class="font-semibold text-gray-900 dark:text-white mb-1">✅ Profile Selected</p>
-              <p class="text-sm text-gray-600 dark:text-gray-400">{{selectedPawner.firstName}} {{selectedPawner.lastName}}</p>
-              <p class="text-sm text-gray-600 dark:text-gray-400">{{selectedPawner.mobileNumber}}</p>
-            </div>
-            <button
-              (click)="clearSelection()"
-              class="text-sm text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200">
-              Change
-            </button>
-          </div>
-        </div>
       </div>
 
-      <!-- Service Type Selection (Only show if pawner selected) -->
-      <div *ngIf="selectedPawner" class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-        <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-4">
-          Step 2: Select Service Type
-        </h2>
-        <p class="text-gray-600 dark:text-gray-400 mb-4">
-          What service do you need today?
-        </p>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
-          <div *ngFor="let service of serviceTypes"
-               (click)="serviceType = service.value"
-               (keyup.enter)="serviceType = service.value"
-               tabindex="0"
-               role="button"
-               [attr.aria-label]="service.label"
-               [class.border-blue-500]="serviceType === service.value"
-               [class.bg-blue-50]="serviceType === service.value"
-               [class.dark:bg-blue-900/20]="serviceType === service.value"
-               class="p-4 border-2 border-gray-200 dark:border-gray-600 rounded-lg cursor-pointer hover:border-blue-400 transition-colors focus:ring-2 focus:ring-blue-500 outline-none">
-            <div class="flex items-center">
-              <span class="text-2xl mr-3">{{service.icon}}</span>
-              <div>
-                <p class="font-semibold text-gray-900 dark:text-white">{{service.label}}</p>
-              </div>
-            </div>
-            <div *ngIf="serviceType === service.value" class="mt-2 flex items-center text-sm text-blue-600 dark:text-blue-400">
-              <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
-              </svg>
-              Selected
-            </div>
-          </div>
-        </div>
-
-        <button
-          (click)="joinQueue()"
-          [disabled]="isJoiningQueue || !serviceType"
-          class="w-full px-6 py-4 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-bold text-lg rounded-lg transition-colors">
-          <span *ngIf="!isJoiningQueue">🎫 Join Queue</span>
-          <span *ngIf="isJoiningQueue">Joining...</span>
-        </button>
+      <!-- Auto-refresh Notice -->
+      <div class="mt-4 text-center">
+        <p class="text-[10px] text-gray-500 dark:text-gray-400">🔄 Updates every 10s</p>
       </div>
-
     </div>
-
-    <!-- Help Section -->
-    <div class="mt-8 bg-blue-50 dark:bg-blue-900/20 rounded-lg p-6">
-      <h3 class="text-lg font-semibold text-blue-900 dark:text-blue-100 mb-2">📌 How it works</h3>
-      <ol class="list-decimal list-inside space-y-2 text-sm text-blue-800 dark:text-blue-200">
-        <li>Search for your information using name or mobile number</li>
-        <li>Select your profile from the results</li>
-        <li>Choose the service type you need</li>
-        <li>Join the queue and wait for your turn</li>
-        <li>Staff will call your queue number when ready</li>
-      </ol>
-    </div>
-
+    <!-- End RIGHT COLUMN -->
   </div>
 </div>

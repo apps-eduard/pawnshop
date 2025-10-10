@@ -782,34 +782,37 @@ export class CashierDashboard implements OnInit, OnDestroy {
   // Handle pawner selected from queue
   onPawnerSelectedFromQueue(event: any) {
     console.log('Pawner selected from queue:', event);
-    
+
     // Store the selected pawner info
     this.selectedPawner = event.pawner;
-    
+
     // Show toast notification
     this.toastService.showSuccess(
       'Queue Selection',
       `${event.pawner.firstName} ${event.pawner.lastName} selected. Proceed with ${event.serviceType}.`
     );
-    
+
     // Navigate to appropriate transaction page based on service type
     const serviceTypeRoutes: { [key: string]: string } = {
       'new_loan': '/transactions/new-loan',
       'renew': '/transactions/renew',
       'redeem': '/transactions/redeem',
       'additional_loan': '/transactions/additional-loan',
+      'partial_payment': '/transactions/partial-payment',
       'inquiry': ''
     };
-    
+
     const route = serviceTypeRoutes[event.serviceType];
     if (route) {
-      this.router.navigate([route], { 
-        state: { 
+      this.router.navigate([route], {
+        state: {
           pawnerId: event.pawnerId,
           pawner: event.pawner,
           queueId: event.queueId,
-          fromQueue: true
-        } 
+          ticketNumber: event.ticketNumber, // Pass ticket number for auto-search
+          fromQueue: true,
+          autoSearch: !!event.ticketNumber // Flag to trigger auto-search if ticket available
+        }
       });
     }
   }

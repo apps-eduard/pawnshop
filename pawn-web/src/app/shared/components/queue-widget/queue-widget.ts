@@ -11,6 +11,7 @@ interface QueueEntry {
   isNewPawner: boolean;
   serviceType: string;
   joinedAt: string;
+  ticketNumber?: string; // Add ticket number field
   pawner: {
     id: number;
     firstName: string;
@@ -51,8 +52,7 @@ interface QueueEntry {
       <!-- Queue List -->
       <div *ngIf="!isLoading && queueEntries.length > 0" class="space-y-2 max-h-96 overflow-y-auto custom-scrollbar">
         <div *ngFor="let entry of queueEntries"
-             (click)="selectPawner(entry)"
-             class="p-4 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-blue-50 dark:hover:bg-gray-700 cursor-pointer transition-colors group">
+             class="p-4 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
           <div class="flex items-start justify-between">
             <div class="flex-1">
               <div class="flex items-center gap-2 mb-1">
@@ -72,11 +72,25 @@ interface QueueEntry {
                 {{getServiceTypeLabel(entry.serviceType)}} • {{getWaitTime(entry.joinedAt)}}
               </p>
             </div>
-            <button 
-              (click)="selectPawner(entry); $event.stopPropagation()"
-              class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
-              Select
-            </button>
+
+            <!-- Action Buttons -->
+            <div class="flex flex-col gap-2 ml-4">
+              <button
+                (click)="selectPawner(entry); $event.stopPropagation()"
+                class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors">
+                ✓ Select
+              </button>
+              <button
+                (click)="markAsDone(entry); $event.stopPropagation()"
+                class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-colors">
+                ✓ Done
+              </button>
+              <button
+                (click)="cancelQueue(entry); $event.stopPropagation()"
+                class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors">
+                ✕ Cancel
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -100,7 +114,7 @@ interface QueueEntry {
 })
 export class QueueWidget implements OnInit, OnDestroy {
   @Output() pawnerSelected = new EventEmitter<any>();
-  
+
   private destroy$ = new Subject<void>();
   private readonly API_URL = 'http://localhost:3000/api';
 
@@ -112,6 +126,7 @@ export class QueueWidget implements OnInit, OnDestroy {
     { value: 'renew', label: 'Renew Loan' },
     { value: 'redeem', label: 'Redeem Item' },
     { value: 'additional_loan', label: 'Additional Loan' },
+    { value: 'partial_payment', label: 'Partial Payment' },
     { value: 'inquiry', label: 'Inquiry' }
   ];
 
@@ -166,7 +181,8 @@ export class QueueWidget implements OnInit, OnDestroy {
       queueId: entry.id,
       queueNumber: entry.queueNumber,
       serviceType: entry.serviceType,
-      isNewPawner: entry.isNewPawner
+      isNewPawner: entry.isNewPawner,
+      ticketNumber: entry.ticketNumber // Include ticket number if available
     });
 
     // Update queue status to processing
@@ -183,6 +199,38 @@ export class QueueWidget implements OnInit, OnDestroy {
       });
   }
 
+  markAsDone(entry: QueueEntry): void {
+    // Update status to completed, which effectively removes from waiting queue
+    this.http.put<any>(`${this.API_URL}/queue/${entry.id}/status`, { status: 'completed' })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          console.log('✅ Queue entry marked as completed:', entry.queueNumber);
+          this.loadQueue(); // Refresh queue
+        },
+        error: (error) => {
+          console.error('❌ Error marking queue as done:', error);
+          alert('Failed to mark as done. Please try again.');
+        }
+      });
+  }
+
+  cancelQueue(entry: QueueEntry): void {
+    // Delete from database
+    this.http.delete<any>(`${this.API_URL}/queue/${entry.id}`)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          console.log('✅ Queue entry cancelled and removed:', entry.queueNumber);
+          this.loadQueue(); // Refresh queue
+        },
+        error: (error) => {
+          console.error('❌ Error cancelling queue:', error);
+          alert('Failed to cancel queue entry. Please try again.');
+        }
+      });
+  }
+
   getServiceTypeLabel(type: string): string {
     const service = this.serviceTypes.find(s => s.value === type);
     return service ? service.label : type;
@@ -193,7 +241,7 @@ export class QueueWidget implements OnInit, OnDestroy {
     const now = new Date();
     const diffMs = now.getTime() - joined.getTime();
     const diffMins = Math.floor(diffMs / 60000);
-    
+
     if (diffMins < 1) return 'Just now';
     if (diffMins < 60) return `${diffMins} min${diffMins > 1 ? 's' : ''} ago`;
     const diffHours = Math.floor(diffMins / 60);

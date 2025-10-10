@@ -432,7 +432,7 @@ export class AppraiserDashboard implements OnInit {
   // Handle pawner selected from queue
   onPawnerSelectedFromQueue(event: any) {
     console.log('Pawner selected from queue for appraisal:', event);
-    
+
     // Populate pawner information
     this.newPawner = {
       firstName: event.pawner.firstName,
@@ -443,16 +443,16 @@ export class AppraiserDashboard implements OnInit {
       cityId: event.pawner.cityId,
       barangayId: event.pawner.barangayId
     };
-    
+
     // Set selected pawner for existing flow
     this.selectedPawner = event.pawner;
-    
+
     // Show toast notification
     this.toastService.showSuccess(
       'Queue Selection',
       `${event.pawner.firstName} ${event.pawner.lastName} selected for appraisal. Add items to begin.`
     );
-    
+
     // Navigate to appraisal page if needed
     this.router.navigate(['/transactions/appraisal'], {
       state: {

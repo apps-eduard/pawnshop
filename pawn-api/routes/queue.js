@@ -4,7 +4,76 @@ const { authenticateToken, authorizeRoles } = require('../middleware/auth');
 
 const router = express.Router();
 
-// Apply authentication middleware to all routes
+// =============================================
+// PUBLIC ENDPOINTS (NO AUTH REQUIRED)
+// =============================================
+
+/**
+ * GET /api/queue/public
+ * Get all active queue entries (for kiosk display)
+ * No authentication required - public kiosk view
+ */
+router.get('/public', async (req, res) => {
+  try {
+    const { branch_id } = req.query;
+
+    console.log(`📺 [${new Date().toISOString()}] Fetching public queue display`);
+
+    let query = `
+      SELECT 
+        pq.id, pq.queue_number, pq.status, pq.is_new_pawner, pq.service_type, pq.ticket_number,
+        pq.joined_at, pq.called_at,
+        p.id as pawner_id, p.first_name, p.last_name, p.mobile_number
+      FROM pawner_queue pq
+      INNER JOIN pawners p ON pq.pawner_id = p.id
+      WHERE pq.status IN ('waiting', 'processing')
+    `;
+
+    const params = [];
+    let paramCount = 1;
+
+    // Filter by branch if provided
+    if (branch_id) {
+      query += ` AND pq.branch_id = $${paramCount++}`;
+      params.push(branch_id);
+    }
+
+    query += ` ORDER BY pq.joined_at ASC`;
+
+    const result = await pool.query(query, params);
+
+    console.log(`✅ Retrieved ${result.rows.length} active queue entries for public display`);
+
+    res.json({
+      success: true,
+      message: 'Queue retrieved successfully',
+      data: result.rows.map(row => ({
+        id: row.id,
+        queueNumber: row.queue_number,
+        status: row.status,
+        isNewPawner: row.is_new_pawner,
+        serviceType: row.service_type,
+        ticketNumber: row.ticket_number,
+        joinedAt: row.joined_at,
+        calledAt: row.called_at,
+        pawner: {
+          id: row.pawner_id,
+          firstName: row.first_name,
+          lastName: row.last_name,
+          mobileNumber: row.mobile_number
+        }
+      }))
+    });
+  } catch (error) {
+    console.error('❌ Error fetching public queue:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching queue'
+    });
+  }
+});
+
+// Apply authentication middleware to remaining routes
 router.use(authenticateToken);
 
 // =============================================
@@ -26,7 +95,7 @@ router.get('/', async (req, res) => {
 
     let query = `
       SELECT 
-        pq.id, pq.queue_number, pq.status, pq.is_new_pawner, pq.service_type,
+        pq.id, pq.queue_number, pq.status, pq.is_new_pawner, pq.service_type, pq.ticket_number,
         pq.joined_at, pq.called_at, pq.completed_at, pq.wait_time_minutes,
         pq.service_time_minutes, pq.notes,
         p.id as pawner_id, p.first_name, p.last_name, p.mobile_number, p.email,
@@ -82,6 +151,7 @@ router.get('/', async (req, res) => {
         status: row.status,
         isNewPawner: row.is_new_pawner,
         serviceType: row.service_type,
+        ticketNumber: row.ticket_number,
         joinedAt: row.joined_at,
         calledAt: row.called_at,
         completedAt: row.completed_at,
@@ -126,6 +196,7 @@ router.post('/', async (req, res) => {
       pawnerId,
       serviceType,
       isNewPawner = false,
+      ticketNumber = null,
       notes
     } = req.body;
 
@@ -137,7 +208,7 @@ router.post('/', async (req, res) => {
       });
     }
 
-    const validServiceTypes = ['new_loan', 'renew', 'redeem', 'additional_loan', 'inquiry'];
+    const validServiceTypes = ['new_loan', 'renew', 'redeem', 'additional_loan', 'partial_payment', 'inquiry'];
     if (!validServiceTypes.includes(serviceType)) {
       return res.status(400).json({
         success: false,
@@ -145,7 +216,7 @@ router.post('/', async (req, res) => {
       });
     }
 
-    console.log(`🎫 [${new Date().toISOString()}] Adding pawner ${pawnerId} to queue - Service: ${serviceType}`);
+    console.log(`🎫 [${new Date().toISOString()}] Adding pawner ${pawnerId} to queue - Service: ${serviceType}${ticketNumber ? `, Ticket: ${ticketNumber}` : ''}`);
 
     const branchId = req.user.branch_id || 1; // Default to main branch
 
@@ -157,14 +228,14 @@ router.post('/', async (req, res) => {
     const queueCount = parseInt(queueCountResult.rows[0].count) + 1;
     const queueNumber = `Q${String(queueCount).padStart(3, '0')}`;
 
-    // Insert queue entry
+    // Insert queue entry with ticket_number
     const result = await pool.query(`
       INSERT INTO pawner_queue (
-        pawner_id, branch_id, queue_number, status, is_new_pawner, service_type, notes
+        pawner_id, branch_id, queue_number, status, is_new_pawner, service_type, ticket_number, notes
       )
-      VALUES ($1, $2, $3, 'waiting', $4, $5, $6)
+      VALUES ($1, $2, $3, 'waiting', $4, $5, $6, $7)
       RETURNING *
-    `, [pawnerId, branchId, queueNumber, isNewPawner, serviceType, notes]);
+    `, [pawnerId, branchId, queueNumber, isNewPawner, serviceType, ticketNumber, notes]);
 
     console.log(`✅ Pawner added to queue: ${queueNumber}`);
 
@@ -177,6 +248,7 @@ router.post('/', async (req, res) => {
         status: result.rows[0].status,
         isNewPawner: result.rows[0].is_new_pawner,
         serviceType: result.rows[0].service_type,
+        ticketNumber: result.rows[0].ticket_number,
         joinedAt: result.rows[0].joined_at
       }
     });
@@ -296,6 +368,51 @@ router.delete('/:id', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error removing queue entry'
+    });
+  }
+});
+
+/**
+ * PATCH /api/queue/:id/complete
+ * Mark queue entry as completed
+ */
+router.patch('/:id/complete', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    console.log(`✅ [${new Date().toISOString()}] Completing queue entry: ${id}`);
+
+    // Check if queue entry exists
+    const queueEntry = await pool.query('SELECT * FROM pawner_queue WHERE id = $1', [id]);
+
+    if (queueEntry.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Queue entry not found'
+      });
+    }
+
+    // Update queue entry to completed status
+    await pool.query(
+      `UPDATE pawner_queue 
+       SET status = 'completed', 
+           completed_at = NOW(),
+           updated_at = NOW()
+       WHERE id = $1`,
+      [id]
+    );
+
+    console.log(`✅ Queue entry ${id} marked as completed`);
+
+    res.json({
+      success: true,
+      message: 'Queue entry completed successfully'
+    });
+  } catch (error) {
+    console.error('❌ Error completing queue entry:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error completing queue entry'
     });
   }
 });
