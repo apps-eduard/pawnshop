@@ -667,6 +667,28 @@ export class CashierDashboard implements OnInit, OnDestroy {
     return labels[type] || type;
   }
 
+  // Get previous principal for additional loan
+  getPreviousPrincipal(history: any, allHistory: any[]): number {
+    if (history.transactionType !== 'additional_loan') {
+      return 0;
+    }
+    // Find the previous transaction in the history array
+    const currentIndex = allHistory.findIndex(h => h.transactionNumber === history.transactionNumber);
+    if (currentIndex > 0) {
+      const previousTransaction = allHistory[currentIndex - 1];
+      return parseFloat(previousTransaction.principalAmount || previousTransaction.balance || 0);
+    }
+    return 0;
+  }
+
+  // Get additional amount for additional loan
+  getAdditionalAmount(history: any, previousPrincipal: number): number {
+    if (history.transactionType !== 'additional_loan') {
+      return 0;
+    }
+    return parseFloat(history.principalAmount || 0) - previousPrincipal;
+  }
+
   loadRecentTransactions() {
     console.log('🔄 Loading recent transactions...');
     this.transactionService.getRecentTransactions().subscribe({

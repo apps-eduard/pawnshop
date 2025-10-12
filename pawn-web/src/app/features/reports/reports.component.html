@@ -113,6 +113,13 @@
             class="px-6 py-3 text-sm font-medium border-b-2 transition-colors hover:text-primary-600">
             Expired Items
           </button>
+          <button
+            (click)="switchTab('cash-position')"
+            [class.border-primary-600]="activeTab === 'cash-position'"
+            [class.text-primary-600]="activeTab === 'cash-position'"
+            class="px-6 py-3 text-sm font-medium border-b-2 transition-colors hover:text-primary-600">
+            Cash Position
+          </button>
         </nav>
       </div>
     </div>
@@ -427,6 +434,252 @@
               </tr>
             </tbody>
           </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cash Position Report -->
+    <div *ngIf="!isLoading && activeTab === 'cash-position' && cashPositionReport" id="cashPositionReport" class="space-y-6">
+      <!-- Report Header -->
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 print:border-0 print:shadow-none">
+        <div class="text-center mb-6">
+          <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Canadian Loans, Bayawan City</h2>
+          <h3 class="text-lg font-semibold text-gray-700 dark:text-gray-300 mt-2">DAILY CASH POSITION REPORT</h3>
+          <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">{{ formatDate(cashPositionReport.date) }}</p>
+        </div>
+
+        <!-- Print Button -->
+        <div class="flex justify-end mb-4 print:hidden">
+          <button
+            (click)="printCashPosition()"
+            class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors flex items-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
+            </svg>
+            Print Report
+          </button>
+        </div>
+
+        <!-- Cash Beginning Balance -->
+        <div class="mb-6 bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
+          <div class="flex justify-between items-center">
+            <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">CASH BEGINNING BALANCE</span>
+            <span class="text-xl font-bold text-blue-600 dark:text-blue-400">{{ formatCurrency(cashPositionReport.beginningBalance) }}</span>
+          </div>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Opening balance as of {{ formatDate(cashPositionReport.date) }}</p>
+        </div>
+
+        <!-- Cash IN Section -->
+        <div class="mb-6">
+          <h4 class="text-lg font-bold text-gray-900 dark:text-white mb-3">CASH IN:</h4>
+          <div class="bg-gray-50 dark:bg-gray-700 rounded-lg overflow-hidden">
+            <table class="min-w-full">
+              <tbody class="divide-y divide-gray-200 dark:divide-gray-600">
+                <tr>
+                  <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">PAID LOAN</td>
+                  <td class="px-4 py-3 text-sm text-right font-medium text-gray-900 dark:text-white">{{ formatCurrency(cashPositionReport.cashIn.paidLoan) }}</td>
+                </tr>
+                <tr>
+                  <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">PARTIAL PAYMENT</td>
+                  <td class="px-4 py-3 text-sm text-right font-medium text-gray-900 dark:text-white">{{ formatCurrency(cashPositionReport.cashIn.partialPayment) }}</td>
+                </tr>
+                <tr>
+                  <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">SOLD AUCTION</td>
+                  <td class="px-4 py-3 text-sm text-right font-medium text-gray-900 dark:text-white">{{ formatCurrency(cashPositionReport.cashIn.soldAuction) }}</td>
+                </tr>
+                <tr>
+                  <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">CASH TRANSFER IN</td>
+                  <td class="px-4 py-3 text-sm text-right font-medium text-gray-900 dark:text-white">{{ formatCurrency(cashPositionReport.cashIn.cashTransferIn) }}</td>
+                </tr>
+                <tr class="bg-green-50 dark:bg-green-900/20">
+                  <td class="px-4 py-3 text-sm font-bold text-gray-900 dark:text-white">TOTAL CASH IN</td>
+                  <td class="px-4 py-3 text-sm text-right font-bold text-green-600 dark:text-green-400">{{ formatCurrency(cashPositionReport.cashIn.total) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Cash OUT Section -->
+        <div class="mb-6">
+          <h4 class="text-lg font-bold text-gray-900 dark:text-white mb-3">CASH OUT:</h4>
+          <div class="bg-gray-50 dark:bg-gray-700 rounded-lg overflow-hidden">
+            <table class="min-w-full">
+              <tbody class="divide-y divide-gray-200 dark:divide-gray-600">
+                <tr>
+                  <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">LOAN</td>
+                  <td class="px-4 py-3 text-sm text-right font-medium text-gray-900 dark:text-white">{{ formatCurrency(cashPositionReport.cashOut.loan) }}</td>
+                </tr>
+                <tr>
+                  <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">REFUND AUCTION</td>
+                  <td class="px-4 py-3 text-sm text-right font-medium text-gray-900 dark:text-white">{{ formatCurrency(cashPositionReport.cashOut.refundAuction) }}</td>
+                </tr>
+                <tr>
+                  <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">EXPENSES</td>
+                  <td class="px-4 py-3 text-sm text-right font-medium text-gray-900 dark:text-white">{{ formatCurrency(cashPositionReport.cashOut.expenses) }}</td>
+                </tr>
+                <tr>
+                  <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">CASH TRANSFER OUT</td>
+                  <td class="px-4 py-3 text-sm text-right font-medium text-gray-900 dark:text-white">{{ formatCurrency(cashPositionReport.cashOut.cashTransferOut) }}</td>
+                </tr>
+                <tr class="bg-red-50 dark:bg-red-900/20">
+                  <td class="px-4 py-3 text-sm font-bold text-gray-900 dark:text-white">TOTAL CASH OUT</td>
+                  <td class="px-4 py-3 text-sm text-right font-bold text-red-600 dark:text-red-400">{{ formatCurrency(cashPositionReport.cashOut.total) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Total Cash Position -->
+        <div class="mb-6 bg-primary-50 dark:bg-primary-900/20 p-4 rounded-lg border-2 border-primary-500">
+          <div class="flex justify-between items-center">
+            <span class="text-lg font-bold text-gray-900 dark:text-white">TOTAL CASH POSITION</span>
+            <span class="text-2xl font-bold text-primary-600 dark:text-primary-400">{{ formatCurrency(cashPositionReport.totalCashPosition) }}</span>
+          </div>
+        </div>
+
+        <!-- Cash Breakdown -->
+        <div class="mb-6">
+          <h4 class="text-lg font-bold text-gray-900 dark:text-white mb-3">CASH BREAKDOWN</h4>
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <!-- 1000 -->
+            <div class="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg">
+              <div class="text-xs text-gray-500 dark:text-gray-400 text-center mb-1">₱1000 x</div>
+              <input
+                type="number"
+                [(ngModel)]="denominations.d1000"
+                (ngModelChange)="calculateDenominationTotal()"
+                min="0"
+                class="w-full text-center text-lg font-bold bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded px-2 py-1 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                placeholder="0">
+              <div class="text-xs text-gray-500 dark:text-gray-400 text-center mt-1">= {{ formatCurrency(denominations.d1000 * 1000) }}</div>
+            </div>
+            <!-- 500 -->
+            <div class="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg">
+              <div class="text-xs text-gray-500 dark:text-gray-400 text-center mb-1">₱500 x</div>
+              <input
+                type="number"
+                [(ngModel)]="denominations.d500"
+                (ngModelChange)="calculateDenominationTotal()"
+                min="0"
+                class="w-full text-center text-lg font-bold bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded px-2 py-1 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                placeholder="0">
+              <div class="text-xs text-gray-500 dark:text-gray-400 text-center mt-1">= {{ formatCurrency(denominations.d500 * 500) }}</div>
+            </div>
+            <!-- 100 -->
+            <div class="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg">
+              <div class="text-xs text-gray-500 dark:text-gray-400 text-center mb-1">₱100 x</div>
+              <input
+                type="number"
+                [(ngModel)]="denominations.d100"
+                (ngModelChange)="calculateDenominationTotal()"
+                min="0"
+                class="w-full text-center text-lg font-bold bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded px-2 py-1 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                placeholder="0">
+              <div class="text-xs text-gray-500 dark:text-gray-400 text-center mt-1">= {{ formatCurrency(denominations.d100 * 100) }}</div>
+            </div>
+            <!-- 50 -->
+            <div class="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg">
+              <div class="text-xs text-gray-500 dark:text-gray-400 text-center mb-1">₱50 x</div>
+              <input
+                type="number"
+                [(ngModel)]="denominations.d50"
+                (ngModelChange)="calculateDenominationTotal()"
+                min="0"
+                class="w-full text-center text-lg font-bold bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded px-2 py-1 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                placeholder="0">
+              <div class="text-xs text-gray-500 dark:text-gray-400 text-center mt-1">= {{ formatCurrency(denominations.d50 * 50) }}</div>
+            </div>
+            <!-- 20 -->
+            <div class="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg">
+              <div class="text-xs text-gray-500 dark:text-gray-400 text-center mb-1">₱20 x</div>
+              <input
+                type="number"
+                [(ngModel)]="denominations.d20"
+                (ngModelChange)="calculateDenominationTotal()"
+                min="0"
+                class="w-full text-center text-lg font-bold bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded px-2 py-1 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                placeholder="0">
+              <div class="text-xs text-gray-500 dark:text-gray-400 text-center mt-1">= {{ formatCurrency(denominations.d20 * 20) }}</div>
+            </div>
+            <!-- 10 -->
+            <div class="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg">
+              <div class="text-xs text-gray-500 dark:text-gray-400 text-center mb-1">₱10 x</div>
+              <input
+                type="number"
+                [(ngModel)]="denominations.d10"
+                (ngModelChange)="calculateDenominationTotal()"
+                min="0"
+                class="w-full text-center text-lg font-bold bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded px-2 py-1 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                placeholder="0">
+              <div class="text-xs text-gray-500 dark:text-gray-400 text-center mt-1">= {{ formatCurrency(denominations.d10 * 10) }}</div>
+            </div>
+            <!-- 5 -->
+            <div class="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg">
+              <div class="text-xs text-gray-500 dark:text-gray-400 text-center mb-1">₱5 x</div>
+              <input
+                type="number"
+                [(ngModel)]="denominations.d5"
+                (ngModelChange)="calculateDenominationTotal()"
+                min="0"
+                class="w-full text-center text-lg font-bold bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded px-2 py-1 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                placeholder="0">
+              <div class="text-xs text-gray-500 dark:text-gray-400 text-center mt-1">= {{ formatCurrency(denominations.d5 * 5) }}</div>
+            </div>
+            <!-- 1 -->
+            <div class="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg">
+              <div class="text-xs text-gray-500 dark:text-gray-400 text-center mb-1">₱1 x</div>
+              <input
+                type="number"
+                [(ngModel)]="denominations.d1"
+                (ngModelChange)="calculateDenominationTotal()"
+                min="0"
+                class="w-full text-center text-lg font-bold bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded px-2 py-1 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                placeholder="0">
+              <div class="text-xs text-gray-500 dark:text-gray-400 text-center mt-1">= {{ formatCurrency(denominations.d1 * 1) }}</div>
+            </div>
+          </div>
+          <div class="mt-3 bg-gray-100 dark:bg-gray-600 p-3 rounded-lg">
+            <div class="flex justify-between items-center">
+              <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">Total Coins:</span>
+              <span class="text-lg font-bold text-gray-900 dark:text-white">{{ formatCurrency(coinTotal) }}</span>
+            </div>
+          </div>
+          <div class="mt-2 bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-lg">
+            <div class="flex justify-between items-center">
+              <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">Actual Total Cash:</span>
+              <span class="text-lg font-bold text-yellow-700 dark:text-yellow-400">{{ formatCurrency(actualTotalCash) }}</span>
+            </div>
+          </div>
+          <div *ngIf="cashVariance !== 0" class="mt-2 p-3 rounded-lg" [class.bg-red-50]="cashVariance < 0" [class.dark:bg-red-900/20]="cashVariance < 0" [class.bg-green-50]="cashVariance > 0" [class.dark:bg-green-900/20]="cashVariance > 0">
+            <div class="flex justify-between items-center">
+              <span class="text-sm font-semibold" [class.text-red-700]="cashVariance < 0" [class.dark:text-red-400]="cashVariance < 0" [class.text-green-700]="cashVariance > 0" [class.dark:text-green-400]="cashVariance > 0">
+                {{ cashVariance > 0 ? 'Overage:' : 'Shortage:' }}
+              </span>
+              <span class="text-lg font-bold" [class.text-red-700]="cashVariance < 0" [class.dark:text-red-400]="cashVariance < 0" [class.text-green-700]="cashVariance > 0" [class.dark:text-green-400]="cashVariance > 0">
+                {{ formatCurrency(Math.abs(cashVariance)) }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700 print:mt-12">
+          <div class="grid grid-cols-2 gap-8">
+            <div class="text-center">
+              <div class="border-t-2 border-gray-800 dark:border-gray-300 pt-2 inline-block min-w-[200px]">
+                <p class="text-sm font-semibold text-gray-900 dark:text-white">Prepared by:</p>
+                <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">EDP Personnel</p>
+              </div>
+            </div>
+            <div class="text-center">
+              <div class="border-t-2 border-gray-800 dark:border-gray-300 pt-2 inline-block min-w-[200px]">
+                <p class="text-sm font-semibold text-gray-900 dark:text-white">Noted by:</p>
+                <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">Auditor</p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

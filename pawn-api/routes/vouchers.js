@@ -74,6 +74,7 @@ router.get('/', async (req, res) => {
       SELECT 
         v.id,
         v.voucher_type,
+        v.transaction_type,
         v.voucher_date,
         v.amount,
         v.notes,
@@ -130,6 +131,7 @@ router.get('/:id', async (req, res) => {
       SELECT 
         v.id,
         v.voucher_type,
+        v.transaction_type,
         v.voucher_date,
         v.amount,
         v.notes,
@@ -199,6 +201,13 @@ router.post('/batch', authorizeRoles('manager', 'admin', 'administrator'), async
           message: `Invalid voucher type at index ${i}. Must be 'cash' or 'cheque'`
         });
       }
+      const transactionType = voucher.transactionType || 'cash_out';
+      if (!['cash_in', 'cash_out'].includes(transactionType)) {
+        return res.status(400).json({
+          success: false,
+          message: `Invalid transaction type at index ${i}. Must be 'cash_in' or 'cash_out'`
+        });
+      }
       if (!voucher.date) {
         return res.status(400).json({
           success: false,
@@ -225,9 +234,10 @@ router.post('/batch', authorizeRoles('manager', 'admin', 'administrator'), async
     const savedVouchers = [];
     
     for (const voucher of vouchers) {
+      const transactionType = voucher.transactionType || 'cash_out';
       const insertQuery = `
-        INSERT INTO vouchers (voucher_type, voucher_date, amount, notes, created_by)
-        VALUES ($1, $2, $3, $4, $5)
+        INSERT INTO vouchers (voucher_type, voucher_date, amount, notes, transaction_type, created_by)
+        VALUES ($1, $2, $3, $4, $5, $6)
         RETURNING *
       `;
       
@@ -236,6 +246,7 @@ router.post('/batch', authorizeRoles('manager', 'admin', 'administrator'), async
         voucher.date,
         voucher.amount,
         voucher.notes.trim(),
+        transactionType,
         userId
       ]);
       
@@ -268,13 +279,13 @@ router.post('/batch', authorizeRoles('manager', 'admin', 'administrator'), async
 /**
  * POST /api/vouchers
  * Create a single voucher
- * Body: { type, date, amount, notes }
+ * Body: { type, date, amount, notes, transactionType }
  */
 router.post('/', authorizeRoles('manager', 'admin', 'administrator'), async (req, res) => {
   const client = await pool.connect();
   
   try {
-    const { type, date, amount, notes } = req.body;
+    const { type, date, amount, notes, transactionType = 'cash_out' } = req.body;
     const userId = req.user.userId;
     
     // Validation
@@ -282,6 +293,13 @@ router.post('/', authorizeRoles('manager', 'admin', 'administrator'), async (req
       return res.status(400).json({
         success: false,
         message: "Voucher type is required and must be 'cash' or 'cheque'"
+      });
+    }
+    
+    if (!transactionType || !['cash_in', 'cash_out'].includes(transactionType)) {
+      return res.status(400).json({
+        success: false,
+        message: "Transaction type is required and must be 'cash_in' or 'cash_out'"
       });
     }
     
@@ -307,8 +325,8 @@ router.post('/', authorizeRoles('manager', 'admin', 'administrator'), async (req
     }
     
     const insertQuery = `
-      INSERT INTO vouchers (voucher_type, voucher_date, amount, notes, created_by)
-      VALUES ($1, $2, $3, $4, $5)
+      INSERT INTO vouchers (voucher_type, voucher_date, amount, notes, transaction_type, created_by)
+      VALUES ($1, $2, $3, $4, $5, $6)
       RETURNING *
     `;
     
@@ -317,6 +335,7 @@ router.post('/', authorizeRoles('manager', 'admin', 'administrator'), async (req
       date,
       amount,
       notes.trim(),
+      transactionType,
       userId
     ]);
     

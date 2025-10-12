@@ -5,6 +5,7 @@ import { Observable } from 'rxjs';
 export interface Voucher {
   id: number;
   voucher_type: 'cash' | 'cheque';
+  transaction_type: 'cash_in' | 'cash_out';
   voucher_date: string;
   amount: number;
   notes: string;
@@ -18,6 +19,7 @@ export interface Voucher {
 
 export interface VoucherForm {
   type: 'cash' | 'cheque';
+  transactionType: 'cash_in' | 'cash_out';
   date: string;
   amount: number;
   notes: string;

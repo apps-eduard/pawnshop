@@ -1,1 +1,45 @@
 /* Reports Component Styles */
+
+/* Print Styles for Cash Position Report */
+@media print {
+  /* Hide non-printable elements */
+  .print\:hidden {
+    display: none !important;
+  }
+
+  /* Reset page margins */
+  @page {
+    margin: 0.5in;
+    size: letter portrait;
+  }
+
+  /* Ensure proper page breaks */
+  #cashPositionReport {
+    page-break-inside: avoid;
+  }
+
+  /* Remove shadows and borders for cleaner print */
+  .print\:border-0 {
+    border: 0 !important;
+  }
+
+  .print\:shadow-none {
+    box-shadow: none !important;
+  }
+
+  /* Ensure black text for printing */
+  body {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Optimize table printing */
+  table {
+    page-break-inside: avoid;
+  }
+
+  /* Ensure footer stays at bottom */
+  .print\:mt-12 {
+    margin-top: 3rem !important;
+  }
+}

@@ -14,8 +14,11 @@ import { ReportsService } from '../../core/services/reports.service';
 export class ReportsComponent implements OnInit {
   private reportsService = inject(ReportsService);
 
+  // Make Math available in template
+  Math = Math;
+
   isLoading = false;
-  activeTab = 'transactions'; // transactions, revenue, categories, vouchers, expired
+  activeTab = 'transactions'; // transactions, revenue, categories, vouchers, expired, cash-position
   activeDateRange = 'month'; // Track which date range button is active
 
   // Date filters - default to last 30 days
@@ -28,6 +31,22 @@ export class ReportsComponent implements OnInit {
   categoryReport: any = null;
   voucherReport: any = null;
   expiredItemsReport: any = null;
+  cashPositionReport: any = null;
+
+  // Denomination tracking
+  denominations = {
+    d1000: 0,
+    d500: 0,
+    d100: 0,
+    d50: 0,
+    d20: 0,
+    d10: 0,
+    d5: 0,
+    d1: 0
+  };
+  coinTotal = 0;
+  actualTotalCash = 0;
+  cashVariance = 0;
 
   ngOnInit() {
     this.loadReport();
@@ -103,6 +122,9 @@ export class ReportsComponent implements OnInit {
         case 'expired':
           await this.loadExpiredItemsReport();
           break;
+        case 'cash-position':
+          await this.loadCashPositionReport();
+          break;
       }
     } catch (error) {
       console.error('Error loading report:', error);
@@ -146,6 +168,13 @@ export class ReportsComponent implements OnInit {
     }
   }
 
+  async loadCashPositionReport() {
+    const response = await this.reportsService.getCashPositionReport(this.endDate);
+    if (response.success) {
+      this.cashPositionReport = response.data;
+    }
+  }
+
   formatCurrency(amount: number): string {
     return new Intl.NumberFormat('en-PH', {
       style: 'currency',
@@ -186,5 +215,30 @@ export class ReportsComponent implements OnInit {
   getTotalVoucherAmount(): number {
     if (!this.voucherReport) return 0;
     return this.voucherReport.reduce((sum: number, v: any) => sum + Number(v.total_amount), 0);
+  }
+
+  calculateDenominationTotal() {
+    // Calculate coin total
+    this.coinTotal =
+      (this.denominations.d1000 * 1000) +
+      (this.denominations.d500 * 500) +
+      (this.denominations.d100 * 100) +
+      (this.denominations.d50 * 50) +
+      (this.denominations.d20 * 20) +
+      (this.denominations.d10 * 10) +
+      (this.denominations.d5 * 5) +
+      (this.denominations.d1 * 1);
+
+    // Actual total cash is same as coin total
+    this.actualTotalCash = this.coinTotal;
+
+    // Calculate variance (actual vs expected)
+    if (this.cashPositionReport) {
+      this.cashVariance = this.actualTotalCash - this.cashPositionReport.totalCashPosition;
+    }
+  }
+
+  printCashPosition() {
+    window.print();
   }
 }

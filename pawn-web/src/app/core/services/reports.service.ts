@@ -180,4 +180,19 @@ export class ReportsService {
       throw error;
     }
   }
+
+  /**
+   * Get cash position report for a specific date
+   */
+  async getCashPositionReport(date: string): Promise<any> {
+    try {
+      const response = await this.http.get<any>(`${this.apiUrl}/cash-position`, {
+        params: { date }
+      }).toPromise();
+      return response;
+    } catch (error) {
+      console.error('Error fetching cash position report:', error);
+      throw error;
+    }
+  }
 }

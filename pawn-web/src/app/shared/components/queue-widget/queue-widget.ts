@@ -27,7 +27,7 @@ interface QueueEntry {
   template: `
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
       <div class="flex items-center justify-between mb-4">
-        <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
+        <h2 class="text-md font-semibold text-gray-900 dark:text-white">
           🎫 Waiting Queue
         </h2>
         <span class="px-3 py-1 text-sm font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded-full">
@@ -52,43 +52,43 @@ interface QueueEntry {
       <!-- Queue List -->
       <div *ngIf="!isLoading && queueEntries.length > 0" class="space-y-2 max-h-96 overflow-y-auto custom-scrollbar">
         <div *ngFor="let entry of queueEntries"
-             class="p-4 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+             class="p-3 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
           <div class="flex items-start justify-between">
             <div class="flex-1">
               <div class="flex items-center gap-2 mb-1">
-                <span class="text-lg font-bold text-blue-600 dark:text-blue-400">{{entry.queueNumber}}</span>
-                <span *ngIf="entry.isNewPawner" class="px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded-full">
-                  🆕 New
+                <span class="text-base font-bold text-blue-600 dark:text-blue-400">{{entry.queueNumber}}</span>
+                <span *ngIf="entry.isNewPawner" class="px-1.5 py-0.5 text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded-full">
+                  New
                 </span>
-                <span *ngIf="!entry.isNewPawner" class="px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200 rounded-full">
-                  👤 Returning
+                <span *ngIf="!entry.isNewPawner" class="px-1.5 py-0.5 text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200 rounded-full">
+                  Returning
                 </span>
               </div>
-              <p class="font-semibold text-gray-900 dark:text-white">
+              <p class="text-sm font-semibold text-gray-900 dark:text-white">
                 {{entry.pawner.firstName}} {{entry.pawner.lastName}}
               </p>
-              <p class="text-sm text-gray-600 dark:text-gray-400">{{entry.pawner.mobileNumber}}</p>
-              <p class="text-sm text-gray-500 dark:text-gray-500 mt-1">
+              <p class="text-xs text-gray-600 dark:text-gray-400">{{entry.pawner.mobileNumber}}</p>
+              <p class="text-xs text-gray-500 dark:text-gray-500 mt-1">
                 {{getServiceTypeLabel(entry.serviceType)}} • {{getWaitTime(entry.joinedAt)}}
               </p>
             </div>
 
             <!-- Action Buttons -->
-            <div class="flex flex-col gap-2 ml-4">
+            <div class="flex flex-col gap-1.5 ml-4">
               <button
                 (click)="selectPawner(entry); $event.stopPropagation()"
-                class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors">
-                ✓ Select
+                class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition-colors">
+                Select
               </button>
               <button
                 (click)="markAsDone(entry); $event.stopPropagation()"
-                class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-colors">
-                ✓ Done
+                class="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs font-medium rounded-lg transition-colors">
+                Done
               </button>
               <button
                 (click)="cancelQueue(entry); $event.stopPropagation()"
-                class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors">
-                ✕ Cancel
+                class="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-medium rounded-lg transition-colors">
+                Cancel
               </button>
             </div>
           </div>

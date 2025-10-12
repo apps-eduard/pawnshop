@@ -376,4 +376,129 @@ router.get('/expired-items', authorizeRoles('manager', 'admin', 'administrator')
   }
 });
 
+/**
+ * GET /api/reports/cash-position
+ * Get daily cash position report for a specific date
+ */
+router.get('/cash-position', authorizeRoles('manager', 'admin', 'administrator'), async (req, res) => {
+  try {
+    const { date } = req.query;
+    const reportDate = date || new Date().toISOString().split('T')[0];
+    
+    console.log(`📊 Generating Cash Position Report for: ${reportDate}`);
+    
+    // Get beginning balance (total cash position from previous day)
+    const beginningBalanceQuery = `
+      SELECT COALESCE(SUM(
+        CASE 
+          WHEN transaction_type IN ('new_loan', 'additional_loan', 'renew') THEN -principal_amount
+          WHEN transaction_type IN ('redeem', 'partial_payment') THEN (principal_amount + interest_amount + service_charge + penalty_amount)
+          ELSE 0
+        END
+      ), 0) as beginning_balance
+      FROM transactions
+      WHERE DATE(transaction_date) < $1
+        AND status NOT IN ('cancelled', 'voided')
+    `;
+    
+    // Cash IN - Paid loans (redeem, partial payment)
+    const cashInQuery = `
+      SELECT 
+        COALESCE(SUM(
+          CASE WHEN transaction_type = 'redeem' 
+          THEN principal_amount + interest_amount + service_charge + penalty_amount 
+          ELSE 0 END
+        ), 0) as paid_loan,
+        COALESCE(SUM(
+          CASE WHEN transaction_type = 'partial_payment' 
+          THEN principal_amount + interest_amount + service_charge + penalty_amount 
+          ELSE 0 END
+        ), 0) as partial_payment,
+        0 as sold_auction,
+        0 as cash_transfer_in
+      FROM transactions
+      WHERE DATE(transaction_date) = $1
+        AND status NOT IN ('cancelled', 'voided')
+    `;
+    
+    // Cash OUT - Loans disbursed
+    const cashOutQuery = `
+      SELECT 
+        COALESCE(SUM(
+          CASE WHEN transaction_type IN ('new_loan', 'additional_loan', 'renew') 
+          THEN principal_amount 
+          ELSE 0 END
+        ), 0) as loan,
+        0 as refund_auction,
+        0 as expenses,
+        0 as cash_transfer_out
+      FROM transactions
+      WHERE DATE(transaction_date) = $1
+        AND status NOT IN ('cancelled', 'voided')
+    `;
+    
+    const [beginningResult, cashInResult, cashOutResult] = await Promise.all([
+      pool.query(beginningBalanceQuery, [reportDate]),
+      pool.query(cashInQuery, [reportDate]),
+      pool.query(cashOutQuery, [reportDate])
+    ]);
+    
+    const beginningBalance = parseFloat(beginningResult.rows[0]?.beginning_balance || 0);
+    const cashIn = cashInResult.rows[0];
+    const cashOut = cashOutResult.rows[0];
+    
+    const totalCashIn = parseFloat(cashIn.paid_loan) + parseFloat(cashIn.partial_payment) + 
+                        parseFloat(cashIn.sold_auction) + parseFloat(cashIn.cash_transfer_in);
+    const totalCashOut = parseFloat(cashOut.loan) + parseFloat(cashOut.refund_auction) + 
+                         parseFloat(cashOut.expenses) + parseFloat(cashOut.cash_transfer_out);
+    const totalCashPosition = beginningBalance + totalCashIn - totalCashOut;
+    
+    // Cash breakdown (denomination) - placeholder values
+    const cashBreakdown = {
+      denomination_1000: 0,
+      denomination_500: 0,
+      denomination_100: 0,
+      denomination_50: 0,
+      denomination_20: 0,
+      denomination_10: 0,
+      denomination_5: 0,
+      denomination_1: 0
+    };
+    
+    res.json({
+      success: true,
+      data: {
+        date: reportDate,
+        beginningBalance: beginningBalance,
+        cashIn: {
+          paidLoan: parseFloat(cashIn.paid_loan),
+          partialPayment: parseFloat(cashIn.partial_payment),
+          soldAuction: parseFloat(cashIn.sold_auction),
+          cashTransferIn: parseFloat(cashIn.cash_transfer_in),
+          total: totalCashIn
+        },
+        cashOut: {
+          loan: parseFloat(cashOut.loan),
+          refundAuction: parseFloat(cashOut.refund_auction),
+          expenses: parseFloat(cashOut.expenses),
+          cashTransferOut: parseFloat(cashOut.cash_transfer_out),
+          total: totalCashOut
+        },
+        totalCashPosition: totalCashPosition,
+        cashBreakdown: cashBreakdown,
+        actualTotalCash: totalCashPosition // Can be manually adjusted
+      }
+    });
+    
+    console.log(`✅ Cash Position Report generated successfully`);
+  } catch (error) {
+    console.error('❌ Error generating cash position report:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to generate cash position report',
+      error: error.message
+    });
+  }
+});
+
 module.exports = router;

@@ -18,6 +18,7 @@ interface NavigationItem {
 
 interface VoucherForm {
   type: 'cash' | 'cheque';
+  transactionType: 'cash_in' | 'cash_out';
   date: string;
   amount: number;
   notes: string;
@@ -59,6 +60,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
   showVoucherModal = false;
   voucherForm: VoucherForm = {
     type: 'cash',
+    transactionType: 'cash_out',
     date: '',
     amount: 0,
     notes: ''
@@ -261,6 +263,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
   resetVoucherForm(): void {
     this.voucherForm = {
       type: 'cash',
+      transactionType: 'cash_out',
       date: new Date().toISOString().split('T')[0],
       amount: 0,
       notes: ''
@@ -323,6 +326,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
     // Convert VoucherEntry[] to VoucherForm[] for API
     const vouchersToSave = this.voucherList.map(v => ({
       type: v.type,
+      transactionType: v.transactionType,
       date: v.date,
       amount: v.amount,
       notes: v.notes
