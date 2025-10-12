@@ -105,6 +105,19 @@ export class PawnerManagementComponent implements OnInit, OnDestroy {
         next: (response: any) => {
           if (response.success) {
             this.cities = response.data.filter((city: City) => city.isActive);
+
+            // Set Butuan as default city when adding new pawner
+            if (!this.editingPawnerId) {
+              const butuanCity = this.cities.find(city =>
+                city.name.toLowerCase().includes('butuan')
+              );
+
+              if (butuanCity) {
+                this.pawnerForm.patchValue({ cityId: butuanCity.id });
+                // Trigger barangays load
+                this.onCityChange();
+              }
+            }
           }
         },
         error: (error: any) => {
@@ -135,6 +148,29 @@ export class PawnerManagementComponent implements OnInit, OnDestroy {
 
     // Reset barangay selection when city changes
     this.pawnerForm.patchValue({ barangayId: '' });
+  }
+
+  // Load barangays when city is changed during inline edit
+  onCityChangeForPawner(pawner: PawnerWithActions): void {
+    if (pawner.cityId) {
+      this.addressService.getBarangaysByCity(pawner.cityId)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (response: any) => {
+            if (response.success) {
+              this.selectedCityBarangays = response.data.filter((barangay: Barangay) => barangay.isActive);
+            }
+          },
+          error: (error: any) => {
+            console.error('Error loading barangays for inline edit:', error);
+          }
+        });
+    } else {
+      this.selectedCityBarangays = [];
+    }
+
+    // Reset barangay selection when city changes
+    pawner.barangayId = undefined;
   }
 
   // Apply search and filters
@@ -221,6 +257,22 @@ export class PawnerManagementComponent implements OnInit, OnDestroy {
   startEdit(pawner: PawnerWithActions): void {
     pawner.isEditing = true;
     pawner.originalData = { ...pawner };
+
+    // Load barangays for the current city when editing
+    if (pawner.cityId) {
+      this.addressService.getBarangaysByCity(pawner.cityId)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (response: any) => {
+            if (response.success) {
+              this.selectedCityBarangays = response.data;
+            }
+          },
+          error: (error: any) => {
+            console.error('Error loading barangays for edit:', error);
+          }
+        });
+    }
   }
 
   // Cancel editing
@@ -239,6 +291,8 @@ export class PawnerManagementComponent implements OnInit, OnDestroy {
       lastName: pawner.lastName,
       contactNumber: pawner.contactNumber,
       email: pawner.email,
+      cityId: pawner.cityId,
+      barangayId: pawner.barangayId,
       addressDetails: pawner.addressDetails,
       isActive: pawner.isActive
     };

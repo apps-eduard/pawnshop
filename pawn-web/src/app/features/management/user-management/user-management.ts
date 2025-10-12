@@ -13,6 +13,8 @@ interface UserWithActions extends User {
   showResetPasswordModal?: boolean;
   showPasswordResult?: boolean;
   newPassword?: string;
+  cityName?: string;
+  barangayName?: string;
 }
 
 @Component({
@@ -106,7 +108,12 @@ export class UserManagementComponent implements OnInit, OnDestroy {
         next: (response) => {
           console.log('Users response:', response);
           if (response.success) {
-            this.users = response.data.map(user => ({ ...user, isEditing: false }));
+            this.users = response.data.map(user => ({
+              ...user,
+              isEditing: false,
+              cityName: this.getCityName(user.cityId),
+              barangayName: this.getBarangayName(user.barangayId)
+            }));
             this.applyFilters();
             console.log('Loaded users:', this.users.length);
           } else {
@@ -207,6 +214,22 @@ export class UserManagementComponent implements OnInit, OnDestroy {
   startEdit(user: UserWithActions): void {
     user.isEditing = true;
     user.originalData = { ...user };
+
+    // Load barangays for the current city when editing
+    if (user.cityId) {
+      this.addressService.getBarangaysByCity(user.cityId)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (response) => {
+            if (response.success) {
+              this.barangays = response.data;
+            }
+          },
+          error: (error) => {
+            console.error('Error loading barangays for edit:', error);
+          }
+        });
+    }
   }
 
   // Cancel editing
@@ -228,6 +251,8 @@ export class UserManagementComponent implements OnInit, OnDestroy {
       role: user.role,
       position: user.position,
       contactNumber: user.contactNumber,
+      cityId: user.cityId,
+      barangayId: user.barangayId,
       address: user.address,
       isActive: user.isActive
     };
@@ -239,12 +264,15 @@ export class UserManagementComponent implements OnInit, OnDestroy {
           if (response.success) {
             user.isEditing = false;
             user.originalData = undefined;
-            // TODO: Show success message
+            // Update display names for city and barangay
+            user.cityName = this.getCityName(user.cityId);
+            user.barangayName = this.getBarangayName(user.barangayId);
+            this.toastService.showSuccess('Success!', 'User updated successfully');
           }
         },
         error: (error) => {
           console.error('Error updating user:', error);
-          // TODO: Show error message
+          this.toastService.showError('Error!', 'Failed to update user');
         }
       });
   }
@@ -376,6 +404,19 @@ export class UserManagementComponent implements OnInit, OnDestroy {
         next: (response) => {
           if (response.success) {
             this.cities = response.data;
+
+            // Set Butuan as default city when adding new user
+            if (this.showAddForm && !this.editingUserId) {
+              const butuanCity = this.cities.find(city =>
+                city.name.toLowerCase().includes('butuan')
+              );
+
+              if (butuanCity) {
+                this.userForm.patchValue({ cityId: butuanCity.id });
+                // Trigger barangays load
+                this.onCityChange();
+              }
+            }
           }
         },
         error: (error) => {
@@ -409,6 +450,43 @@ export class UserManagementComponent implements OnInit, OnDestroy {
       this.selectedCityId = null;
       this.userForm.patchValue({ barangayId: '' });
     }
+  }
+
+  // Load barangays when city is changed during inline edit
+  onCityChangeForUser(user: UserWithActions): void {
+    if (user.cityId) {
+      this.addressService.getBarangaysByCity(user.cityId)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (response) => {
+            if (response.success) {
+              this.barangays = response.data;
+            }
+          },
+          error: (error) => {
+            console.error('Error loading barangays for inline edit:', error);
+          }
+        });
+    } else {
+      this.barangays = [];
+    }
+
+    // Reset barangay selection when city changes
+    user.barangayId = undefined;
+  }
+
+  // Helper method to get city name by ID
+  getCityName(cityId?: number): string {
+    if (!cityId) return 'N/A';
+    const city = this.cities.find(c => c.id === cityId);
+    return city ? city.name : 'N/A';
+  }
+
+  // Helper method to get barangay name by ID
+  getBarangayName(barangayId?: number): string {
+    if (!barangayId) return 'N/A';
+    const barangay = this.barangays.find(b => b.id === barangayId);
+    return barangay ? barangay.name : 'N/A';
   }
 }
 

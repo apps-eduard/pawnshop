@@ -307,7 +307,21 @@
               <div class="font-medium">{{ pawner.cityName }}, {{ pawner.barangayName }}</div>
               <div class="text-gray-500 dark:text-gray-400 truncate">{{ pawner.addressDetails }}</div>
             </div>
-            <div *ngIf="pawner.isEditing">
+            <div *ngIf="pawner.isEditing" class="space-y-2">
+              <select
+                [(ngModel)]="pawner.cityId"
+                (change)="onCityChangeForPawner(pawner)"
+                class="block w-48 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-gray-700 dark:text-white">
+                <option value="">Select City</option>
+                <option *ngFor="let city of cities" [value]="city.id">{{ city.name }}</option>
+              </select>
+              <select
+                [(ngModel)]="pawner.barangayId"
+                [disabled]="!pawner.cityId"
+                class="block w-48 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-gray-700 dark:text-white disabled:bg-gray-100 dark:disabled:bg-gray-800">
+                <option value="">{{ pawner.cityId ? 'Select Barangay' : 'Select city first' }}</option>
+                <option *ngFor="let barangay of selectedCityBarangays" [value]="barangay.id">{{ barangay.name }}</option>
+              </select>
               <textarea
                 [(ngModel)]="pawner.addressDetails"
                 rows="2"

@@ -377,7 +377,7 @@ router.put('/:id', async (req, res) => {
       values.push(barangayId);
     }
     if (addressDetails !== undefined) {
-      fields.push(`address_details = $${paramCount++}`);
+      fields.push(`street = $${paramCount++}`);
       values.push(addressDetails);
     }
     if (isActive !== undefined) {

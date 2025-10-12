@@ -54,7 +54,14 @@ export class ProfileComponent implements OnInit {
 
   profileData: ProfileData | null = null;
 
+  // Cities and Barangays
+  cities: any[] = [];
+  barangays: any[] = [];
+  isLoadingCities = false;
+  isLoadingBarangays = false;
+
   private apiUrl = `${environment.apiUrl}/users`;
+  private addressApiUrl = `${environment.apiUrl}/addresses`;
 
   constructor(
     private formBuilder: FormBuilder,
@@ -65,6 +72,7 @@ export class ProfileComponent implements OnInit {
   ngOnInit(): void {
     this.initializeForms();
     this.loadProfile();
+    this.loadCities();
   }
 
   private initializeForms(): void {
@@ -270,6 +278,65 @@ export class ProfileComponent implements OnInit {
         this.showConfirmPassword = !this.showConfirmPassword;
         break;
     }
+  }
+
+  // Load cities from API
+  loadCities(): void {
+    this.isLoadingCities = true;
+
+    this.http.get<{ success: boolean; data: any[] }>(`${this.addressApiUrl}/cities`)
+      .subscribe({
+        next: (response) => {
+          this.isLoadingCities = false;
+          if (response.success && response.data) {
+            this.cities = response.data;
+
+            // Set Butuan as default city if no city is selected
+            const currentCityId = this.addressForm.get('cityId')?.value;
+            if (!currentCityId) {
+              const butuanCity = this.cities.find(city =>
+                city.name.toLowerCase().includes('butuan')
+              );
+
+              if (butuanCity) {
+                this.addressForm.patchValue({ cityId: butuanCity.id });
+                // Load barangays for Butuan
+                this.onCityChange(butuanCity.id.toString());
+              }
+            }
+          }
+        },
+        error: (error) => {
+          this.isLoadingCities = false;
+          console.error('Error loading cities:', error);
+        }
+      });
+  }
+
+  // Load barangays based on selected city
+  onCityChange(cityId: string): void {
+    if (!cityId) {
+      this.barangays = [];
+      this.addressForm.patchValue({ barangayId: '' });
+      return;
+    }
+
+    this.isLoadingBarangays = true;
+
+    this.http.get<{ success: boolean; data: any[] }>(`${this.addressApiUrl}/cities/${cityId}/barangays`)
+      .subscribe({
+        next: (response) => {
+          this.isLoadingBarangays = false;
+          if (response.success && response.data) {
+            this.barangays = response.data;
+          }
+        },
+        error: (error) => {
+          this.isLoadingBarangays = false;
+          console.error('Error loading barangays:', error);
+          this.barangays = [];
+        }
+      });
   }
 
   getRoleDisplayName(role: string): string {
