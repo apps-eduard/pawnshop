@@ -8,7 +8,7 @@
     </div>
 
     <!-- Dashboard Cards Grid -->
-    <div *ngIf="!isLoading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <div *ngIf="!isLoading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
       <div
         *ngFor="let card of dashboardCards"
         [routerLink]="card.route"
@@ -68,15 +68,12 @@
       </div>
     </div>
 
-    <!-- Quick Stats Row -->
-    <div class="grid grid-cols-1 gap-6 mb-8">
-
-      <!-- Recent Transactions -->
-      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-        <div class="flex items-center justify-between mb-6">
-          <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Recent Transactions</h3>
-          <a routerLink="/transactions" class="text-primary-600 hover:text-primary-700 text-sm font-medium cursor-pointer">View All</a>
-        </div>
+    <!-- Recent Transactions -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-8">
+      <div class="flex items-center justify-between mb-6">
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Recent Transactions</h3>
+        <a routerLink="/transactions" class="text-primary-600 hover:text-primary-700 text-sm font-medium cursor-pointer">View All</a>
+      </div>
 
         <!-- Empty State -->
         <div *ngIf="recentTransactions.length === 0" class="text-center py-8">
@@ -186,7 +183,6 @@
           </div>
         </div>
       </div>
-    </div>
 
     <!-- Action Buttons -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

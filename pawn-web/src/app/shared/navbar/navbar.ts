@@ -118,11 +118,11 @@ export class NavbarComponent implements OnInit, OnDestroy {
     this.authService.switchRole(newRole);
     this.roleMenuOpen = false;
     this.userMenuOpen = false;
-    
+
     // Navigate to the new role's dashboard
     const dashboardRoute = this.authService.getDashboardRoute();
     this.router.navigate([dashboardRoute]);
-    
+
     // Update page title
     this.setPageTitle(dashboardRoute);
   }

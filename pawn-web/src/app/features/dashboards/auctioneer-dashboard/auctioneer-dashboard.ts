@@ -188,75 +188,18 @@ export class AuctioneerDashboard implements OnInit, AfterViewChecked {
               amount: stats.avgSalePrice
             }
           ];
-
-          console.log('✅ Dashboard cards loaded:', this.dashboardCards);
         } else {
-          console.warn('⚠️ Unexpected response format:', response);
-          this.loadMockData();
+          this.dashboardCards = [];
         }
         this.isLoading = false;
       },
       error: (error) => {
         console.error('❌ Error loading dashboard data:', error);
         this.toastService.showError('Error', 'Failed to load dashboard statistics');
-        this.loadMockData();
+        this.dashboardCards = [];
         this.isLoading = false;
       }
     });
-  }
-
-  private loadMockData() {
-    // Fallback mock data
-    this.dashboardCards = [
-      {
-        title: 'Expired Items',
-        count: 8,
-        icon: 'expired',
-        color: 'red',
-        route: '/items/expired',
-        amount: 450000
-      },
-      {
-        title: 'Ready for Auction',
-        count: 34,
-        icon: 'scheduled',
-        color: 'blue',
-        route: '/auctions/ready',
-        amount: 850000
-      },
-      {
-        title: 'Sold Today',
-        count: 12,
-        icon: 'sold',
-        color: 'green',
-        route: '/auctions/sold-today',
-        amount: 420000
-      },
-      {
-        title: 'Sold This Month',
-        count: 45,
-        icon: 'month',
-        color: 'purple',
-        route: '/auctions/sold-month',
-        amount: 1250000
-      },
-      {
-        title: 'Sold This Year',
-        count: 234,
-        icon: 'success',
-        color: 'indigo',
-        route: '/auctions/sold-year',
-        amount: 5680000
-      },
-      {
-        title: 'Average Sale Price',
-        count: 0,
-        icon: 'average',
-        color: 'orange',
-        route: '/auctions/analytics',
-        amount: 24273
-      }
-    ];
   }
 
   private updateTime() {
@@ -267,17 +210,11 @@ export class AuctioneerDashboard implements OnInit, AfterViewChecked {
 
   private async loadExpiredItems(): Promise<void> {
     try {
-      console.log('🔄 Loading expired items from database...');
       const apiUrl = 'http://localhost:3000/api/items/expired';
-
       const response = await this.http.get<any>(apiUrl).toPromise();
 
-      console.log('📦 Raw API Response:', response);
-
       if (response && response.success && response.data) {
-        console.log('📦 Expired items data:', response.data);
-
-      this.expiredItems = response.data.map((item: any) => ({
+        this.expiredItems = response.data.map((item: any) => ({
         id: item.id,
         transactionId: item.transactionId || item.transaction_id,
         ticketNumber: item.ticketNumber || item.ticket_number || 'N/A',
@@ -296,15 +233,12 @@ export class AuctioneerDashboard implements OnInit, AfterViewChecked {
         showHistory: false,
         transactionHistory: [],
         loadingHistory: false
-      }));        console.log(`✅ Successfully loaded ${this.expiredItems.length} expired items`);
-        console.log('📦 Mapped expired items:', this.expiredItems);
+      }));
       } else {
-        console.warn('⚠️ No expired items data in response');
         this.expiredItems = [];
       }
     } catch (error: any) {
-      console.error('❌ Error loading expired items:', error);
-      console.error('❌ Error details:', error?.error || error?.message || error);
+      console.error('Error loading expired items:', error);
       this.expiredItems = [];
     }
   }
@@ -338,8 +272,6 @@ export class AuctioneerDashboard implements OnInit, AfterViewChecked {
   async loadTransactionHistory(item: ExpiredItem): Promise<void> {
     try {
       item.loadingHistory = true;
-      console.log(`📜 Loading transaction history for item ${item.id}...`);
-
       const apiUrl = `http://localhost:3000/api/items/expired/${item.id}/history`;
       const response = await this.http.get<any>(apiUrl).toPromise();
 
@@ -364,10 +296,9 @@ export class AuctioneerDashboard implements OnInit, AfterViewChecked {
           status: tx.status,
           notes: tx.notes
         }));
-        console.log(`✅ Loaded ${item.transactionHistory?.length} transactions for item ${item.id}`);
       }
     } catch (error: any) {
-      console.error('❌ Error loading transaction history:', error);
+      console.error('Error loading transaction history:', error);
       item.transactionHistory = [];
     } finally {
       item.loadingHistory = false;
@@ -413,41 +344,32 @@ export class AuctioneerDashboard implements OnInit, AfterViewChecked {
 
           const response = await this.http.post<any>(apiUrl, payload).toPromise();
 
-          console.log('✅ Auction price set response:', response);
-
           if (response && response.success) {
-            // Store item description before updating
             const itemDescription = this.selectedExpiredItem!.itemDescription;
             const priceFormatted = price.toLocaleString();
 
-            // Update local data on successful save
+            // Update local data
             this.selectedExpiredItem!.auctionPrice = price;
             this.selectedExpiredItem!.isSetForAuction = true;
 
-            console.log(`✅ Auction price set successfully for ${itemDescription}: ₱${priceFormatted}`);
             this.closePriceModal();
 
-            // Reload expired items to get updated data
+            // Reload data
             await this.loadExpiredItems();
-
-            // Reload dashboard cards to update statistics
             this.loadDashboardData();
 
-            // Show success toast
             this.toastService.showSuccess(
               'Auction Price Set',
               `Price set to ₱${priceFormatted} for "${itemDescription}"`
             );
           } else {
-            console.error('❌ Failed to set auction price:', response?.message);
             this.toastService.showError(
               'Failed to Set Price',
               response?.message || 'An error occurred. Please try again.'
             );
           }
         } catch (error: any) {
-          console.error('❌ Error setting auction price:', error);
-          console.error('❌ Error details:', error?.error || error?.message || error);
+          console.error('Error setting auction price:', error);
           this.toastService.showError(
             'Failed to Set Price',
             'An error occurred. Please try again.'
@@ -469,40 +391,31 @@ export class AuctioneerDashboard implements OnInit, AfterViewChecked {
     }
 
     try {
-      console.log(`🚫 Removing auction price for item ${item.id}...`);
-
       const apiUrl = 'http://localhost:3000/api/items/remove-auction-price';
       const payload = { itemId: item.id };
-
       const response = await this.http.post<any>(apiUrl, payload).toPromise();
 
       if (response && response.success) {
-        console.log(`✅ Auction price removed successfully for item ${item.id}`);
-
         // Update local data
         item.auctionPrice = undefined;
         item.isSetForAuction = false;
 
-        // Reload expired items to get fresh data
+        // Reload data
         await this.loadExpiredItems();
-
-        // Reload dashboard cards to update statistics
         this.loadDashboardData();
 
-        // Show success toast
         this.toastService.showSuccess(
           'Auction Price Removed',
           `"${item.itemDescription}" has been returned to Pending status.`
         );
       } else {
-        console.error('❌ Failed to remove auction price:', response?.message);
         this.toastService.showError(
           'Failed to Remove Price',
           response?.message || 'An error occurred. Please try again.'
         );
       }
     } catch (error: any) {
-      console.error('❌ Error removing auction price:', error);
+      console.error('Error removing auction price:', error);
       this.toastService.showError(
         'Failed to Remove Price',
         'An error occurred. Please try again.'
@@ -571,18 +484,15 @@ export class AuctioneerDashboard implements OnInit, AfterViewChecked {
   }
 
   startAuction(auction: AuctionItem) {
-    // TODO: Implement start auction logic
-    console.log('Starting auction:', auction.id);
+    this.toastService.showInfo('Info', 'Auction feature coming soon');
   }
 
   endAuction(auction: AuctionItem) {
-    // TODO: Implement end auction logic
-    console.log('Ending auction:', auction.id);
+    this.toastService.showInfo('Info', 'Auction feature coming soon');
   }
 
   viewBidders(auction: AuctionItem) {
-    // TODO: Implement view bidders logic
-    console.log('Viewing bidders for auction:', auction.id);
+    this.toastService.showInfo('Info', 'Bidders feature coming soon');
   }
 
   /**
