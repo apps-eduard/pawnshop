@@ -39,6 +39,7 @@ export class UserManagementComponent implements OnInit, OnDestroy {
   // Address management
   cities: City[] = [];
   barangays: Barangay[] = [];
+  selectedCityBarangays: Barangay[] = [];  // For inline edit
   selectedCityId: number | null = null;
 
   // Available roles for dropdown
@@ -110,9 +111,8 @@ export class UserManagementComponent implements OnInit, OnDestroy {
           if (response.success) {
             this.users = response.data.map(user => ({
               ...user,
-              isEditing: false,
-              cityName: this.getCityName(user.cityId),
-              barangayName: this.getBarangayName(user.barangayId)
+              isEditing: false
+              // cityName and barangayName already come from backend
             }));
             this.applyFilters();
             console.log('Loaded users:', this.users.length);
@@ -222,13 +222,15 @@ export class UserManagementComponent implements OnInit, OnDestroy {
         .subscribe({
           next: (response) => {
             if (response.success) {
-              this.barangays = response.data;
+              this.selectedCityBarangays = response.data;
             }
           },
           error: (error) => {
             console.error('Error loading barangays for edit:', error);
           }
         });
+    } else {
+      this.selectedCityBarangays = [];
     }
   }
 
@@ -264,9 +266,8 @@ export class UserManagementComponent implements OnInit, OnDestroy {
           if (response.success) {
             user.isEditing = false;
             user.originalData = undefined;
-            // Update display names for city and barangay
-            user.cityName = this.getCityName(user.cityId);
-            user.barangayName = this.getBarangayName(user.barangayId);
+            // Reload users to get fresh data with city/barangay names from backend
+            this.loadUsers();
             this.toastService.showSuccess('Success!', 'User updated successfully');
           }
         },
@@ -396,6 +397,45 @@ export class UserManagementComponent implements OnInit, OnDestroy {
     return roleClasses[role as keyof typeof roleClasses] || 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
   }
 
+  // Check if a role is selected for the user
+  isRoleSelected(user: UserWithActions, roleValue: string): boolean {
+    if (!user.roles || !Array.isArray(user.roles)) {
+      // If roles array doesn't exist, check if it matches the primary role
+      return user.role === roleValue;
+    }
+    return user.roles.includes(roleValue as UserRole);
+  }
+
+  // Toggle role selection
+  toggleRole(user: UserWithActions, roleValue: string): void {
+    // Initialize roles array if it doesn't exist
+    if (!user.roles || !Array.isArray(user.roles)) {
+      user.roles = [user.role as UserRole];
+    }
+
+    const roleIndex = user.roles.indexOf(roleValue as UserRole);
+
+    if (roleIndex > -1) {
+      // Remove role if already selected (but keep at least one role)
+      if (user.roles.length > 1) {
+        user.roles.splice(roleIndex, 1);
+        // Update primary role if we removed it
+        if (user.role === roleValue) {
+          user.role = user.roles[0];
+        }
+      } else {
+        this.toastService.showError('Role Required', 'User must have at least one role');
+      }
+    } else {
+      // Add role if not selected
+      user.roles.push(roleValue as UserRole);
+      // If this is the first role being added, make it primary
+      if (!user.role) {
+        user.role = roleValue as UserRole;
+      }
+    }
+  }
+
   // Load cities for address selection
   loadCities(): void {
     this.addressService.getCities()
@@ -460,7 +500,7 @@ export class UserManagementComponent implements OnInit, OnDestroy {
         .subscribe({
           next: (response) => {
             if (response.success) {
-              this.barangays = response.data;
+              this.selectedCityBarangays = response.data;
             }
           },
           error: (error) => {
@@ -468,7 +508,7 @@ export class UserManagementComponent implements OnInit, OnDestroy {
           }
         });
     } else {
-      this.barangays = [];
+      this.selectedCityBarangays = [];
     }
 
     // Reset barangay selection when city changes

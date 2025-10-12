@@ -31,12 +31,18 @@ router.get('/', requireAdmin, async (req, res) => {
     const result = await pool.query(`
       SELECT e.id, e.username, e.email, e.first_name, e.middle_name, e.last_name, 
              e.mobile_number, e.role, e.is_active, e.last_login,
-             e.created_at, e.updated_at,
+             e.created_at, e.updated_at, e.address_id,
              b.name as branch_name,
+             a.city_id, a.barangay_id, a.address_details,
+             c.name as city_name,
+             br.name as barangay_name,
              last_login.created_at as last_login_at,
              last_login.ip_address as last_login_ip
       FROM employees e
       LEFT JOIN branches b ON e.branch_id = b.id
+      LEFT JOIN addresses a ON e.address_id = a.id
+      LEFT JOIN cities c ON a.city_id = c.id
+      LEFT JOIN barangays br ON a.barangay_id = br.id
       LEFT JOIN (
         SELECT DISTINCT ON (user_id) user_id, created_at, ip_address
         FROM audit_logs 
@@ -57,6 +63,12 @@ router.get('/', requireAdmin, async (req, res) => {
       role: row.role,
       isActive: row.is_active,
       branchName: row.branch_name,
+      addressId: row.address_id,
+      cityId: row.city_id,
+      barangayId: row.barangay_id,
+      address: row.address_details,
+      cityName: row.city_name,
+      barangayName: row.barangay_name,
       lastLogin: row.last_login || row.last_login_at,
       lastLoginIp: row.last_login_ip,
       createdAt: row.created_at,
@@ -401,6 +413,8 @@ router.put('/:id', requireAdmin, async (req, res) => {
       position,
       contactNumber,
       address,
+      cityId,
+      barangayId,
       branchId,
       isActive
     } = req.body;
@@ -409,8 +423,8 @@ router.put('/:id', requireAdmin, async (req, res) => {
     
     await client.query('BEGIN');
     
-    // Check if employee exists
-    const existingEmployee = await client.query('SELECT id FROM employees WHERE id = $1', [id]);
+    // Check if employee exists and get their current address_id
+    const existingEmployee = await client.query('SELECT id, address_id FROM employees WHERE id = $1', [id]);
     if (existingEmployee.rows.length === 0) {
       await client.query('ROLLBACK');
       return res.status(404).json({
@@ -418,6 +432,8 @@ router.put('/:id', requireAdmin, async (req, res) => {
         message: 'Employee not found'
       });
     }
+    
+    const currentAddressId = existingEmployee.rows[0].address_id;
     
     // Check for username/email conflicts (excluding current employee)
     if (username || email) {
@@ -432,6 +448,52 @@ router.put('/:id', requireAdmin, async (req, res) => {
           success: false,
           message: 'Username or email already exists'
         });
+      }
+    }
+    
+    // Handle address updates
+    let addressId = currentAddressId;
+    if (cityId !== undefined || barangayId !== undefined || address !== undefined) {
+      if (currentAddressId) {
+        // Update existing address record
+        const addressFields = [];
+        const addressValues = [];
+        let addrParamCount = 1;
+        
+        if (cityId !== undefined) {
+          addressFields.push(`city_id = $${addrParamCount++}`);
+          addressValues.push(cityId);
+        }
+        if (barangayId !== undefined) {
+          addressFields.push(`barangay_id = $${addrParamCount++}`);
+          addressValues.push(barangayId);
+        }
+        if (address !== undefined) {
+          addressFields.push(`address_details = $${addrParamCount++}`);
+          addressValues.push(address);
+        }
+        
+        if (addressFields.length > 0) {
+          addressFields.push(`updated_at = $${addrParamCount++}`);
+          addressValues.push(new Date());
+          addressValues.push(currentAddressId);
+          
+          const addressQuery = `UPDATE addresses SET ${addressFields.join(', ')} WHERE id = $${addrParamCount}`;
+          await client.query(addressQuery, addressValues);
+          console.log(`✅ Updated address ${currentAddressId} for employee ${id}`);
+        }
+      } else {
+        // Create new address record
+        // Need cityId and barangayId to create address
+        if (cityId && barangayId) {
+          const addressResult = await client.query(
+            `INSERT INTO addresses (city_id, barangay_id, address_details, created_at, updated_at)
+             VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+            [cityId, barangayId, address || '', new Date(), new Date()]
+          );
+          addressId = addressResult.rows[0].id;
+          console.log(`✅ Created new address ${addressId} for employee ${id}`);
+        }
       }
     }
     
@@ -468,10 +530,6 @@ router.put('/:id', requireAdmin, async (req, res) => {
       employeeFields.push(`contact_number = $${paramCount++}`);
       employeeValues.push(contactNumber);
     }
-    if (address !== undefined) {
-      employeeFields.push(`address = $${paramCount++}`);
-      employeeValues.push(address);
-    }
     if (branchId !== undefined) {
       employeeFields.push(`branch_id = $${paramCount++}`);
       employeeValues.push(branchId);
@@ -479,6 +537,12 @@ router.put('/:id', requireAdmin, async (req, res) => {
     if (isActive !== undefined) {
       employeeFields.push(`is_active = $${paramCount++}`);
       employeeValues.push(isActive);
+    }
+    
+    // Link to address if we have one (either existing or newly created)
+    if (addressId && addressId !== currentAddressId) {
+      employeeFields.push(`address_id = $${paramCount++}`);
+      employeeValues.push(addressId);
     }
     
     // Update employees table if there are fields to update
