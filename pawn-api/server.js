@@ -29,6 +29,7 @@ const statisticsRoutes = require('./routes/statistics');
 const reportsRoutes = require('./routes/reports');
 const rbacRoutes = require('./routes/rbac');
 const queueRoutes = require('./routes/queue');
+const healthRoutes = require('./routes/health');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -132,47 +133,8 @@ app.use('/api', (req, res, next) => {
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// Simple health check endpoint that doesn't require authentication
-app.get('/api/health', async (req, res) => {
-  console.log(`🏥 [${new Date().toISOString()}] Health check requested from ${req.ip || req.connection.remoteAddress}`);
-  
-  try {
-    // Test database connection
-    const { pool } = require('./config/database');
-    const dbResult = await pool.query('SELECT NOW() as current_time, version() as db_version');
-    
-    // Test if cities and barangays exist - important for pawner creation
-    const cityCount = await pool.query('SELECT COUNT(*) as count FROM cities');
-    const barangayCount = await pool.query('SELECT COUNT(*) as count FROM barangays');
-    
-    const healthData = {
-      status: 'ok',
-      timestamp: new Date().toISOString(),
-      database: {
-        connected: true,
-        currentTime: dbResult.rows[0].current_time,
-        version: dbResult.rows[0].db_version
-      },
-      resources: {
-        cities: cityCount.rows[0].count,
-        barangays: barangayCount.rows[0].count
-      }
-    };
-    
-    res.status(200).json(healthData);
-  } catch (error) {
-    console.error(`❌ Health check error: ${error.message}`);
-    
-    res.status(500).json({
-      status: 'error',
-      timestamp: new Date().toISOString(),
-      message: `Server is running but there was an error: ${error.message}`,
-      database: {
-        connected: false
-      }
-    });
-  }
-});
+// Health check endpoint (moved to separate route for better organization)
+app.use('/api', healthRoutes);
 
 // Request logging middleware - EVERY REQUEST
 app.use((req, res, next) => {

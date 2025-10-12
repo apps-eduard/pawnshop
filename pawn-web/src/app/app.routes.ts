@@ -65,7 +65,7 @@ export const routes: Routes = [
         path: 'rbac',
         component: RbacComponent
       },
-      
+
       // Profile Settings Route
       {
         path: 'profile',

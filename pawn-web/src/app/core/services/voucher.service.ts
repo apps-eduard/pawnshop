@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../../environments/environment';
 
 export interface Voucher {
   id: number;
@@ -60,7 +61,7 @@ export interface VoucherStatsResponse {
   providedIn: 'root'
 })
 export class VoucherService {
-  private readonly API_URL = 'http://localhost:3000/api';
+  private readonly API_URL = environment.apiUrl;
   private vouchersUrl = `${this.API_URL}/vouchers`;
 
   constructor(private http: HttpClient) {}

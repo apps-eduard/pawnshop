@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../../core/auth/auth';
+import { environment } from '../../../environments/environment';
 
 interface ProfileData {
   id: number;
@@ -30,23 +31,23 @@ interface ProfileData {
 export class ProfileComponent implements OnInit {
   profileForm!: FormGroup;
   passwordForm!: FormGroup;
-  
+
   isLoadingProfile = false;
   isUpdatingProfile = false;
   isChangingPassword = false;
-  
+
   profileMessage = '';
   passwordMessage = '';
   profileError = '';
   passwordError = '';
-  
+
   showOldPassword = false;
   showNewPassword = false;
   showConfirmPassword = false;
-  
+
   profileData: ProfileData | null = null;
-  
-  private apiUrl = 'http://localhost:3000/api/users';
+
+  private apiUrl = `${environment.apiUrl}/users`;
 
   constructor(
     private formBuilder: FormBuilder,
@@ -83,7 +84,7 @@ export class ProfileComponent implements OnInit {
   private passwordMatchValidator(group: FormGroup): { [key: string]: boolean } | null {
     const newPassword = group.get('newPassword')?.value;
     const confirmPassword = group.get('confirmPassword')?.value;
-    
+
     if (newPassword !== confirmPassword) {
       return { passwordMismatch: true };
     }
@@ -93,7 +94,7 @@ export class ProfileComponent implements OnInit {
   loadProfile(): void {
     this.isLoadingProfile = true;
     this.profileError = '';
-    
+
     this.http.get<{ success: boolean; data: ProfileData }>(`${this.apiUrl}/profile`)
       .subscribe({
         next: (response) => {
@@ -141,7 +142,7 @@ export class ProfileComponent implements OnInit {
         if (response.success) {
           this.profileMessage = 'Profile updated successfully!';
           this.profileData = response.data;
-          
+
           // Clear success message after 3 seconds
           setTimeout(() => {
             this.profileMessage = '';
@@ -180,7 +181,7 @@ export class ProfileComponent implements OnInit {
         if (response.success) {
           this.passwordMessage = 'Password changed successfully!';
           this.passwordForm.reset();
-          
+
           // Clear success message after 3 seconds
           setTimeout(() => {
             this.passwordMessage = '';

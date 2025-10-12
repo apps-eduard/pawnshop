@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { ApiResponse } from '../models/interfaces';
+import { environment } from '../../../environments/environment';
 
 export interface Category {
   id: number;
@@ -33,7 +34,7 @@ export interface CreateCategoryDescriptionRequest {
   providedIn: 'root'
 })
 export class CategoriesService {
-  private baseUrl = 'http://localhost:3000/api/categories';
+  private baseUrl = `${environment.apiUrl}/categories`;
 
   constructor(private http: HttpClient) {}
 

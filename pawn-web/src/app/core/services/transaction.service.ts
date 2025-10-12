@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { TransactionType, Loan, LoanTransaction } from '../models/interfaces';
+import { environment } from '../../../environments/environment';
 
 export interface Transaction {
   id: number;
@@ -90,7 +91,7 @@ export interface PartialPaymentRequest {
   providedIn: 'root'
 })
 export class TransactionService {
-  private readonly API_URL = 'http://localhost:3000/api';
+  private readonly API_URL = environment.apiUrl;
   private apiUrl = `${this.API_URL}/transactions`;
 
   constructor(private http: HttpClient) {}

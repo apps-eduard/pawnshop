@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, firstValueFrom } from 'rxjs';
 import { map } from 'rxjs/operators';
+import { environment } from '../../../environments/environment';
 
 // ============================================
 // API Response Wrapper
@@ -96,7 +97,7 @@ export interface AssignRolesRequest {
 })
 export class RbacV2Service {
   private http = inject(HttpClient);
-  private apiUrl = 'http://localhost:3000/api/rbac-v2';
+  private apiUrl = `${environment.apiUrl}/rbac-v2`;
 
   // ==========================================
   // Menu Management

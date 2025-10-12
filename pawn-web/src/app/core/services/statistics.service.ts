@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../environments/environment';
 
 export interface TransactionStatistics {
   count: number;
@@ -25,7 +26,7 @@ export interface ApiResponse<T> {
   providedIn: 'root'
 })
 export class StatisticsService {
-  private readonly API_URL = 'http://localhost:3000/api';
+  private readonly API_URL = environment.apiUrl;
   private statisticsUrl = `${this.API_URL}/statistics`;
 
   constructor(private http: HttpClient) {}

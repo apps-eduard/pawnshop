@@ -17,7 +17,8 @@ exports.seed = async function(knex) {
     'manager': 'manager',
     'cashier': 'cashier',
     'appraiser': 'appraiser',
-    'auctioneer': 'auctioneer'
+    'auctioneer': 'auctioneer',
+    'pawner': 'pawner'
   };
   
   const employeeRoles = [];

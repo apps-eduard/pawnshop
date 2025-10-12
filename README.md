@@ -123,7 +123,104 @@ pawnshop/
 - `POST /api/auth/login` - User authentication
 - `GET /api/auth/profile` - Get user profile
 - `GET /api/dashboard/:role` - Dashboard data
-- `GET /api/health` - Server health check
+- `GET /api/health` - Comprehensive server health check
+
+### 🏥 Health Check Endpoint
+
+The system includes a comprehensive health monitoring endpoint that provides both visual dashboard and API access.
+
+**URL**: `http://localhost:3000/api/health`
+
+#### Features
+- **Dual Response Format**: 
+  - HTML dashboard for browser viewing
+  - JSON API for programmatic access
+- **Auto-refresh**: Dashboard updates every 30 seconds
+- **Status Indicator**: Visual ✓ HEALTHY / ✗ UNHEALTHY badge
+- **Copy Buttons**: Quick copy for API URLs
+
+#### Information Provided
+1. **Server Status**
+   - Name, version, environment
+   - Uptime, port, Node.js version
+   - Platform information
+
+2. **Database Health**
+   - Connection status
+   - PostgreSQL version
+   - Host, port, database name
+
+3. **Data Statistics**
+   - Active employees count
+   - Active pawners count
+   - Total transactions
+   - Total items
+   - Cities and barangays count
+
+4. **Configuration**
+   - Client URL
+   - API URL
+   - JWT status
+   - CORS enabled
+   - Max file size
+
+5. **Frontend Integration**
+   - Expected frontend URL
+   - API endpoint configuration
+   - Environment-specific settings
+
+6. **System Resources**
+   - Heap memory usage
+   - Total heap size
+   - RSS memory
+
+#### Usage
+
+**Browser Access** (Visual Dashboard):
+```
+http://localhost:3000/api/health
+```
+
+**API Access** (JSON Response):
+```bash
+curl -H "Accept: application/json" http://localhost:3000/api/health
+```
+
+**PowerShell**:
+```powershell
+Invoke-RestMethod -Uri "http://localhost:3000/api/health" -Headers @{"Accept"="application/json"}
+```
+
+#### Response Example (JSON)
+```json
+{
+  "status": "healthy",
+  "timestamp": "2025-10-12T00:28:15.000Z",
+  "server": {
+    "name": "Pawnshop Management System API",
+    "version": "1.0.0",
+    "environment": "development",
+    "uptime": "0h 5m 23s",
+    "port": 3000
+  },
+  "database": {
+    "connected": true,
+    "type": "PostgreSQL",
+    "version": "14.x"
+  },
+  "data": {
+    "employees": 8,
+    "pawners": 150,
+    "transactions": 1250,
+    "items": 3400
+  },
+  "configuration": {
+    "clientUrl": "http://localhost:4200",
+    "apiUrl": "http://localhost:3000/api",
+    "jwtEnabled": true
+  }
+}
+```
 
 ## 🔒 Security Features
 - JWT token authentication
@@ -146,6 +243,7 @@ pawnshop/
 4. Run `npm run dev` in both directories
 5. Access the application at http://localhost:4200
 6. Login with demo credentials
+7. Check server health at http://localhost:3000/api/health
 
 ## 📄 License
 ISC License

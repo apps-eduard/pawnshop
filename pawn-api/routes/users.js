@@ -88,8 +88,8 @@ router.get('/:id', requireAdmin, async (req, res) => {
     console.log(`👤 [${new Date().toISOString()}] Admin fetching employee ${id} - User: ${req.user.username}`);
     
     const result = await pool.query(`
-      SELECT e.id, e.user_id, e.username, e.email, e.first_name, e.last_name, e.role, 
-             e.is_active, e.created_at, e.updated_at,
+      SELECT e.id, e.username, e.email, e.first_name, e.middle_name, e.last_name, e.role, 
+             e.mobile_number, e.is_active, e.created_at, e.updated_at,
              e.position, e.contact_number, e.address,
              b.name as branch_name
       FROM employees e
@@ -107,11 +107,12 @@ router.get('/:id', requireAdmin, async (req, res) => {
     const row = result.rows[0];
     const employee = {
       id: row.id,
-      userId: row.user_id,
       username: row.username,
       email: row.email,
       firstName: row.first_name,
+      middleName: row.middle_name,
       lastName: row.last_name,
+      mobileNumber: row.mobile_number,
       role: row.role,
       isActive: row.is_active,
       position: row.position,
@@ -209,11 +210,12 @@ router.post('/', requireAdmin, async (req, res) => {
     // Return employee data (without password)
     const employeeData = {
       id: newEmployee.id,
-      userId: newEmployee.user_id,
       username: newEmployee.username,
       email: newEmployee.email,
       firstName: newEmployee.first_name,
+      middleName: newEmployee.middle_name,
       lastName: newEmployee.last_name,
+      mobileNumber: newEmployee.mobile_number,
       role: newEmployee.role,
       isActive: newEmployee.is_active,
       position: newEmployee.position,
@@ -616,7 +618,8 @@ router.get('/profile', async (req, res) => {
     const userId = req.user.id;
     
     const result = await pool.query(`
-      SELECT e.id, e.username, e.email, e.first_name, e.last_name, e.role, 
+      SELECT e.id, e.username, e.email, e.first_name, e.middle_name, e.last_name, 
+             e.mobile_number, e.role, 
              e.position, e.contact_number, e.address, e.is_active,
              e.created_at, b.name as branch_name
       FROM employees e
@@ -640,7 +643,9 @@ router.get('/profile', async (req, res) => {
         username: user.username,
         email: user.email,
         firstName: user.first_name,
+        middleName: user.middle_name,
         lastName: user.last_name,
+        mobileNumber: user.mobile_number,
         role: user.role,
         position: user.position,
         contactNumber: user.contact_number,

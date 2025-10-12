@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../environments/environment';
 
 export interface Item {
   id?: number;
@@ -31,7 +32,7 @@ export interface ApiResponse<T> {
   providedIn: 'root'
 })
 export class ItemService {
-  private readonly API_URL = 'http://localhost:3000/api';
+  private readonly API_URL = environment.apiUrl;
   private apiUrl = `${this.API_URL}/items`;
 
   constructor(private http: HttpClient) {}

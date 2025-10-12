@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../environments/environment';
 
 export interface TransactionReportData {
   id: number;
@@ -95,7 +96,7 @@ export interface ExpiredItemSummary {
   providedIn: 'root'
 })
 export class ReportsService {
-  private readonly API_URL = 'http://localhost:3000/api';
+  private readonly API_URL = environment.apiUrl;
   private apiUrl = `${this.API_URL}/reports`;
 
   constructor(private http: HttpClient) {}

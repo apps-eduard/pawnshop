@@ -33,6 +33,18 @@ exports.seed = async function(knex) {
       is_active: true
     },
     {
+      username: 'pawner1',
+      password_hash: passwordHash,
+      first_name: 'Pedro',
+      middle_name: 'Santos',
+      last_name: 'Reyes',
+      email: 'pawner1@pawnshop.com',
+      mobile_number: '09161234567',
+      role: 'pawner',
+      branch_id: mainBranch?.id || 1,
+      is_active: true
+    },
+    {
       username: 'cashier1',
       password_hash: passwordHash,
       first_name: 'Maria',
@@ -116,6 +128,7 @@ exports.seed = async function(knex) {
 
   console.log('✅ Demo employees seeded successfully!');
   console.log('   Username: admin | Password: password123');
+  console.log('   Username: pawner1 | Password: password123');
   console.log('   Username: cashier1 | Password: password123');
   console.log('   Username: cashier2 | Password: password123');
   console.log('   Username: manager1 | Password: password123');

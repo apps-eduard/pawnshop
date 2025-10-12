@@ -1,5 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../environments/environment';
 
 export interface User {
   id: number;
@@ -37,7 +38,7 @@ export interface RolePermissions {
 })
 export class RbacService {
   private http = inject(HttpClient);
-  private apiUrl = 'http://localhost:3000/api/rbac';
+  private apiUrl = `${environment.apiUrl}/rbac`;
 
   async getRoles(): Promise<any> {
     try {
