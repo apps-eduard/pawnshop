@@ -123,13 +123,33 @@ pawnshop/
 - `POST /api/auth/login` - User authentication
 - `GET /api/auth/profile` - Get user profile
 - `GET /api/dashboard/:role` - Dashboard data
-- `GET /api/health` - Comprehensive server health check
+- `GET /health` - Simple health check (for frontend)
+- `GET /api/health` - Comprehensive health dashboard
 
-### 🏥 Health Check Endpoint
+### 🏥 Health Check Endpoints
 
-The system includes a comprehensive health monitoring endpoint that provides both visual dashboard and API access.
+The system includes two health check endpoints:
 
+#### 1. Simple Health Check - `/health`
+**URL**: `http://localhost:3000/health`
+
+A lightweight endpoint for quick availability checks. Returns a simple JSON response.
+
+**Response:**
+```json
+{
+  "status": "ok",
+  "timestamp": "2025-10-12T05:45:00.000Z",
+  "service": "Pawnshop API"
+}
+```
+
+**Use Case:** Frontend health checks, load balancers, monitoring tools
+
+#### 2. Comprehensive Health Dashboard - `/api/health`
 **URL**: `http://localhost:3000/api/health`
+
+A detailed health monitoring endpoint with both visual dashboard and JSON API access.
 
 #### Features
 - **Dual Response Format**: 

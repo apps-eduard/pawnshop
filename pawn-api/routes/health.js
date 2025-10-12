@@ -18,7 +18,7 @@ router.get('/health', async (req, res) => {
     const employeeCount = await pool.query('SELECT COUNT(*) as count FROM employees WHERE is_active = true');
     const pawnerCount = await pool.query('SELECT COUNT(*) as count FROM pawners WHERE is_active = true');
     const transactionCount = await pool.query('SELECT COUNT(*) as count FROM transactions');
-    const itemCount = await pool.query('SELECT COUNT(*) as count FROM items');
+    const itemCount = await pool.query('SELECT COUNT(*) as count FROM pawn_items');
     const cityCount = await pool.query('SELECT COUNT(*) as count FROM cities');
     const barangayCount = await pool.query('SELECT COUNT(*) as count FROM barangays');
     
@@ -77,14 +77,19 @@ router.get('/health', async (req, res) => {
       }
     };
     
-    // Check if request wants HTML (browser) or JSON (API call)
-    if (req.accepts('html')) {
-      // Return beautiful HTML page
+    // Check if request explicitly wants JSON (API calls) or HTML (browser viewing)
+    // Prioritize JSON for fetch/API calls, HTML only for direct browser access
+    const wantsJson = req.get('Accept')?.includes('application/json') || 
+                     req.get('Content-Type')?.includes('application/json') ||
+                     !req.get('Accept')?.includes('text/html');
+    
+    if (wantsJson) {
+      // Return JSON for API calls (default for fetch)
+      res.status(200).json(healthData);
+    } else {
+      // Return HTML only for direct browser viewing
       const html = generateHealthHTML(healthData);
       res.status(200).send(html);
-    } else {
-      // Return JSON for API calls
-      res.status(200).json(healthData);
     }
     
   } catch (error) {
@@ -109,11 +114,15 @@ router.get('/health', async (req, res) => {
       }
     };
     
-    if (req.accepts('html')) {
+    const wantsJson = req.get('Accept')?.includes('application/json') || 
+                     req.get('Content-Type')?.includes('application/json') ||
+                     !req.get('Accept')?.includes('text/html');
+    
+    if (wantsJson) {
+      res.status(500).json(errorData);
+    } else {
       const html = generateHealthHTML(errorData);
       res.status(500).send(html);
-    } else {
-      res.status(500).json(errorData);
     }
   }
 });

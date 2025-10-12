@@ -103,8 +103,8 @@ export class LoginComponent implements OnInit {
         password: this.loginForm.value.password
       };
 
-      // First check if API is accessible by making a request to the health endpoint
-      fetch('http://localhost:3000/api/health')
+      // First check if API is accessible by making a request to the simple health endpoint
+      fetch('http://localhost:3000/health')
         .then(response => {
           if (!response.ok) {
             throw new Error('API server not responding. Please check if the server is running.');
