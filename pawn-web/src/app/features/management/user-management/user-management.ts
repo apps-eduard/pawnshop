@@ -10,6 +10,9 @@ import { User, UserRole, City, Barangay } from '../../../core/models/interfaces'
 interface UserWithActions extends User {
   isEditing?: boolean;
   originalData?: User;
+  showResetPasswordModal?: boolean;
+  showPasswordResult?: boolean;
+  newPassword?: string;
 }
 
 @Component({
@@ -268,21 +271,51 @@ export class UserManagementComponent implements OnInit, OnDestroy {
 
   // Reset user password
   resetPassword(user: UserWithActions): void {
-    if (confirm(`Reset password for ${user.username}?`)) {
-      this.userService.resetPassword(user.id)
-        .pipe(takeUntil(this.destroy$))
-        .subscribe({
-          next: (response) => {
-            if (response.success) {
-              alert(`Password reset successfully. New password: ${response.data.newPassword}`);
-            }
-          },
-          error: (error) => {
-            console.error('Error resetting password:', error);
-            // TODO: Show error message
+    // Show confirmation modal
+    user.showResetPasswordModal = true;
+  }
+
+  // Confirm password reset
+  confirmResetPassword(user: UserWithActions): void {
+    this.userService.resetPassword(user.id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          if (response.success) {
+            user.showResetPasswordModal = false;
+            user.newPassword = response.data.newPassword;
+            user.showPasswordResult = true;
+          } else {
+            user.showResetPasswordModal = false;
+            this.toastService.showError('Error!', response.message || 'Failed to reset password');
           }
-        });
-    }
+        },
+        error: (error) => {
+          console.error('Error resetting password:', error);
+          user.showResetPasswordModal = false;
+          this.toastService.showError('Error!', error.error?.message || 'Failed to reset password');
+        }
+      });
+  }
+
+  // Cancel password reset
+  cancelResetPassword(user: UserWithActions): void {
+    user.showResetPasswordModal = false;
+  }
+
+  // Close password result modal
+  closePasswordResult(user: UserWithActions): void {
+    user.showPasswordResult = false;
+    user.newPassword = undefined;
+  }
+
+  // Copy password to clipboard
+  copyPassword(password: string): void {
+    navigator.clipboard.writeText(password).then(() => {
+      this.toastService.showSuccess('Success!', 'Password copied to clipboard');
+    }).catch(() => {
+      this.toastService.showError('Error!', 'Failed to copy password');
+    });
   }
 
   // Delete user

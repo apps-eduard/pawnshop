@@ -29,9 +29,9 @@ router.get('/', requireAdmin, async (req, res) => {
     console.log(`👥 [${new Date().toISOString()}] Admin fetching all users - User: ${req.user.username}`);
     
     const result = await pool.query(`
-      SELECT e.id, e.user_id, e.username, e.email, e.first_name, e.last_name, e.role, 
-             e.is_active, e.created_at, e.updated_at,
-             e.position, e.contact_number, e.address,
+      SELECT e.id, e.username, e.email, e.first_name, e.middle_name, e.last_name, 
+             e.mobile_number, e.role, e.is_active, e.last_login,
+             e.created_at, e.updated_at,
              b.name as branch_name,
              last_login.created_at as last_login_at,
              last_login.ip_address as last_login_ip
@@ -48,18 +48,16 @@ router.get('/', requireAdmin, async (req, res) => {
     
     const users = result.rows.map(row => ({
       id: row.id,
-      userId: row.user_id,
       username: row.username,
       email: row.email,
       firstName: row.first_name,
+      middleName: row.middle_name,
       lastName: row.last_name,
+      mobileNumber: row.mobile_number,
       role: row.role,
       isActive: row.is_active,
-      position: row.position,
-      contactNumber: row.contact_number,
-      address: row.address,
       branchName: row.branch_name,
-      lastLogin: row.last_login_at,
+      lastLogin: row.last_login || row.last_login_at,
       lastLoginIp: row.last_login_ip,
       createdAt: row.created_at,
       updatedAt: row.updated_at
@@ -520,6 +518,144 @@ router.post('/:id/change-password', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error changing password'
+    });
+  }
+});
+
+// Update employee profile (Users can update their own profile)
+router.put('/profile', async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const {
+      email,
+      firstName,
+      lastName,
+      mobileNumber,
+      contactNumber,
+      address
+    } = req.body;
+    
+    console.log(`👤 [${new Date().toISOString()}] Profile update request - User: ${req.user.username}`);
+    
+    // Validate required fields
+    if (!email || !firstName || !lastName) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email, first name, and last name are required'
+      });
+    }
+    
+    // Check if email is already taken by another user
+    const existingUser = await pool.query(
+      'SELECT id FROM employees WHERE email = $1 AND id != $2',
+      [email, userId]
+    );
+    
+    if (existingUser.rows.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email is already taken by another user'
+      });
+    }
+    
+    // Update profile
+    const result = await pool.query(`
+      UPDATE employees 
+      SET email = $1, 
+          first_name = $2, 
+          last_name = $3,
+          mobile_number = $4, 
+          contact_number = $5, 
+          address = $6,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = $7
+      RETURNING id, username, email, first_name, last_name, role, mobile_number, contact_number, address, position, is_active
+    `, [email, firstName, lastName, mobileNumber, contactNumber, address, userId]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+    
+    const updatedUser = result.rows[0];
+    
+    console.log(`✅ Profile updated successfully for user ${userId}`);
+    
+    res.json({
+      success: true,
+      message: 'Profile updated successfully',
+      data: {
+        id: updatedUser.id,
+        username: updatedUser.username,
+        email: updatedUser.email,
+        firstName: updatedUser.first_name,
+        lastName: updatedUser.last_name,
+        role: updatedUser.role,
+        mobileNumber: updatedUser.mobile_number,
+        contactNumber: updatedUser.contact_number,
+        address: updatedUser.address,
+        position: updatedUser.position,
+        isActive: updatedUser.is_active
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Error updating profile:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error updating profile'
+    });
+  }
+});
+
+// Get current user profile
+router.get('/profile', async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    const result = await pool.query(`
+      SELECT e.id, e.username, e.email, e.first_name, e.last_name, e.role, 
+             e.position, e.contact_number, e.address, e.is_active,
+             e.created_at, b.name as branch_name
+      FROM employees e
+      LEFT JOIN branches b ON e.branch_id = b.id
+      WHERE e.id = $1
+    `, [userId]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+    
+    const user = result.rows[0];
+    
+    res.json({
+      success: true,
+      data: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        firstName: user.first_name,
+        lastName: user.last_name,
+        role: user.role,
+        position: user.position,
+        contactNumber: user.contact_number,
+        address: user.address,
+        isActive: user.is_active,
+        branchName: user.branch_name,
+        createdAt: user.created_at
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Error fetching profile:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching profile'
     });
   }
 });

@@ -122,6 +122,11 @@ export class NavbarComponent implements OnInit, OnDestroy {
     this.userMenuOpen = false;
   }
 
+  // Close dropdown menu
+  closeDropdown(): void {
+    this.userMenuOpen = false;
+  }
+
   // Go back navigation
   goBack(): void {
     this.location.back();
