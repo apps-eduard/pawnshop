@@ -70,7 +70,7 @@ router.get('/pending-ready', async (req, res) => {
              p.first_name, p.last_name
       FROM item_appraisals ia
       JOIN pawners p ON ia.pawner_id = p.id
-      WHERE ia.status = 'completed'
+      WHERE ia.status = 'pending'
       ORDER BY ia.created_at DESC
     `);
     
@@ -316,6 +316,57 @@ router.post('/', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error creating appraisal',
+      error: error.message
+    });
+  }
+});
+
+// Delete/Cancel appraisal
+router.delete('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.userId;
+    
+    console.log(`🗑️ [Appraisals API] Deleting appraisal ID: ${id} by user: ${req.user?.username || 'unknown'}`);
+
+    // Check if appraisal exists and get details
+    const checkResult = await pool.query(
+      'SELECT id, status, appraiser_id FROM item_appraisals WHERE id = $1',
+      [id]
+    );
+
+    if (checkResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Appraisal not found'
+      });
+    }
+
+    const appraisal = checkResult.rows[0];
+
+    // Optional: Check if user has permission to delete
+    // For now, allow cashiers and appraisers to delete
+    // You can add more strict permission checking here if needed
+
+    // Delete the appraisal
+    await pool.query(
+      'DELETE FROM item_appraisals WHERE id = $1',
+      [id]
+    );
+
+    console.log(`✅ [Appraisals API] Successfully deleted appraisal ID: ${id}`);
+
+    res.json({
+      success: true,
+      message: 'Appraisal deleted successfully',
+      data: { id: parseInt(id) }
+    });
+
+  } catch (error) {
+    console.error('❌ [Appraisals API] Error deleting appraisal:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error deleting appraisal',
       error: error.message
     });
   }

@@ -185,17 +185,17 @@ router.get('/with-descriptions', authenticateToken, async (req, res) => {
         c.id,
         c.name,
         c.interest_rate,
-        c.notes,
+        c.description,
         json_agg(
           json_build_object(
             'id', d.id,
-            'description', d.name
+            'name', d.name
           ) ORDER BY d.name
         ) FILTER (WHERE d.id IS NOT NULL) as descriptions
       FROM categories c
       LEFT JOIN descriptions d ON c.id = d.category_id AND d.is_active = true
       WHERE c.is_active = true
-      GROUP BY c.id, c.name, c.interest_rate, c.notes
+      GROUP BY c.id, c.name, c.interest_rate, c.description
       ORDER BY c.name
     `);
 

@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
@@ -65,13 +65,16 @@ interface Barangay {
   standalone: true,
   imports: [CommonModule, FormsModule, RouterModule, QueueWidget]
 })
-export class AppraiserDashboard implements OnInit {
+export class AppraiserDashboard implements OnInit, OnDestroy {
   @ViewChild('searchInput') searchInput!: ElementRef<HTMLInputElement>;
   @ViewChild('categorySelect') categorySelect!: ElementRef<HTMLSelectElement>;
 
   currentDateTime = new Date();
   isLoading = false;
   isSearching = false;
+
+  // Auto-refresh interval for today's appraisals
+  private appraisalsRefreshInterval: any;
 
   // Authentication properties
   isLoggedIn = false;
@@ -277,6 +280,13 @@ export class AppraiserDashboard implements OnInit {
     this.loadCities();
     this.loadCategories();
     this.loadRecentAppraisals();
+
+    // Auto-refresh recent appraisals every 10 seconds (same as cashier dashboard)
+    this.appraisalsRefreshInterval = setInterval(() => {
+      console.log('🔄 Auto-refreshing today\'s appraisals...');
+      this.loadRecentAppraisals();
+    }, 10000);
+
     this.updateTime();
     setInterval(() => this.updateTime(), 1000);
 
@@ -286,6 +296,13 @@ export class AppraiserDashboard implements OnInit {
         this.searchInput.nativeElement.focus();
       }
     }, 100);
+  }
+
+  ngOnDestroy() {
+    // Clean up interval to prevent memory leaks
+    if (this.appraisalsRefreshInterval) {
+      clearInterval(this.appraisalsRefreshInterval);
+    }
   }
 
   updateTime() {
@@ -654,23 +671,27 @@ export class AppraiserDashboard implements OnInit {
     this.appraisalService.getAppraisals().subscribe({
       next: (response) => {
         if (response.success) {
-          // Get only the latest 10 appraisals
-          this.recentAppraisals = response.data.slice(0, 10).map(appraisal => ({
-            id: appraisal.id,
-            pawnerId: appraisal.pawnerId,
-            category: appraisal.category || 'Jewelry', // fallback for existing data
-            categoryDescription: appraisal.categoryDescription || '',
-            description: appraisal.description,
-            estimatedValue: appraisal.estimatedValue,
-            weight: appraisal.weight,
-            karat: appraisal.karat,
-            notes: appraisal.notes || '',
-            serialNumber: appraisal.serialNumber || '',
-            status: appraisal.status as 'pending' | 'approved' | 'rejected',
-            pawnerName: appraisal.pawnerName || 'Unknown Customer',
-            pawnerContact: appraisal.pawnerContact || 'No contact',
-            createdAt: appraisal.createdAt || new Date()
-          }));
+          // Filter out completed appraisals (only show active ones: pending, approved, rejected)
+          // Get only the latest 10 appraisals that are NOT completed
+          this.recentAppraisals = response.data
+            .filter(appraisal => appraisal.status !== 'completed')
+            .slice(0, 10)
+            .map(appraisal => ({
+              id: appraisal.id,
+              pawnerId: appraisal.pawnerId,
+              category: appraisal.category || 'Jewelry', // fallback for existing data
+              categoryDescription: appraisal.categoryDescription || '',
+              description: appraisal.description,
+              estimatedValue: appraisal.estimatedValue,
+              weight: appraisal.weight,
+              karat: appraisal.karat,
+              notes: appraisal.notes || '',
+              serialNumber: appraisal.serialNumber || '',
+              status: appraisal.status as 'pending' | 'approved' | 'rejected',
+              pawnerName: appraisal.pawnerName || 'Unknown Customer',
+              pawnerContact: appraisal.pawnerContact || 'No contact',
+              createdAt: appraisal.createdAt || new Date()
+            }));
         }
       },
       error: (error) => {

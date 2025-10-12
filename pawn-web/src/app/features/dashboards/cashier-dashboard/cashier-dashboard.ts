@@ -10,6 +10,7 @@ import { PawnerService } from '../../../core/services/pawner.service';
 import { ItemService } from '../../../core/services/item.service';
 import { AddressService } from '../../../core/services/address.service';
 import { ToastService } from '../../../core/services/toast.service';
+import { ConfirmationService } from '../../../core/services/confirmation.service';
 import { CategoriesService, Category } from '../../../core/services/categories.service';
 import { TransactionService, Transaction } from '../../../core/services/transaction.service';
 import { StatusColorService } from '../../../core/services/status-color.service';
@@ -65,6 +66,7 @@ export class CashierDashboard implements OnInit, OnDestroy {
   // Time update mechanism to prevent ExpressionChangedAfterItHasBeenCheckedError
   private timeUpdateInterval: any;
   private clockUpdateInterval: any; // Separate interval for clock updates
+  private appraisalsRefreshInterval: any; // Auto-refresh interval for pending appraisals
   private timeAgoCache = new Map<string, string>();
 
   // New Loan Modal Properties
@@ -277,6 +279,7 @@ export class CashierDashboard implements OnInit, OnDestroy {
     private itemService: ItemService,
     private addressService: AddressService,
     private toastService: ToastService,
+    private confirmationService: ConfirmationService,
     private categoriesService: CategoriesService,
     private transactionService: TransactionService,
     private http: HttpClient,
@@ -291,6 +294,12 @@ export class CashierDashboard implements OnInit, OnDestroy {
     this.loadDashboardData();
     this.loadRecentTransactions();
     this.loadPendingAppraisals();
+
+    // Auto-refresh pending appraisals every 10 seconds (same as queue widget)
+    this.appraisalsRefreshInterval = setInterval(() => {
+      console.log('🔄 Auto-refreshing pending appraisals...');
+      this.loadPendingAppraisals();
+    }, 10000);
 
     // Subscribe to route params to detect when route becomes active
     this.route.params.subscribe(() => {
@@ -359,6 +368,9 @@ export class CashierDashboard implements OnInit, OnDestroy {
     }
     if (this.clockUpdateInterval) {
       clearInterval(this.clockUpdateInterval);
+    }
+    if (this.appraisalsRefreshInterval) {
+      clearInterval(this.appraisalsRefreshInterval);
     }
   }
 
@@ -561,7 +573,7 @@ export class CashierDashboard implements OnInit, OnDestroy {
 
   loadPendingAppraisals() {
     console.log('🔄 Loading pending appraisals...');
-    this.appraisalService.getAppraisalsByStatus('completed').subscribe({
+    this.appraisalService.getAppraisalsByStatus('pending').subscribe({
       next: (response: any) => {
         console.log('📊 API Response:', response);
         if (response.success) {
@@ -583,6 +595,39 @@ export class CashierDashboard implements OnInit, OnDestroy {
       },
       error: (error: any) => {
         console.error('❌ Error loading pending appraisals:', error);
+      }
+    });
+  }
+
+  async cancelAppraisal(appraisalId: number) {
+    const confirmed = await this.confirmationService.confirm({
+      title: 'Cancel Appraisal',
+      message: 'Are you sure you want to cancel this appraisal? This action cannot be undone.',
+      confirmText: 'Yes, Cancel',
+      cancelText: 'No, Keep It',
+      type: 'danger',
+      icon: '🗑️'
+    });
+
+    if (!confirmed) {
+      return;
+    }
+
+    console.log('🗑️ Cancelling appraisal ID:', appraisalId);
+
+    this.appraisalService.deleteAppraisal(appraisalId).subscribe({
+      next: (response: any) => {
+        console.log('✅ Appraisal cancelled successfully:', response);
+
+        // Show success notification
+        this.toastService.showSuccess('Success', 'Appraisal cancelled successfully');
+
+        // Refresh the pending appraisals list
+        this.loadPendingAppraisals();
+      },
+      error: (error: any) => {
+        console.error('❌ Error cancelling appraisal:', error);
+        this.toastService.showError('Error', 'Failed to cancel appraisal. Please try again.');
       }
     });
   }
@@ -2093,13 +2138,13 @@ export class CashierDashboard implements OnInit, OnDestroy {
   loadCategoryDescriptions() {
     // Load descriptions from API based on selected category
     this.isLoadingDescriptions = true;
-    
+
     this.categoriesService.getCategoriesWithDescriptions().subscribe({
       next: (response: any) => {
         if (response.success && response.data) {
           const category = response.data.find((cat: any) => cat.name === this.currentItem.category);
           if (category && category.descriptions && category.descriptions.length > 0) {
-            this.filteredCategoryDescriptions = category.descriptions.map((desc: any) => 
+            this.filteredCategoryDescriptions = category.descriptions.map((desc: any) =>
               ({ description: desc.name })
             );
           } else {

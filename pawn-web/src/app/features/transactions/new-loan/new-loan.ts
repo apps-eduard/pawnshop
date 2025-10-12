@@ -91,6 +91,9 @@ export class NewLoan implements OnInit, OnDestroy {
   // Lifecycle management
   private destroy$ = new Subject<void>();
 
+  // Track appraisal ID if loan is created from pending appraisal
+  sourceAppraisalId: number | null = null;
+
   // Date Management - Add flag to control auto-calculation
   autoCalculateDates = true;
 
@@ -283,6 +286,10 @@ export class NewLoan implements OnInit, OnDestroy {
   loadAppraisalDataForLoan(appraisalData: any) {
     console.log('📋 Loading appraisal data for new loan:', appraisalData);
 
+    // Store the appraisal ID so we can mark it as completed after transaction
+    this.sourceAppraisalId = appraisalData.id;
+    console.log('🔖 Source appraisal ID stored:', this.sourceAppraisalId);
+
     // First, we need to get the full pawner details
     if (appraisalData.pawnerId) {
       this.pawnerService.getPawner(appraisalData.pawnerId).subscribe({
@@ -345,6 +352,14 @@ export class NewLoan implements OnInit, OnDestroy {
 
     console.log('✅ Appraisal data loaded successfully for new loan');
     this.barangays = [];
+
+    // Focus on principal input after a short delay to ensure DOM is ready
+    setTimeout(() => {
+      if (this.principalLoanInput && this.principalLoanInput.nativeElement) {
+        this.principalLoanInput.nativeElement.focus();
+        console.log('✅ Principal loan input focused');
+      }
+    }, 600);
   }
 
   // Test method to manually load sample appraisal data (for debugging)
@@ -1064,6 +1079,7 @@ export class NewLoan implements OnInit, OnDestroy {
 
     // Prepare loan data for API
     const loanData = {
+      sourceAppraisalId: this.sourceAppraisalId, // Include appraisal ID if loan is from pending appraisal
       pawnerData: this.selectedPawner || {
         firstName: this.pawnerForm.firstName,
         lastName: this.pawnerForm.lastName,

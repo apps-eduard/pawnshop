@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Subject, interval } from 'rxjs';
 import { takeUntil, switchMap, startWith } from 'rxjs/operators';
+import { ConfirmationService } from '../../../core/services/confirmation.service';
 
 interface QueueEntry {
   id: number;
@@ -25,7 +26,7 @@ interface QueueEntry {
   standalone: true,
   imports: [CommonModule],
   template: `
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 flex flex-col h-full">
       <div class="flex items-center justify-between mb-4">
         <h2 class="text-md font-semibold text-gray-900 dark:text-white">
           🎫 Waiting Queue
@@ -50,9 +51,10 @@ interface QueueEntry {
       </div>
 
       <!-- Queue List -->
-      <div *ngIf="!isLoading && queueEntries.length > 0" class="space-y-2 max-h-96 overflow-y-auto custom-scrollbar">
+      <div *ngIf="!isLoading && queueEntries.length > 0" class="space-y-2 flex-1 overflow-y-auto custom-scrollbar">
         <div *ngFor="let entry of queueEntries"
-             class="p-3 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+             (click)="selectPawner(entry)"
+             class="group relative p-3 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:border-primary-400 dark:hover:border-primary-600 transition-all cursor-pointer">
           <div class="flex items-start justify-between">
             <div class="flex-1">
               <div class="flex items-center gap-2 mb-1">
@@ -72,26 +74,18 @@ interface QueueEntry {
                 {{getServiceTypeLabel(entry.serviceType)}} • {{getWaitTime(entry.joinedAt)}}
               </p>
             </div>
-
-            <!-- Action Buttons -->
-            <div class="flex flex-col gap-1.5 ml-4">
-              <button
-                (click)="selectPawner(entry); $event.stopPropagation()"
-                class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition-colors">
-                Select
-              </button>
-              <button
-                (click)="markAsDone(entry); $event.stopPropagation()"
-                class="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs font-medium rounded-lg transition-colors">
-                Done
-              </button>
-              <button
-                (click)="cancelQueue(entry); $event.stopPropagation()"
-                class="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-medium rounded-lg transition-colors">
-                Cancel
-              </button>
-            </div>
           </div>
+
+          <!-- Cancel Button (Appears on hover - Top Right) -->
+          <button
+            (click)="cancelQueue(entry); $event.stopPropagation()"
+            type="button"
+            class="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-200 hover:bg-red-600 shadow-md hover:shadow-lg transform hover:scale-110"
+            title="Cancel queue entry">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
         </div>
       </div>
     </div>
@@ -130,7 +124,10 @@ export class QueueWidget implements OnInit, OnDestroy {
     { value: 'inquiry', label: 'Inquiry' }
   ];
 
-  constructor(private http: HttpClient) {}
+  constructor(
+    private http: HttpClient,
+    private confirmationService: ConfirmationService
+  ) {}
 
   ngOnInit(): void {
     // Initial load
@@ -215,7 +212,20 @@ export class QueueWidget implements OnInit, OnDestroy {
       });
   }
 
-  cancelQueue(entry: QueueEntry): void {
+  async cancelQueue(entry: QueueEntry): Promise<void> {
+    const confirmed = await this.confirmationService.confirm({
+      title: 'Cancel Queue Entry',
+      message: `Are you sure you want to cancel queue entry ${entry.queueNumber}? This action cannot be undone.`,
+      confirmText: 'Yes, Cancel',
+      cancelText: 'No, Keep It',
+      type: 'danger',
+      icon: '🗑️'
+    });
+
+    if (!confirmed) {
+      return;
+    }
+
     // Delete from database
     this.http.delete<any>(`${this.API_URL}/queue/${entry.id}`)
       .pipe(takeUntil(this.destroy$))

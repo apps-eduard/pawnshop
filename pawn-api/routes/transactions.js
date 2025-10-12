@@ -732,6 +732,7 @@ router.get('/:id', async (req, res) => {
 router.post('/new-loan', async (req, res) => {
   try {
     const { 
+      sourceAppraisalId, // ID of the appraisal this loan is created from
       pawnerData,
       items,
       loanData,
@@ -743,7 +744,7 @@ router.post('/new-loan', async (req, res) => {
     } = req.body;
     
     console.log(`➕ [${new Date().toISOString()}] Creating new loan transaction - User: ${req.user.username}`);
-    console.log('📋 Received data:', { pawnerData, items: items?.length, loanData });
+    console.log('📋 Received data:', { sourceAppraisalId, pawnerData, items: items?.length, loanData });
     
     // Validate required fields
     if (!pawnerData || !items || !loanData || !loanData.principalLoan) {
@@ -935,6 +936,17 @@ router.post('/new-loan', async (req, res) => {
         JSON.stringify({ new_values: transaction }),
         'New loan transaction created'
       ]);
+      
+      // 9. Mark source appraisal as completed if this loan was created from a pending appraisal
+      if (sourceAppraisalId) {
+        console.log(`🔄 Marking appraisal ${sourceAppraisalId} as completed...`);
+        await client.query(`
+          UPDATE item_appraisals 
+          SET status = 'completed', updated_at = NOW()
+          WHERE id = $1
+        `, [sourceAppraisalId]);
+        console.log(`✅ Appraisal ${sourceAppraisalId} marked as completed`);
+      }
       
       await client.query('COMMIT');
       

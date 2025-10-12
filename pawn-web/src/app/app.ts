@@ -4,12 +4,13 @@ import { CommonModule } from '@angular/common';
 import { HttpClientModule } from '@angular/common/http';
 import { filter } from 'rxjs/operators';
 import { ToastComponent } from './shared/toast/toast.component';
+import { ConfirmationDialogComponent } from './shared/components/confirmation-dialog/confirmation-dialog.component';
 import { ThemeService } from './core/theme/theme';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, HttpClientModule, RouterOutlet, ToastComponent],
+  imports: [CommonModule, HttpClientModule, RouterOutlet, ToastComponent, ConfirmationDialogComponent],
   templateUrl: './app.html',
   styleUrl: './app.css'
 })
