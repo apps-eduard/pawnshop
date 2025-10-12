@@ -17,15 +17,6 @@ import { Appraisal, CreateAppraisalRequest } from '../../../core/models/interfac
 import { QueueWidget } from '../../../shared/components/queue-widget/queue-widget';
 
 
-interface DashboardCard {
-  title: string;
-  count: number;
-  icon: string;
-  color: string;
-  route: string;
-  amount?: number;
-}
-
 @Component({
   selector: 'app-cashier-dashboard',
   templateUrl: './cashier-dashboard.html',
@@ -63,7 +54,6 @@ export class CashierDashboard implements OnInit, OnDestroy {
 
   currentDateTime = new Date();
   isLoading = false;
-  dashboardCards: DashboardCard[] = [];
   recentTransactions: Transaction[] = [];
   pendingAppraisals: Appraisal[] = [];
   expandedTransactions = new Set<number>(); // Track which transactions are expanded
@@ -375,41 +365,9 @@ export class CashierDashboard implements OnInit, OnDestroy {
   private loadDashboardData() {
     this.isLoading = true;
 
-    // Mock dashboard data for Cashier
-    this.dashboardCards = [
-      {
-        title: 'Today\'s Loans',
-        count: 12,
-        icon: 'loans',
-        color: 'blue',
-        route: '/loans',
-        amount: 180000
-      },
-      {
-        title: 'Payments Received',
-        count: 8,
-        icon: 'payments',
-        color: 'green',
-        route: '/payments',
-        amount: 75000
-      },
-      {
-        title: 'Renewals',
-        count: 5,
-        icon: 'renewals',
-        color: 'orange',
-        route: '/renewals',
-        amount: 45000
-      },
-      {
-        title: 'Due Today',
-        count: 3,
-        icon: 'due',
-        color: 'red',
-        route: '/due-today',
-        amount: 35000
-      }
-    ];
+    // Dashboard data is now loaded from actual API calls
+    // Pending appraisals loaded via loadPendingAppraisals()
+    // Recent transactions loaded via loadRecentTransactions()
 
     setTimeout(() => {
       this.isLoading = false;
@@ -1699,8 +1657,7 @@ export class CashierDashboard implements OnInit, OnDestroy {
       return contactValue || 'Not provided';
     };
 
-    // In a real application, this would fetch pawner details from the API
-    // For now, we'll use mock data or extract from appraisal
+    // Fetch and populate pawner details from the appraisal data
     this.selectedPawnerInfo = {
       fullName: appraisal.pawnerName || (appraisal.pawner?.name) || 'Unknown Pawner',
       contactNumber: getContactNumber(),
@@ -2134,16 +2091,29 @@ export class CashierDashboard implements OnInit, OnDestroy {
   }
 
   loadCategoryDescriptions() {
-    // Mock implementation
+    // Load descriptions from API based on selected category
     this.isLoadingDescriptions = true;
-    setTimeout(() => {
-      this.filteredCategoryDescriptions = [
-        { description: '18K Gold Ring' },
-        { description: '21K Gold Necklace' },
-        { description: '24K Gold Bracelet' }
-      ];
-      this.isLoadingDescriptions = false;
-    }, 50); // Reduced from 500ms to 50ms for instant response
+    
+    this.categoriesService.getCategoriesWithDescriptions().subscribe({
+      next: (response: any) => {
+        if (response.success && response.data) {
+          const category = response.data.find((cat: any) => cat.name === this.currentItem.category);
+          if (category && category.descriptions && category.descriptions.length > 0) {
+            this.filteredCategoryDescriptions = category.descriptions.map((desc: any) => 
+              ({ description: desc.name })
+            );
+          } else {
+            this.filteredCategoryDescriptions = [];
+          }
+        }
+        this.isLoadingDescriptions = false;
+      },
+      error: (error: any) => {
+        console.error('Error loading category descriptions:', error);
+        this.filteredCategoryDescriptions = [];
+        this.isLoadingDescriptions = false;
+      }
+    });
   }
 
   openAddCategoryDescriptionDialog() {
