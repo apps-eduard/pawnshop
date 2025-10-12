@@ -126,78 +126,8 @@ export class AppraiserDashboard implements OnInit {
   // Track loading state for category descriptions
   isLoadingDescriptions: boolean = false;
 
-  // Category descriptions based on selected category
-  categoryDescriptions: { [key: string]: CategoryDescription[] } = {
-    'Jewelry': [
-      { description: 'Gold Ring' },
-      { description: 'Gold Necklace' },
-      { description: 'Gold Bracelet' },
-      { description: 'Gold Earrings' },
-      { description: 'Silver Ring' },
-      { description: 'Silver Necklace' },
-      { description: 'Silver Bracelet' },
-      { description: 'Platinum Ring' },
-      { description: 'Diamond Ring' },
-      { description: 'Pearl Necklace' },
-      { description: 'Watch - Gold' },
-      { description: 'Watch - Silver' },
-      { description: 'Other Jewelry' }
-    ],
-    'Appliances': [
-      { description: 'Refrigerator' },
-      { description: 'Washing Machine' },
-      { description: 'Air Conditioner' },
-      { description: 'Microwave Oven' },
-      { description: 'Electric Fan' },
-      { description: 'Rice Cooker' },
-      { description: 'Blender' },
-      { description: 'Oven Toaster' },
-      { description: 'Iron' },
-      { description: 'Vacuum Cleaner' },
-      { description: 'Water Dispenser' },
-      { description: 'Other Appliance' }
-    ],
-    'Electronics': [
-      { description: 'Mobile Phone' },
-      { description: 'Laptop' },
-      { description: 'Tablet' },
-      { description: 'Smart Watch' },
-      { description: 'Camera' },
-      { description: 'Gaming Console' },
-      { description: 'Television' },
-      { description: 'Sound System' },
-      { description: 'DVD Player' },
-      { description: 'Computer Monitor' },
-      { description: 'Printer' },
-      { description: 'Other Electronic' }
-    ],
-    'Tools': [
-      { description: 'Power Drill' },
-      { description: 'Generator' },
-      { description: 'Welding Machine' },
-      { description: 'Angle Grinder' },
-      { description: 'Circular Saw' },
-      { description: 'Hammer Drill' },
-      { description: 'Compressor' },
-      { description: 'Other Tool' }
-    ],
-    'Vehicles': [
-      { description: 'Motorcycle' },
-      { description: 'Bicycle' },
-      { description: 'Car' },
-      { description: 'Scooter' },
-      { description: 'ATV' },
-      { description: 'Other Vehicle' }
-    ],
-    'Other': [
-      { description: 'Furniture' },
-      { description: 'Musical Instrument' },
-      { description: 'Artwork' },
-      { description: 'Collectible' },
-      { description: 'Antique' },
-      { description: 'Other Item' }
-    ]
-  };
+  // Category descriptions cache loaded from API
+  categoryDescriptions: { [key: string]: CategoryDescription[] } = {};
 
   // Add Category Description Modal
   showAddCategoryDescriptionModal = false;
@@ -212,82 +142,20 @@ export class AppraiserDashboard implements OnInit {
       // Reset category description when category changes
       this.currentItem.categoryDescription = '';
 
-      // Check if we have any cached descriptions for this category
-      const cachedDescriptions = this.categoryDescriptions[this.currentItem.category];
-      console.log('Cached descriptions for', this.currentItem.category, ':', cachedDescriptions);
+      // Clear current descriptions
+      this.filteredCategoryDescriptions = [];
 
-      // Initially set from cache if available
-      this.filteredCategoryDescriptions = cachedDescriptions || [];
-
-      // Force a UI update using setTimeout
-      setTimeout(() => {
-        console.log('After timeout - filtered descriptions:', this.filteredCategoryDescriptions);
-      }, 0);
-
-      // Always fetch fresh descriptions from the server
+      // Load descriptions from the server
       this.loadCategoryDescriptions(this.currentItem.category);
     } else {
       this.filteredCategoryDescriptions = [];
     }
   }
 
-  // Add default descriptions based on category
-  addDefaultDescriptions(categoryName: string) {
-    console.log('Adding default descriptions for', categoryName);
-    let defaults: {description: string}[] = [];
-
-    switch(categoryName.toLowerCase()) {
-      case 'jewelry':
-        defaults = [
-          { description: '14K Gold Ring' },
-          { description: '18K Gold Necklace' },
-          { description: 'Silver Bracelet' },
-          { description: 'Diamond Earrings' }
-        ];
-        break;
-      case 'appliances':
-        defaults = [
-          { description: 'Refrigerator' },
-          { description: 'Washing Machine' },
-          { description: 'Television' },
-          { description: 'Microwave Oven' }
-        ];
-        break;
-      case 'electronics':
-        defaults = [
-          { description: 'Smartphone' },
-          { description: 'Laptop Computer' },
-          { description: 'Digital Camera' },
-          { description: 'Tablet' }
-        ];
-        break;
-      case 'vehicles':
-        defaults = [
-          { description: 'Motorcycle' },
-          { description: 'Bicycle' },
-          { description: 'Scooter' }
-        ];
-        break;
-      default:
-        defaults = [
-          { description: 'General Item' }
-        ];
-    }
-
-    this.categoryDescriptions[categoryName] = defaults;
-    this.filteredCategoryDescriptions = [...defaults];
-    console.log('Added default descriptions:', this.filteredCategoryDescriptions);
-  }
-
-  // Helper method to load category descriptions from server if not already loaded
+  // Helper method to load category descriptions from server
   loadCategoryDescriptions(categoryName: string) {
     console.log('Loading descriptions for category:', categoryName);
     this.isLoadingDescriptions = true;
-
-    // Add default descriptions if we don't have any for this category yet
-    if (!this.categoryDescriptions[categoryName] || this.categoryDescriptions[categoryName].length === 0) {
-      this.addDefaultDescriptions(categoryName);
-    }
 
     this.categoriesService.getCategoriesWithDescriptions().subscribe({
       next: (response: any) => {
@@ -310,7 +178,6 @@ export class AppraiserDashboard implements OnInit {
             console.log('Updated filteredCategoryDescriptions with server data:', this.filteredCategoryDescriptions);
           } else {
             console.warn(`No descriptions found in API for category: ${categoryName}`);
-            // We'll keep using the default descriptions we added earlier
           }
         } else {
           console.error('API response error or no data:', response);
@@ -318,7 +185,6 @@ export class AppraiserDashboard implements OnInit {
       },
       error: (error: any) => {
         console.error('Error loading category descriptions:', error);
-        // We'll keep using the default descriptions we added earlier
         this.isLoadingDescriptions = false;
       },
       complete: () => {
@@ -330,66 +196,6 @@ export class AppraiserDashboard implements OnInit {
 
   // Recent Appraisals
   recentAppraisals: AppraisalItem[] = [];
-
-  // Dashboard Cards
-  dashboardCards = [
-    {
-      title: 'Pending Appraisals',
-      count: 0,
-      icon: 'pending',
-      color: 'yellow',
-      route: '/appraisals'
-    },
-    {
-      title: 'Completed Today',
-      count: 0,
-      icon: 'completed',
-      color: 'green',
-      route: '/appraisals'
-    },
-    {
-      title: 'High Value Items',
-      count: 0,
-      icon: 'high-value',
-      color: 'blue',
-      route: '/appraisals'
-    },
-    {
-      title: 'Average Appraisal',
-      count: 0,
-      icon: 'average',
-      color: 'purple',
-      route: '/appraisals'
-    }
-  ];
-
-  // Item Categories
-  itemCategories = [
-    {
-      name: 'Jewelry - Gold',
-      count: 0,
-      avgValue: 25000,
-      color: 'yellow'
-    },
-    {
-      name: 'Electronics',
-      count: 0,
-      avgValue: 15000,
-      color: 'blue'
-    },
-    {
-      name: 'Appliances',
-      count: 0,
-      avgValue: 20000,
-      color: 'green'
-    },
-    {
-      name: 'Vehicles',
-      count: 0,
-      avgValue: 50000,
-      color: 'red'
-    }
-  ];
 
   constructor(
     private http: HttpClient,
@@ -1519,83 +1325,6 @@ export class AppraiserDashboard implements OnInit {
       default:
         return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300';
     }
-  }
-
-  // Get Card Color Classes
-  getCardColorClasses(color: string): string {
-    switch (color) {
-      case 'yellow':
-        return 'bg-yellow-100 dark:bg-yellow-900 text-yellow-600 dark:text-yellow-400';
-      case 'green':
-        return 'bg-green-100 dark:bg-green-900 text-green-600 dark:text-green-400';
-      case 'blue':
-        return 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400';
-      case 'purple':
-        return 'bg-purple-100 dark:bg-purple-900 text-purple-600 dark:text-purple-400';
-      case 'red':
-        return 'bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-400';
-      default:
-        return 'bg-gray-100 dark:bg-gray-900 text-gray-600 dark:text-gray-400';
-    }
-  }
-
-  // Get Category Color Classes
-  getCategoryColorClasses(color: string): string {
-    switch (color) {
-      case 'yellow':
-        return 'border-yellow-200 dark:border-yellow-800 bg-yellow-50 dark:bg-yellow-900/20';
-      case 'blue':
-        return 'border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20';
-      case 'green':
-        return 'border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20';
-      case 'red':
-        return 'border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20';
-      default:
-        return 'border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/20';
-    }
-  }
-
-  // Quick login for testing
-  quickLogin() {
-    const loginData = {
-      username: 'appraiser1',
-      password: 'appraiser123'
-    };
-
-    console.log(`🔐 [${new Date().toISOString()}] Attempting quick login with:`, loginData.username);
-    console.log(`🔗 Login API URL: http://localhost:3000/api/auth/login`);
-
-    this.http.post<any>('http://localhost:3000/api/auth/login', loginData).subscribe({
-      next: (response) => {
-        console.log(`📥 [${new Date().toISOString()}] Login response:`, response);
-
-        if (response.success && response.data?.user && response.data?.token) {
-          localStorage.setItem('currentUser', JSON.stringify(response.data.user));
-          localStorage.setItem('token', response.data.token);
-          localStorage.setItem('refreshToken', response.data.refreshToken);
-
-          console.log(`✅ [${new Date().toISOString()}] Login successful:`, {
-            user: response.data.user,
-            tokenPreview: response.data.token.substring(0, 20) + '...'
-          });
-
-          this.toastService.showSuccess('Login Success', `Logged in as ${response.data.user.firstName} ${response.data.user.lastName}`);
-        } else {
-          console.error(`❌ [${new Date().toISOString()}] Login failed - invalid response:`, response);
-          this.toastService.showError('Login Failed', response.message || 'Invalid credentials');
-        }
-      },
-      error: (error) => {
-        console.error(`❌ [${new Date().toISOString()}] Login network error:`, {
-          status: error.status,
-          statusText: error.statusText,
-          message: error.message,
-          error: error.error,
-          url: error.url
-        });
-        this.toastService.showError('Login Error', 'Failed to connect to server');
-      }
-    });
   }
 
   // Check if user is authenticated

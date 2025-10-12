@@ -29,16 +29,23 @@ interface ProfileData {
   styleUrl: './profile.css'
 })
 export class ProfileComponent implements OnInit {
+  // Tab state
+  activeTab: 'profile' | 'address' | 'password' = 'profile';
+
   profileForm!: FormGroup;
+  addressForm!: FormGroup;
   passwordForm!: FormGroup;
 
   isLoadingProfile = false;
   isUpdatingProfile = false;
+  isUpdatingAddress = false;
   isChangingPassword = false;
 
   profileMessage = '';
+  addressMessage = '';
   passwordMessage = '';
   profileError = '';
+  addressError = '';
   passwordError = '';
 
   showOldPassword = false;
@@ -61,14 +68,20 @@ export class ProfileComponent implements OnInit {
   }
 
   private initializeForms(): void {
-    // Profile form
+    // Profile form (basic info only)
     this.profileForm = this.formBuilder.group({
       email: ['', [Validators.required, Validators.email]],
       firstName: ['', [Validators.required]],
       lastName: ['', [Validators.required]],
       mobileNumber: [''],
-      contactNumber: [''],
-      address: ['']
+      contactNumber: ['']
+    });
+
+    // Address form (separate tab)
+    this.addressForm = this.formBuilder.group({
+      address: [''],
+      cityId: [''],
+      barangayId: ['']
     });
 
     // Password form
@@ -79,6 +92,18 @@ export class ProfileComponent implements OnInit {
     }, {
       validators: this.passwordMatchValidator
     });
+  }
+
+  // Tab switching
+  switchTab(tab: 'profile' | 'address' | 'password'): void {
+    this.activeTab = tab;
+    // Clear messages when switching tabs
+    this.profileMessage = '';
+    this.addressMessage = '';
+    this.passwordMessage = '';
+    this.profileError = '';
+    this.addressError = '';
+    this.passwordError = '';
   }
 
   private passwordMatchValidator(group: FormGroup): { [key: string]: boolean } | null {
@@ -153,6 +178,43 @@ export class ProfileComponent implements OnInit {
         this.isUpdatingProfile = false;
         this.profileError = error.error?.message || 'Failed to update profile';
         console.error('Error updating profile:', error);
+      }
+    });
+  }
+
+  onUpdateAddress(): void {
+    if (this.addressForm.invalid) {
+      Object.keys(this.addressForm.controls).forEach(key => {
+        this.addressForm.get(key)?.markAsTouched();
+      });
+      return;
+    }
+
+    this.isUpdatingAddress = true;
+    this.addressMessage = '';
+    this.addressError = '';
+
+    const formData = this.addressForm.value;
+
+    this.http.put<{ success: boolean; message: string; data: ProfileData }>(
+      `${this.apiUrl}/profile/address`,
+      formData
+    ).subscribe({
+      next: (response) => {
+        this.isUpdatingAddress = false;
+        if (response.success) {
+          this.addressMessage = 'Address updated successfully!';
+
+          // Clear success message after 3 seconds
+          setTimeout(() => {
+            this.addressMessage = '';
+          }, 3000);
+        }
+      },
+      error: (error) => {
+        this.isUpdatingAddress = false;
+        this.addressError = error.error?.message || 'Failed to update address';
+        console.error('Error updating address:', error);
       }
     });
   }
