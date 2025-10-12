@@ -150,6 +150,19 @@ router.post('/login', [
     // Remove sensitive data
     delete user.password_hash;
     
+    // Determine available roles based on user's role
+    let availableRoles = [user.role]; // Default: single role
+    
+    // Only Manager and Auctioneer have access to multiple roles
+    // Administrator stays as single role for security
+    if (user.role === 'manager') {
+      availableRoles = ['manager', 'auctioneer', 'cashier'];
+    } else if (user.role === 'auctioneer') {
+      availableRoles = ['auctioneer', 'appraiser', 'cashier'];
+    }
+    
+    console.log(`👥 Available roles for ${username}: [${availableRoles.join(', ')}]`);
+    
     const responseTime = Date.now() - startTime;
     console.log(`🎉 Login successful for: ${username} (${user.role})`);
     console.log(`⏱️  Response time: ${responseTime}ms`);
@@ -167,6 +180,7 @@ router.post('/login', [
           firstName: user.first_name,
           lastName: user.last_name,
           role: user.role,
+          roles: availableRoles, // NEW: Array of available roles
           branchId: user.branch_id,
           branchName: user.branch_name,
           position: user.position,

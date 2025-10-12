@@ -8,8 +8,7 @@ import { ItemService } from '../../../core/services/item.service';
 import { AddressService } from '../../../core/services/address.service';
 import { AppraisalService } from '../../../core/services/appraisal.service';
 import { ToastService } from '../../../core/services/toast.service';
-import { CategoriesService, Category } from '../../../core/services/categories.service';
-import { QueueWidget } from '../../../shared/components/queue-widget/queue-widget';
+import { CategoriesService } from '../../../core/services/categories.service';
 
 
 interface Pawner {
@@ -63,7 +62,7 @@ interface Barangay {
   templateUrl: './appraiser-dashboard.html',
   styleUrl: './appraiser-dashboard.css',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, QueueWidget]
+  imports: [CommonModule, FormsModule, RouterModule]
 })
 export class AppraiserDashboard implements OnInit, OnDestroy {
   @ViewChild('searchInput') searchInput!: ElementRef<HTMLInputElement>;

@@ -76,15 +76,75 @@
         </button>
 
         <!-- Notifications (if authenticated) -->
-        <button *ngIf="currentUser"
-          class="p-2 text-gray-400 dark:text-gray-300 hover:text-gray-500 dark:hover:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 rounded-md transition-colors relative"
-          aria-label="Notifications">
-          <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-          </svg>
-          <!-- Notification badge -->
-          <span class="absolute top-0 right-0 block h-2 w-2 rounded-full bg-red-400 ring-2 ring-white dark:ring-gray-900"></span>
-        </button>
+        <div *ngIf="currentUser && hasMultipleRoles()" class="relative" clickOutside (clickOutside)="roleMenuOpen = false">
+          <button
+            (click)="roleMenuOpen = !roleMenuOpen"
+            class="p-2 text-gray-400 dark:text-gray-300 hover:text-gray-500 dark:hover:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 rounded-md transition-colors relative"
+            aria-label="Switch Role">
+            <!-- Role Icon -->
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+            <!-- Badge showing number of roles -->
+            <span class="absolute top-0 right-0 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-white transform translate-x-1/2 -translate-y-1/2 bg-primary-500 rounded-full">
+              {{ getAvailableRoles().length }}
+            </span>
+          </button>
+
+          <!-- Role Switcher Dropdown -->
+          <div *ngIf="roleMenuOpen"
+            class="origin-top-right absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5 focus:outline-none z-50 transform transition-all duration-200 ease-in-out"
+            role="menu">
+            <div class="py-1" role="none">
+              <!-- Header -->
+              <div class="px-4 py-2 border-b border-gray-200 dark:border-gray-700">
+                <p class="text-xs font-medium text-gray-500 dark:text-gray-400">Switch Role</p>
+                <p class="text-sm font-semibold text-gray-900 dark:text-gray-100 mt-1">{{ currentUser.role | titlecase }}</p>
+              </div>
+
+              <!-- Role List -->
+              <div class="py-1">
+                <button
+                  *ngFor="let role of getAvailableRoles()"
+                  (click)="switchRole(role)"
+                  [class.bg-primary-50]="role === currentUser.role"
+                  [class.dark:bg-primary-900/20]="role === currentUser.role"
+                  [class.text-primary-600]="role === currentUser.role"
+                  [class.dark:text-primary-400]="role === currentUser.role"
+                  class="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center justify-between group"
+                  role="menuitem">
+                  <span class="flex items-center">
+                    <!-- Admin Icon -->
+                    <svg *ngIf="role === 'administrator' || role === 'admin'" class="w-5 h-5 mr-3 text-gray-500 dark:text-gray-400 group-hover:text-primary-600 dark:group-hover:text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                    </svg>
+                    <!-- Manager Icon -->
+                    <svg *ngIf="role === 'manager'" class="w-5 h-5 mr-3 text-gray-500 dark:text-gray-400 group-hover:text-primary-600 dark:group-hover:text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                    </svg>
+                    <!-- Cashier Icon -->
+                    <svg *ngIf="role === 'cashier'" class="w-5 h-5 mr-3 text-gray-500 dark:text-gray-400 group-hover:text-primary-600 dark:group-hover:text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                    </svg>
+                    <!-- Auctioneer Icon -->
+                    <svg *ngIf="role === 'auctioneer'" class="w-5 h-5 mr-3 text-gray-500 dark:text-gray-400 group-hover:text-primary-600 dark:group-hover:text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                    </svg>
+                    <!-- Appraiser Icon -->
+                    <svg *ngIf="role === 'appraiser'" class="w-5 h-5 mr-3 text-gray-500 dark:text-gray-400 group-hover:text-primary-600 dark:group-hover:text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
+                    </svg>
+                    <span class="font-medium">{{ role | titlecase }}</span>
+                  </span>
+                  <!-- Checkmark for current role -->
+                  <svg *ngIf="role === currentUser.role" class="w-5 h-5 text-primary-600 dark:text-primary-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
 
         <!-- User Menu -->
         <div *ngIf="currentUser" class="relative" clickOutside (clickOutside)="userMenuOpen = false">
@@ -122,9 +182,6 @@
                 role="menuitem"
                 (click)="closeDropdown()">
                 Profile Settings
-              </a>
-              <a href="#" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" role="menuitem">
-                Help & Support
               </a>
               <button
                 (click)="logout()"

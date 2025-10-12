@@ -20,6 +20,116 @@ router.use(authenticateToken);
 router.use(requireAdmin);
 
 // =============================================
+// DASHBOARD STATISTICS
+// =============================================
+
+// Get dashboard statistics
+router.get('/dashboard/stats', async (req, res) => {
+  try {
+    console.log(`📊 [${new Date().toISOString()}] Admin fetching dashboard stats - User: ${req.user.username}`);
+    
+    // Run all queries in parallel for better performance
+    const [
+      loansResult,
+      branchesResult,
+      usersResult,
+      todayResult,
+      pawnersResult,
+      auctionResult
+    ] = await Promise.all([
+      // Total loans query
+      pool.query(`
+        SELECT 
+          COUNT(*) as total,
+          COUNT(CASE WHEN status = 'active' THEN 1 END) as active,
+          COUNT(CASE WHEN status = 'expired' THEN 1 END) as expired,
+          COALESCE(SUM(principal_amount), 0) as total_amount,
+          COALESCE(SUM(CASE WHEN status = 'active' THEN principal_amount ELSE 0 END), 0) as active_amount,
+          COALESCE(SUM(CASE WHEN status = 'expired' THEN principal_amount ELSE 0 END), 0) as expired_amount
+        FROM transactions
+      `),
+      // Branches count
+      pool.query(`
+        SELECT COUNT(DISTINCT id) as count 
+        FROM branches
+      `),
+      // Users/Employees count
+      pool.query(`
+        SELECT COUNT(*) as count 
+        FROM employees
+      `),
+      // Today's transactions
+      pool.query(`
+        SELECT 
+          COUNT(*) as count,
+          COALESCE(SUM(principal_amount), 0) as amount
+        FROM transactions 
+        WHERE DATE(transaction_date) = CURRENT_DATE
+      `),
+      // Total pawners
+      pool.query(`
+        SELECT COUNT(*) as count
+        FROM pawners
+      `),
+      // Auction items
+      pool.query(`
+        SELECT 
+          COUNT(*) as count,
+          COALESCE(SUM(appraised_value), 0) as amount
+        FROM pawn_items 
+        WHERE status = 'auctioned'
+      `)
+    ]);
+    
+    const stats = {
+      totalLoans: {
+        count: parseInt(loansResult.rows[0].total),
+        amount: parseFloat(loansResult.rows[0].total_amount)
+      },
+      activeLoans: {
+        count: parseInt(loansResult.rows[0].active),
+        amount: parseFloat(loansResult.rows[0].active_amount)
+      },
+      expiredLoans: {
+        count: parseInt(loansResult.rows[0].expired),
+        amount: parseFloat(loansResult.rows[0].expired_amount)
+      },
+      branches: {
+        count: parseInt(branchesResult.rows[0].count)
+      },
+      users: {
+        count: parseInt(usersResult.rows[0].count)
+      },
+      todayTransactions: {
+        count: parseInt(todayResult.rows[0].count),
+        amount: parseFloat(todayResult.rows[0].amount)
+      },
+      totalPawners: {
+        count: parseInt(pawnersResult.rows[0].count)
+      },
+      auctionItems: {
+        count: parseInt(auctionResult.rows[0].count),
+        amount: parseFloat(auctionResult.rows[0].amount)
+      }
+    };
+    
+    console.log('✅ Dashboard stats retrieved successfully');
+    
+    res.json({
+      success: true,
+      data: stats
+    });
+  } catch (error) {
+    console.error('❌ Error fetching dashboard statistics:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching dashboard statistics',
+      error: error.message
+    });
+  }
+});
+
+// =============================================
 // CATEGORIES MANAGEMENT
 // =============================================
 

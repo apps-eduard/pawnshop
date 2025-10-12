@@ -4,7 +4,8 @@ export interface User {
   email: string;
   firstName: string;
   lastName: string;
-  role: UserRole | string;
+  role: UserRole | string;  // Primary/active role
+  roles?: UserRole[] | string[];  // All available roles (optional for multi-role users)
   branchId?: string;
   branchName?: string;
   position?: string;

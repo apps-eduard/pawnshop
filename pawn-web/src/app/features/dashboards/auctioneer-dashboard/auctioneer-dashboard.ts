@@ -131,96 +131,132 @@ export class AuctioneerDashboard implements OnInit, AfterViewChecked {
   private loadDashboardData() {
     this.isLoading = true;
 
-    // Mock dashboard data for Auctioneer
+    // Fetch real data from API
+    const apiUrl = 'http://localhost:3000/api/auctioneer/dashboard/stats';
+    this.http.get<any>(apiUrl).subscribe({
+      next: (response) => {
+        if (response.success && response.data) {
+          const stats = response.data;
+
+          this.dashboardCards = [
+            {
+              title: 'Expired Items',
+              count: stats.expiredItems.count,
+              icon: 'expired',
+              color: 'red',
+              route: '/items/expired',
+              amount: stats.expiredItems.totalValue
+            },
+            {
+              title: 'Ready for Auction',
+              count: stats.readyForAuction.count,
+              icon: 'scheduled',
+              color: 'blue',
+              route: '/auctions/ready',
+              amount: stats.readyForAuction.totalValue
+            },
+            {
+              title: 'Sold Today',
+              count: stats.soldToday.count,
+              icon: 'sold',
+              color: 'green',
+              route: '/auctions/sold-today',
+              amount: stats.soldToday.revenue
+            },
+            {
+              title: 'Sold This Month',
+              count: stats.soldThisMonth.count,
+              icon: 'month',
+              color: 'purple',
+              route: '/auctions/sold-month',
+              amount: stats.soldThisMonth.revenue
+            },
+            {
+              title: 'Sold This Year',
+              count: stats.soldThisYear.count,
+              icon: 'success',
+              color: 'indigo',
+              route: '/auctions/sold-year',
+              amount: stats.soldThisYear.revenue
+            },
+            {
+              title: 'Average Sale Price',
+              count: 0,
+              icon: 'average',
+              color: 'orange',
+              route: '/auctions/analytics',
+              amount: stats.avgSalePrice
+            }
+          ];
+
+          console.log('✅ Dashboard cards loaded:', this.dashboardCards);
+        } else {
+          console.warn('⚠️ Unexpected response format:', response);
+          this.loadMockData();
+        }
+        this.isLoading = false;
+      },
+      error: (error) => {
+        console.error('❌ Error loading dashboard data:', error);
+        this.toastService.showError('Error', 'Failed to load dashboard statistics');
+        this.loadMockData();
+        this.isLoading = false;
+      }
+    });
+  }
+
+  private loadMockData() {
+    // Fallback mock data
     this.dashboardCards = [
       {
-        title: 'Active Auctions',
+        title: 'Expired Items',
         count: 8,
-        icon: 'active',
-        color: 'green',
-        route: '/auctions/active'
+        icon: 'expired',
+        color: 'red',
+        route: '/items/expired',
+        amount: 450000
       },
       {
-        title: 'Scheduled Items',
+        title: 'Ready for Auction',
         count: 34,
         icon: 'scheduled',
         color: 'blue',
-        route: '/auctions/scheduled',
+        route: '/auctions/ready',
         amount: 850000
       },
       {
-        title: 'Items Sold Today',
+        title: 'Sold Today',
         count: 12,
         icon: 'sold',
-        color: 'purple',
-        route: '/auctions/sold',
+        color: 'green',
+        route: '/auctions/sold-today',
         amount: 420000
+      },
+      {
+        title: 'Sold This Month',
+        count: 45,
+        icon: 'month',
+        color: 'purple',
+        route: '/auctions/sold-month',
+        amount: 1250000
+      },
+      {
+        title: 'Sold This Year',
+        count: 234,
+        icon: 'success',
+        color: 'indigo',
+        route: '/auctions/sold-year',
+        amount: 5680000
+      },
+      {
+        title: 'Average Sale Price',
+        count: 0,
+        icon: 'average',
+        color: 'orange',
+        route: '/auctions/analytics',
+        amount: 24273
       }
     ];
-
-    // Mock upcoming auctions
-    this.upcomingAuctions = [
-      {
-        id: 'AUC001',
-        loan_id: 'L2024001',
-        item_description: 'Gold necklace with diamonds',
-        starting_bid: 45000,
-        current_bid: 52000,
-        reserve_price: 50000,
-        auction_date: new Date(Date.now() + 2 * 60 * 60 * 1000), // 2 hours from now
-        status: 'scheduled',
-        bidders_count: 5,
-        item_type: 'jewelry'
-      },
-      {
-        id: 'AUC002',
-        loan_id: 'L2024002',
-        item_description: 'Samsung 65" QLED TV',
-        starting_bid: 25000,
-        reserve_price: 30000,
-        auction_date: new Date(Date.now() + 4 * 60 * 60 * 1000), // 4 hours from now
-        status: 'scheduled',
-        bidders_count: 0,
-        item_type: 'appliance'
-      },
-      {
-        id: 'AUC003',
-        loan_id: 'L2024003',
-        item_description: 'MacBook Pro 16" M3',
-        starting_bid: 35000,
-        current_bid: 41000,
-        reserve_price: 40000,
-        auction_date: new Date(Date.now() + 6 * 60 * 60 * 1000), // 6 hours from now
-        status: 'active',
-        bidders_count: 8,
-        item_type: 'electronics'
-      },
-      {
-        id: 'AUC004',
-        loan_id: 'L2024004',
-        item_description: 'Toyota Vios 2020',
-        starting_bid: 450000,
-        reserve_price: 500000,
-        auction_date: new Date(Date.now() + 24 * 60 * 60 * 1000), // Tomorrow
-        status: 'scheduled',
-        bidders_count: 0,
-        item_type: 'vehicle'
-      }
-    ];
-
-    // Mock auction stats
-    this.auctionStats = {
-      total_auctions: 156,
-      active_auctions: 8,
-      items_sold: 134,
-      total_revenue: 4250000,
-      avg_sale_price: 31716,
-      success_rate: 87.2
-    };
-
-    setTimeout(() => {
-      this.isLoading = false;
-    }, 500);
   }
 
   private updateTime() {
@@ -394,6 +430,9 @@ export class AuctioneerDashboard implements OnInit, AfterViewChecked {
             // Reload expired items to get updated data
             await this.loadExpiredItems();
 
+            // Reload dashboard cards to update statistics
+            this.loadDashboardData();
+
             // Show success toast
             this.toastService.showSuccess(
               'Auction Price Set',
@@ -446,6 +485,9 @@ export class AuctioneerDashboard implements OnInit, AfterViewChecked {
 
         // Reload expired items to get fresh data
         await this.loadExpiredItems();
+
+        // Reload dashboard cards to update statistics
+        this.loadDashboardData();
 
         // Show success toast
         this.toastService.showSuccess(
@@ -574,5 +616,18 @@ export class AuctioneerDashboard implements OnInit, AfterViewChecked {
       const years = Math.floor(diffDays / 365);
       return `${years} year${years > 1 ? 's' : ''} ago`;
     }
+  }
+
+  getCardBackgroundClass(color: string): string {
+    const colorMap: { [key: string]: string } = {
+      blue: 'bg-blue-500',
+      green: 'bg-green-500',
+      orange: 'bg-orange-500',
+      red: 'bg-red-500',
+      purple: 'bg-purple-500',
+      indigo: 'bg-indigo-500',
+      teal: 'bg-teal-500'
+    };
+    return colorMap[color] || colorMap['blue'];
   }
 }

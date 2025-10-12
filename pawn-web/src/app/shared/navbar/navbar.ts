@@ -24,6 +24,7 @@ export class NavbarComponent implements OnInit, OnDestroy {
   currentUser: User | null = null;
   isDarkMode = false;
   userMenuOpen = false;
+  roleMenuOpen = false;
   isOnLoginPage = false;
   isOnTransactionPage = false;
   currentDateTime = new Date();
@@ -103,6 +104,27 @@ export class NavbarComponent implements OnInit, OnDestroy {
     const firstInitial = this.currentUser.firstName?.charAt(0) || '';
     const lastInitial = this.currentUser.lastName?.charAt(0) || '';
     return (firstInitial + lastInitial).toUpperCase();
+  }
+
+  hasMultipleRoles(): boolean {
+    return this.authService.hasMultipleRoles();
+  }
+
+  getAvailableRoles(): string[] {
+    return this.authService.getAvailableRoles() as string[];
+  }
+
+  switchRole(newRole: string): void {
+    this.authService.switchRole(newRole);
+    this.roleMenuOpen = false;
+    this.userMenuOpen = false;
+    
+    // Navigate to the new role's dashboard
+    const dashboardRoute = this.authService.getDashboardRoute();
+    this.router.navigate([dashboardRoute]);
+    
+    // Update page title
+    this.setPageTitle(dashboardRoute);
   }
 
   onToggleSidebar(): void {

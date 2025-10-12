@@ -53,6 +53,35 @@ export class AuthService {
     return user?.role === role;
   }
 
+  hasMultipleRoles(): boolean {
+    const user = this.getCurrentUser();
+    return !!user?.roles && user.roles.length > 1;
+  }
+
+  getAvailableRoles(): UserRole[] | string[] {
+    const user = this.getCurrentUser();
+    return user?.roles || (user?.role ? [user.role] : []);
+  }
+
+  switchRole(newRole: UserRole | string): void {
+    const user = this.getCurrentUser();
+    if (!user) return;
+
+    // Check if user has access to this role
+    const availableRoles = this.getAvailableRoles();
+    if (!availableRoles.includes(newRole as any)) {
+      console.warn(`User does not have access to role: ${newRole}`);
+      return;
+    }
+
+    // Update current role
+    user.role = newRole;
+    localStorage.setItem('currentUser', JSON.stringify(user));
+    this.currentUserSubject.next(user);
+    
+    console.log(`✅ Switched to role: ${newRole}`);
+  }
+
   getToken(): string | null {
     return localStorage.getItem('token');
   }

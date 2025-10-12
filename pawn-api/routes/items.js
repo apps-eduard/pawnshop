@@ -1,6 +1,7 @@
 const express = require('express');
 const { authenticateToken, authorizeRoles } = require('../middleware/auth');
 const { pool } = require('../config/database');
+const { updateExpiredTransactions } = require('../utils/updateExpiredTransactions');
 
 const router = express.Router();
 
@@ -69,6 +70,9 @@ router.get('/', async (req, res) => {
 router.get('/expired', async (req, res) => {
   try {
     console.log(`⏰ [${new Date().toISOString()}] Fetching expired items - User: ${req.user.username}`);
+    
+    // First, update any transactions that have expired
+    await updateExpiredTransactions();
     
     const result = await pool.query(`
       SELECT 
