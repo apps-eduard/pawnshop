@@ -160,7 +160,7 @@ export class AuctioneerDashboard implements OnInit, AfterViewChecked {
               count: stats.soldToday.count,
               icon: 'sold',
               color: 'green',
-              route: '/auctions/sold-today',
+              route: '/transactions/sales-report',
               amount: stats.soldToday.revenue
             },
             {
@@ -168,7 +168,7 @@ export class AuctioneerDashboard implements OnInit, AfterViewChecked {
               count: stats.soldThisMonth.count,
               icon: 'month',
               color: 'purple',
-              route: '/auctions/sold-month',
+              route: '/transactions/sales-report',
               amount: stats.soldThisMonth.revenue
             },
             {
@@ -176,7 +176,7 @@ export class AuctioneerDashboard implements OnInit, AfterViewChecked {
               count: stats.soldThisYear.count,
               icon: 'success',
               color: 'indigo',
-              route: '/auctions/sold-year',
+              route: '/transactions/sales-report',
               amount: stats.soldThisYear.revenue
             },
             {
@@ -184,7 +184,7 @@ export class AuctioneerDashboard implements OnInit, AfterViewChecked {
               count: 0,
               icon: 'average',
               color: 'orange',
-              route: '/auctions/analytics',
+              route: '/transactions/sales-report',
               amount: stats.avgSalePrice
             }
           ];

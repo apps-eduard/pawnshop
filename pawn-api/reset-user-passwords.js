@@ -7,6 +7,7 @@ async function resetUserPasswords() {
   
   const demoAccounts = [
     { username: 'admin', password: 'password123', role: 'Administrator' },
+    { username: 'pawner1', password: 'password123', role: 'Pawner' },
     { username: 'cashier1', password: 'password123', role: 'Cashier' },
     { username: 'cashier2', password: 'password123', role: 'Cashier' },
     { username: 'manager1', password: 'password123', role: 'Manager' },

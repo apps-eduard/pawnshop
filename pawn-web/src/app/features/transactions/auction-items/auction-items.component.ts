@@ -51,7 +51,17 @@ export class AuctionItemsComponent implements OnInit, OnDestroy, AfterViewChecke
   // Sale dialog properties
   showSaleDialog = false;
   selectedSaleItem: AuctionItem | null = null;
-  buyerName = '';
+
+  // Buyer search and form
+  isNewCustomer = false;
+  buyerSearchQuery = '';
+  searchResults: any[] = [];
+  selectedBuyer: any = null;
+  isSearching = false;
+  showSearchResults = false;
+
+  buyerFirstName = '';
+  buyerLastName = '';
   buyerContact = '';
   saleNotes = '';
   discountAmount: number = 0;
@@ -340,7 +350,13 @@ export class AuctionItemsComponent implements OnInit, OnDestroy, AfterViewChecke
 
     // Open sale dialog
     this.selectedSaleItem = item;
-    this.buyerName = '';
+    this.isNewCustomer = false;
+    this.buyerSearchQuery = '';
+    this.searchResults = [];
+    this.selectedBuyer = null;
+    this.showSearchResults = false;
+    this.buyerFirstName = '';
+    this.buyerLastName = '';
     this.buyerContact = '';
     this.saleNotes = '';
     this.discountAmount = 0;
@@ -354,7 +370,13 @@ export class AuctionItemsComponent implements OnInit, OnDestroy, AfterViewChecke
   closeSaleDialog(): void {
     this.showSaleDialog = false;
     this.selectedSaleItem = null;
-    this.buyerName = '';
+    this.isNewCustomer = false;
+    this.buyerSearchQuery = '';
+    this.searchResults = [];
+    this.selectedBuyer = null;
+    this.showSearchResults = false;
+    this.buyerFirstName = '';
+    this.buyerLastName = '';
     this.buyerContact = '';
     this.saleNotes = '';
     this.discountAmount = 0;
@@ -392,9 +414,17 @@ export class AuctionItemsComponent implements OnInit, OnDestroy, AfterViewChecke
   }
 
   async confirmSale(): Promise<void> {
-    if (!this.selectedSaleItem || !this.buyerName || !this.buyerName.trim()) {
-      this.toastService.showWarning('Validation Error', 'Please enter buyer name');
+    // Validate buyer information
+    if (!this.isNewCustomer && !this.selectedBuyer) {
+      this.toastService.showWarning('Validation Error', 'Please select or add a buyer');
       return;
+    }
+
+    if (this.isNewCustomer) {
+      if (!this.buyerFirstName.trim() || !this.buyerLastName.trim()) {
+        this.toastService.showWarning('Validation Error', 'Please enter buyer first name and last name');
+        return;
+      }
     }
 
     this.isProcessingSale = true;
@@ -402,14 +432,15 @@ export class AuctionItemsComponent implements OnInit, OnDestroy, AfterViewChecke
     try {
       // Prepare sale data
       const saleData = {
-        itemId: this.selectedSaleItem.id,
-        buyerName: this.buyerName.trim(),
-        buyerContact: this.buyerContact || undefined,
+        itemId: this.selectedSaleItem!.id,
+        buyerId: this.isNewCustomer ? null : this.selectedBuyer.id,
+        buyerFirstName: this.isNewCustomer ? this.buyerFirstName.trim() : this.selectedBuyer.first_name,
+        buyerLastName: this.isNewCustomer ? this.buyerLastName.trim() : this.selectedBuyer.last_name,
+        buyerContact: this.isNewCustomer ? this.buyerContact : this.selectedBuyer.mobile_number,
         saleNotes: this.saleNotes || undefined,
         discountAmount: this.discountAmount || 0,
         finalPrice: this.finalPrice,
-        receivedAmount: this.receivedAmount || 0,
-        changeAmount: this.changeAmount || 0
+        receivedAmount: this.receivedAmount || 0
       };
 
       console.log('Processing sale:', saleData);
@@ -429,7 +460,11 @@ export class AuctionItemsComponent implements OnInit, OnDestroy, AfterViewChecke
       }
 
       // Build success message
-      let successMessage = `Successfully sold "${this.selectedSaleItem.itemDescription}" to ${this.buyerName}`;
+      const buyerName = this.isNewCustomer
+        ? `${this.buyerFirstName} ${this.buyerLastName}`
+        : `${this.selectedBuyer?.first_name} ${this.selectedBuyer?.last_name}`;
+
+      let successMessage = `Successfully sold "${this.selectedSaleItem?.itemDescription}" to ${buyerName}`;
       if (this.discountAmount > 0) {
         successMessage += ` with ₱${this.discountAmount.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} discount`;
       }
@@ -456,5 +491,54 @@ export class AuctionItemsComponent implements OnInit, OnDestroy, AfterViewChecke
     } finally {
       this.isProcessingSale = false;
     }
+  }
+
+  // Buyer search methods
+  async searchBuyers(): Promise<void> {
+    const query = this.buyerSearchQuery.trim();
+    if (!query || query.length < 2) {
+      this.searchResults = [];
+      this.showSearchResults = false;
+      return;
+    }
+
+    this.isSearching = true;
+    this.showSearchResults = true;
+
+    try {
+      // Call API to search pawners by name or contact
+      const response = await this.itemService.searchPawners(query);
+      this.searchResults = response.data || [];
+    } catch (error) {
+      console.error('Error searching buyers:', error);
+      this.searchResults = [];
+    } finally {
+      this.isSearching = false;
+    }
+  }
+
+  selectBuyer(buyer: any): void {
+    this.selectedBuyer = buyer;
+    this.buyerSearchQuery = `${buyer.first_name} ${buyer.last_name}`;
+    this.showSearchResults = false;
+    this.buyerContact = buyer.mobile_number || '';
+  }
+
+  showNewCustomerForm(): void {
+    this.isNewCustomer = true;
+    this.buyerSearchQuery = '';
+    this.searchResults = [];
+    this.selectedBuyer = null;
+    this.showSearchResults = false;
+    this.buyerFirstName = '';
+    this.buyerLastName = '';
+    this.buyerContact = '';
+  }
+
+  cancelNewCustomer(): void {
+    this.isNewCustomer = false;
+    this.buyerFirstName = '';
+    this.buyerLastName = '';
+    this.buyerContact = '';
   }
 }

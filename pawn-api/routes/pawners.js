@@ -40,7 +40,7 @@ router.get('/search', async (req, res) => {
     console.log(`🔍 [${new Date().toISOString()}] Searching pawners: "${q}" - User: ${req.user?.username || 'UNKNOWN'}`);
     
     const result = await pool.query(`
-      SELECT p.id, p.first_name, p.last_name, p.mobile_number as contact_number, p.email,
+      SELECT p.id, p.customer_code, p.first_name, p.last_name, p.mobile_number, p.email,
              p.house_number as address, p.id_type, p.id_number, p.birth_date, p.is_active,
              p.created_at, p.updated_at
       FROM pawners p
@@ -48,6 +48,7 @@ router.get('/search', async (req, res) => {
         AND (
           LOWER(p.first_name) LIKE LOWER($1) OR
           LOWER(p.last_name) LIKE LOWER($1) OR
+          LOWER(p.customer_code) LIKE LOWER($1) OR
           p.mobile_number LIKE $1 OR
           LOWER(p.email) LIKE LOWER($1)
         )
@@ -57,9 +58,10 @@ router.get('/search', async (req, res) => {
     
     const mappedResults = result.rows.map(row => ({
       id: row.id,
-      firstName: row.first_name,
-      lastName: row.last_name,
-      contactNumber: row.contact_number,
+      customer_code: row.customer_code,
+      first_name: row.first_name,
+      last_name: row.last_name,
+      mobile_number: row.mobile_number,
       email: row.email,
       address: row.address,
       idType: row.id_type,
@@ -71,7 +73,7 @@ router.get('/search', async (req, res) => {
     }));
 
     console.log(`✅ [${new Date().toISOString()}] Found ${result.rows.length} pawners matching: "${q}"`);
-    console.log(`📊 [${new Date().toISOString()}] Search results:`, mappedResults.map(r => `${r.firstName} ${r.lastName} (${r.contactNumber})`));
+    console.log(`📊 [${new Date().toISOString()}] Search results:`, mappedResults.map(r => `${r.first_name} ${r.last_name} (${r.customer_code})`));
     
     const response = {
       success: true,

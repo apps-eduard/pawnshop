@@ -417,27 +417,128 @@
             </div>
           </div>
 
-          <!-- Buyer Information - Grid Layout -->
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label for="buyerName" class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Buyer Name *</label>
-              <input
-                id="buyerName"
-                type="text"
-                [(ngModel)]="buyerName"
-                placeholder="Enter buyer's name"
-                class="w-full px-2.5 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                required>
+          <!-- Buyer Information -->
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <label class="block text-xs font-medium text-gray-700 dark:text-gray-300">Buyer Information *</label>
+              <button
+                *ngIf="!isNewCustomer"
+                type="button"
+                (click)="showNewCustomerForm()"
+                class="text-xs text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 font-medium flex items-center">
+                <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                </svg>
+                New Customer
+              </button>
             </div>
 
-            <div>
-              <label for="buyerContact" class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Contact Number</label>
+            <!-- Search Box (shown when not new customer) -->
+            <div *ngIf="!isNewCustomer" class="relative">
               <input
-                id="buyerContact"
                 type="text"
-                [(ngModel)]="buyerContact"
-                placeholder="Contact number"
-                class="w-full px-2.5 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white">
+                [(ngModel)]="buyerSearchQuery"
+                (input)="searchBuyers()"
+                (focus)="showSearchResults = true"
+                placeholder="Search by name or contact number..."
+                class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white pl-9">
+              <svg class="w-4 h-4 absolute left-3 top-2.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+              </svg>
+
+              <!-- Search Results Dropdown -->
+              <div *ngIf="showSearchResults && buyerSearchQuery.length >= 2"
+                   class="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-48 overflow-y-auto">
+                <div *ngIf="isSearching" class="p-3 text-sm text-gray-500 dark:text-gray-400 text-center">
+                  <svg class="animate-spin h-4 w-4 mx-auto mb-1" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Searching...
+                </div>
+                <div *ngIf="!isSearching && searchResults.length === 0" class="p-3 text-sm text-gray-500 dark:text-gray-400 text-center">
+                  No customers found
+                </div>
+                <div *ngFor="let buyer of searchResults"
+                     (click)="selectBuyer(buyer)"
+                     class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer border-b border-gray-200 dark:border-gray-700 last:border-0">
+                  <div class="text-sm font-medium text-gray-900 dark:text-white">
+                    {{ buyer.first_name }} {{ buyer.last_name }}
+                  </div>
+                  <div class="text-xs text-gray-500 dark:text-gray-400">
+                    {{ buyer.mobile_number || 'No contact' }} • Code: {{ buyer.customer_code }}
+                  </div>
+                </div>
+              </div>
+
+              <!-- Selected Buyer Display -->
+              <div *ngIf="selectedBuyer && !showSearchResults" class="mt-2 p-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-md">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <div class="text-sm font-medium text-gray-900 dark:text-white">
+                      {{ selectedBuyer.first_name }} {{ selectedBuyer.last_name }}
+                    </div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400">
+                      {{ selectedBuyer.mobile_number || 'No contact' }}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    (click)="selectedBuyer = null; buyerSearchQuery = ''"
+                    class="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- New Customer Form (shown when isNewCustomer = true) -->
+            <div *ngIf="isNewCustomer" class="space-y-3">
+              <div class="flex items-center justify-between p-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md">
+                <span class="text-xs font-medium text-blue-700 dark:text-blue-300">Adding New Customer</span>
+                <button
+                  type="button"
+                  (click)="cancelNewCustomer()"
+                  class="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium">
+                  Cancel
+                </button>
+              </div>
+
+              <div class="grid grid-cols-3 gap-3">
+                <div>
+                  <label for="buyerFirstName" class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">First Name *</label>
+                  <input
+                    id="buyerFirstName"
+                    type="text"
+                    [(ngModel)]="buyerFirstName"
+                    placeholder="First name"
+                    class="w-full px-2.5 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                    required>
+                </div>
+
+                <div>
+                  <label for="buyerLastName" class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Last Name *</label>
+                  <input
+                    id="buyerLastName"
+                    type="text"
+                    [(ngModel)]="buyerLastName"
+                    placeholder="Last name"
+                    class="w-full px-2.5 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                    required>
+                </div>
+
+                <div>
+                  <label for="buyerContact" class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Contact</label>
+                  <input
+                    id="buyerContact"
+                    type="text"
+                    [(ngModel)]="buyerContact"
+                    placeholder="Contact number"
+                    class="w-full px-2.5 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white">
+                </div>
+              </div>
             </div>
           </div>
 
@@ -470,7 +571,7 @@
       <div class="bg-gray-50 dark:bg-gray-700 px-4 py-2.5 flex justify-end space-x-2">
         <button
           (click)="confirmSale()"
-          [disabled]="!buyerName || !buyerName.trim() || isProcessingSale"
+          [disabled]="(!isNewCustomer && !selectedBuyer) || (isNewCustomer && (!buyerFirstName.trim() || !buyerLastName.trim())) || isProcessingSale"
           class="px-3 py-1.5 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center">
           <svg *ngIf="isProcessingSale" class="animate-spin -ml-1 mr-1.5 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>

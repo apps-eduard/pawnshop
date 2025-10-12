@@ -8,6 +8,7 @@ import { PartialPayment } from '../partial-payment/partial-payment';
 import { Redeem } from '../redeem/redeem';
 import { Renew } from '../renew/renew';
 import { AuctionItemsComponent } from '../auction-items/auction-items.component';
+import { SalesReportComponent } from '../sales-report/sales-report.component';
 
 // Admin Transaction Management
 import { TransactionManagement } from '../../management/transaction-management/transaction-management';
@@ -60,5 +61,11 @@ export const transactionRoutes: Routes = [
     component: AuctionItemsComponent,
     // canActivate: [AuthGuard],
     data: { roles: ['cashier', 'manager', 'administrator', 'auctioneer'] }
+  },
+  {
+    path: 'sales-report',
+    component: SalesReportComponent,
+    // canActivate: [AuthGuard],
+    data: { roles: ['auctioneer', 'manager', 'administrator'] }
   }
 ];

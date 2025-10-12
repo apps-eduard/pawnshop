@@ -401,6 +401,144 @@ router.get('/for-auction/validate/:itemId', async (req, res) => {
   }
 });
 
+// Get sold items with date filters (MUST be before /:id route)
+router.get('/sold-items', authorizeRoles('administrator', 'admin', 'manager', 'auctioneer'), async (req, res) => {
+  try {
+    const { startDate, endDate, period } = req.query;
+    
+    console.log(`📊 [${new Date().toISOString()}] Fetching sold items - User: ${req.user.username}, Period: ${period || 'custom'}`);
+    
+    let dateCondition = '';
+    let params = [];
+    
+    if (period === 'today') {
+      dateCondition = 'AND pi.sold_date = CURRENT_DATE';
+    } else if (period === 'month') {
+      dateCondition = 'AND DATE_TRUNC(\'month\', pi.sold_date) = DATE_TRUNC(\'month\', CURRENT_DATE)';
+    } else if (period === 'year') {
+      dateCondition = 'AND DATE_TRUNC(\'year\', pi.sold_date) = DATE_TRUNC(\'year\', CURRENT_DATE)';
+    } else if (startDate && endDate) {
+      dateCondition = 'AND pi.sold_date BETWEEN $1 AND $2';
+      params = [startDate, endDate];
+    }
+    
+    const query = `
+      SELECT 
+        pi.id,
+        pi.custom_description,
+        pi.appraised_value,
+        pi.loan_amount,
+        pi.auction_price,
+        pi.discount_amount,
+        pi.final_price,
+        pi.received_amount,
+        pi.sold_date,
+        pi.sale_notes,
+        t.transaction_number as ticket_number,
+        t.expiry_date,
+        t.granted_date,
+        p.first_name as pawner_first_name,
+        p.last_name as pawner_last_name,
+        p.mobile_number as pawner_contact,
+        buyer.id as buyer_id,
+        buyer.customer_code as buyer_code,
+        buyer.first_name as buyer_first_name,
+        buyer.last_name as buyer_last_name,
+        buyer.mobile_number as buyer_contact,
+        c.name as category,
+        d.name as description_name,
+        d.description as description_text
+      FROM pawn_items pi
+      LEFT JOIN transactions t ON pi.transaction_id = t.id
+      LEFT JOIN pawners p ON t.pawner_id = p.id
+      LEFT JOIN pawners buyer ON pi.buyer_id = buyer.id
+      LEFT JOIN categories c ON pi.category_id = c.id
+      LEFT JOIN descriptions d ON pi.description_id = d.id
+      WHERE pi.status = 'sold'
+        ${dateCondition}
+      ORDER BY pi.sold_date DESC, pi.id DESC
+    `;
+    
+    const result = await pool.query(query, params);
+    
+    const soldItems = result.rows.map(row => {
+      // Build item description
+      let itemDesc = row.custom_description;
+      if (!itemDesc || itemDesc.trim() === '') {
+        itemDesc = row.description_name || row.description_text || row.category || 'Item';
+      }
+      
+      return {
+        id: row.id,
+        ticketNumber: row.ticket_number,
+        itemDescription: itemDesc,
+        category: row.category || 'N/A',
+        
+        // Pawner (original owner) info
+        pawnerName: row.pawner_first_name && row.pawner_last_name 
+          ? `${row.pawner_first_name} ${row.pawner_last_name}` 
+          : 'N/A',
+        pawnerContact: row.pawner_contact || 'N/A',
+        
+        // Buyer info
+        buyerId: row.buyer_id,
+        buyerCode: row.buyer_code || 'N/A',
+        buyerName: row.buyer_first_name && row.buyer_last_name 
+          ? `${row.buyer_first_name} ${row.buyer_last_name}` 
+          : 'N/A',
+        buyerContact: row.buyer_contact || 'N/A',
+        
+        // Financial details
+        appraisedValue: row.appraised_value ? parseFloat(row.appraised_value) : 0,
+        loanAmount: row.loan_amount ? parseFloat(row.loan_amount) : 0,
+        auctionPrice: row.auction_price ? parseFloat(row.auction_price) : 0,
+        discountAmount: row.discount_amount ? parseFloat(row.discount_amount) : 0,
+        finalPrice: row.final_price ? parseFloat(row.final_price) : 0,
+        receivedAmount: row.received_amount ? parseFloat(row.received_amount) : 0,
+        
+        // Sale info
+        soldDate: row.sold_date,
+        saleNotes: row.sale_notes,
+        soldBy: row.sold_by || 'System',
+        
+        // Dates
+        grantedDate: row.granted_date,
+        expiredDate: row.expiry_date
+      };
+    });
+    
+    // Calculate summary statistics
+    const totalSales = soldItems.reduce((sum, item) => sum + item.finalPrice, 0);
+    const totalDiscount = soldItems.reduce((sum, item) => sum + item.discountAmount, 0);
+    const totalReceived = soldItems.reduce((sum, item) => sum + item.receivedAmount, 0);
+    
+    console.log(`✅ Found ${soldItems.length} sold items - Total Sales: ₱${totalSales.toFixed(2)}`);
+    
+    res.json({
+      success: true,
+      message: 'Sold items retrieved successfully',
+      data: {
+        items: soldItems,
+        summary: {
+          totalItems: soldItems.length,
+          totalSales: totalSales,
+          totalDiscount: totalDiscount,
+          totalReceived: totalReceived,
+          averagePrice: soldItems.length > 0 ? totalSales / soldItems.length : 0
+        }
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Error fetching sold items:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch sold items',
+      error: error.message
+    });
+  }
+});
+
 // Get single item by ID
 router.get('/:id', async (req, res) => {
   try {
@@ -665,22 +803,30 @@ router.post('/for-auction/confirm-sale', async (req, res) => {
   try {
     const {
       itemId,
-      buyerName,
+      buyerId,  // null if new customer
+      buyerFirstName,
+      buyerLastName,
       buyerContact,
       saleNotes,
       discountAmount,
       finalPrice,
-      receivedAmount,
-      changeAmount
+      receivedAmount
     } = req.body;
     
     console.log(`✅ [${new Date().toISOString()}] Processing auction sale for item ${itemId} - User: ${req.user.username}`);
     
     // Validate required fields
-    if (!itemId || !buyerName || !buyerName.trim()) {
+    if (!itemId) {
       return res.status(400).json({
         success: false,
-        message: 'Item ID and buyer name are required'
+        message: 'Item ID is required'
+      });
+    }
+    
+    if (!buyerId && (!buyerFirstName || !buyerLastName || !buyerFirstName.trim() || !buyerLastName.trim())) {
+      return res.status(400).json({
+        success: false,
+        message: 'Buyer first name and last name are required'
       });
     }
     
@@ -736,30 +882,68 @@ router.post('/for-auction/confirm-sale', async (req, res) => {
         });
       }
       
+      // Handle buyer - either use existing or create new
+      let finalBuyerId = buyerId;
+      
+      if (!buyerId) {
+        // Create new pawner record for the buyer
+        console.log(`📝 Creating new pawner: ${buyerFirstName} ${buyerLastName}`);
+        
+        // Generate customer code
+        const codeResult = await client.query(`
+          SELECT COALESCE(MAX(CAST(SUBSTRING(customer_code FROM 5) AS INTEGER)), 0) + 1 as next_code
+          FROM pawners
+          WHERE customer_code ~ '^CUST[0-9]+$'
+        `);
+        const nextCode = codeResult.rows[0].next_code;
+        const customerCode = `CUST${String(nextCode).padStart(6, '0')}`;
+        
+        const newPawner = await client.query(`
+          INSERT INTO pawners (
+            customer_code,
+            first_name,
+            last_name,
+            mobile_number,
+            is_active,
+            created_by,
+            updated_by
+          )
+          VALUES ($1, $2, $3, $4, true, $5, $5)
+          RETURNING id
+        `, [
+          customerCode,
+          buyerFirstName.trim(),
+          buyerLastName.trim(),
+          buyerContact || null,
+          req.user.id
+        ]);
+        
+        finalBuyerId = newPawner.rows[0].id;
+        console.log(`✅ Created new pawner with ID: ${finalBuyerId}, Code: ${customerCode}`);
+      } else {
+        console.log(`👤 Using existing pawner ID: ${buyerId}`);
+      }
+      
       // Update pawn_items with sale information
       const updateResult = await client.query(`
         UPDATE pawn_items
         SET 
           status = 'sold',
-          buyer_name = $1,
-          buyer_contact = $2,
-          sale_notes = $3,
-          discount_amount = $4,
-          final_price = $5,
-          received_amount = $6,
-          change_amount = $7,
+          buyer_id = $1,
+          sale_notes = $2,
+          discount_amount = $3,
+          final_price = $4,
+          received_amount = $5,
           sold_date = CURRENT_DATE,
           updated_at = CURRENT_TIMESTAMP
-        WHERE id = $8
+        WHERE id = $6
         RETURNING *
       `, [
-        buyerName.trim(),
-        buyerContact || null,
+        finalBuyerId,
         saleNotes || null,
         discountAmount || 0,
         finalPrice,
         receivedAmount || 0,
-        changeAmount || 0,
         itemId
       ]);
       
@@ -776,7 +960,8 @@ router.post('/for-auction/confirm-sale', async (req, res) => {
       
       await client.query('COMMIT');
       
-      console.log(`✅ Sale completed for item ${itemId} - Buyer: ${buyerName}`);
+      const buyerName = `${buyerFirstName} ${buyerLastName}`;
+      console.log(`✅ Sale completed for item ${itemId} - Buyer: ${buyerName} (ID: ${finalBuyerId})`);
       
       res.json({
         success: true,
@@ -785,13 +970,13 @@ router.post('/for-auction/confirm-sale', async (req, res) => {
           item: updateResult.rows[0],
           saleDetails: {
             itemId,
+            buyerId: finalBuyerId,
             buyerName,
             buyerContact,
             auctionPrice: item.auction_price,
             discountAmount: discountAmount || 0,
             finalPrice,
             receivedAmount: receivedAmount || 0,
-            changeAmount: changeAmount || 0,
             soldDate: new Date().toISOString().split('T')[0]
           }
         }

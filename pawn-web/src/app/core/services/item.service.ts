@@ -151,13 +151,14 @@ export class ItemService {
 
   async confirmAuctionSale(saleData: {
     itemId: number;
-    buyerName: string;
+    buyerId?: number | null;
+    buyerFirstName: string;
+    buyerLastName: string;
     buyerContact?: string;
     saleNotes?: string;
     discountAmount?: number;
     finalPrice: number;
     receivedAmount?: number;
-    changeAmount?: number;
   }): Promise<ApiResponse<any>> {
     try {
       const response = await this.http.post<ApiResponse<any>>(`${this.apiUrl}/for-auction/confirm-sale`, saleData).toPromise();
@@ -167,6 +168,55 @@ export class ItemService {
       return {
         success: false,
         message: error?.error?.message || 'Failed to confirm sale',
+        data: null
+      };
+    }
+  }
+
+  /**
+   * Search for pawners by name or contact number
+   */
+  async searchPawners(query: string): Promise<ApiResponse<any>> {
+    try {
+      const response = await this.http.get<ApiResponse<any>>(`${this.apiUrl.replace('/items', '/pawners')}/search?q=${encodeURIComponent(query)}`).toPromise();
+      return response || { success: false, message: 'No response', data: [] };
+    } catch (error: any) {
+      console.error('Error searching pawners:', error);
+      return {
+        success: false,
+        message: error?.error?.message || 'Failed to search pawners',
+        data: []
+      };
+    }
+  }
+
+  /**
+   * Get sold items with date filters
+   */
+  async getSoldItems(params: {
+    period?: 'today' | 'month' | 'year';
+    startDate?: string;
+    endDate?: string;
+  }): Promise<ApiResponse<any>> {
+    try {
+      let queryParams = new URLSearchParams();
+      if (params.period) {
+        queryParams.append('period', params.period);
+      }
+      if (params.startDate) {
+        queryParams.append('startDate', params.startDate);
+      }
+      if (params.endDate) {
+        queryParams.append('endDate', params.endDate);
+      }
+
+      const response = await this.http.get<ApiResponse<any>>(`${this.apiUrl}/sold-items?${queryParams.toString()}`).toPromise();
+      return response || { success: false, message: 'No response', data: null };
+    } catch (error: any) {
+      console.error('Error fetching sold items:', error);
+      return {
+        success: false,
+        message: error?.error?.message || 'Failed to fetch sold items',
         data: null
       };
     }
