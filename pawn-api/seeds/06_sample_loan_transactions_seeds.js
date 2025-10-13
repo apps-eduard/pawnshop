@@ -115,15 +115,22 @@ exports.seed = async function(knex) {
     const jewelryServiceCharge = 5; // Minimum service charge
     const jewelryTotalAmount = jewelryPrincipal + jewelryInterestAmount + jewelryServiceCharge;
 
-    // Insert pawner
+    // Insert address first
+    const [jewelryAddress] = await knex('addresses').insert({
+      city_id: butuanCity.id,
+      barangay_id: barangay.id,
+      address_details: `House ${jewelryPawnerId}, ${scenario.name} - Jewelry`,
+      created_at: knex.fn.now(),
+      updated_at: knex.fn.now()
+    }).returning('id');
+
+    // Insert pawner with address_id
     await knex('pawners').insert({
       id: jewelryPawnerId,
       first_name: `Sample${jewelryPawnerId}`,
       last_name: `Pawner`,
       mobile_number: `09${String(jewelryPawnerId).padStart(9, '0')}`,
-      city_id: butuanCity.id,
-      barangay_id: barangay.id,
-      street: `${scenario.name} - Jewelry`,
+      address_id: jewelryAddress.id,
       created_at: knex.fn.now(),
       updated_at: knex.fn.now()
     });
@@ -191,15 +198,22 @@ exports.seed = async function(knex) {
     const appliancesServiceCharge = 5; // Minimum service charge
     const appliancesTotalAmount = appliancesPrincipal + appliancesInterestAmount + appliancesServiceCharge;
 
-    // Insert pawner
+    // Insert address first
+    const [appliancesAddress] = await knex('addresses').insert({
+      city_id: butuanCity.id,
+      barangay_id: barangay.id,
+      address_details: `House ${appliancesPawnerId}, ${scenario.name} - Appliances`,
+      created_at: knex.fn.now(),
+      updated_at: knex.fn.now()
+    }).returning('id');
+
+    // Insert pawner with address_id
     await knex('pawners').insert({
       id: appliancesPawnerId,
       first_name: `Sample${appliancesPawnerId}`,
       last_name: `Pawner`,
       mobile_number: `09${String(appliancesPawnerId).padStart(9, '0')}`,
-      city_id: butuanCity.id,
-      barangay_id: barangay.id,
-      street: `${scenario.name} - Appliances`,
+      address_id: appliancesAddress.id,
       created_at: knex.fn.now(),
       updated_at: knex.fn.now()
     });

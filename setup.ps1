@@ -63,6 +63,7 @@ try {
     Write-Host "  - Seeding cities and barangays data..." -ForegroundColor Gray
     Write-Host "  - Seeding item descriptions..." -ForegroundColor Gray
     Write-Host "  - Seeding demo employees and RBAC..." -ForegroundColor Gray
+    Write-Host "  - Seeding menu items and permissions..." -ForegroundColor Gray
     npx knex seed:run
     if ($LASTEXITCODE -ne 0) { throw "Failed to seed database" }
 
@@ -104,7 +105,8 @@ try {
         Write-Host "  * Cities and barangays data seeded" -ForegroundColor Green
         Write-Host "  * Item descriptions seeded" -ForegroundColor Green
         Write-Host "  * Demo accounts created with password: password123" -ForegroundColor Green
-        Write-Host "  * RBAC system configured (5 roles, 8 menus)" -ForegroundColor Green
+        Write-Host "  * RBAC system configured (5 roles, 17 menus with cascading structure)" -ForegroundColor Green
+        Write-Host "  * Menu items: Management (6 children), Transactions (7 children), Reports" -ForegroundColor Green
         Write-Host "  * Employee roles assigned (7 employees)" -ForegroundColor Green
         Write-Host ""
         Write-Host "To start the application:" -ForegroundColor Cyan
