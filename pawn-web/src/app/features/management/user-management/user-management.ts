@@ -111,7 +111,9 @@ export class UserManagementComponent implements OnInit, OnDestroy {
           if (response.success) {
             this.users = response.data.map(user => ({
               ...user,
-              isEditing: false
+              isEditing: false,
+              // Convert roles array from objects to strings
+              roles: Array.isArray(user.roles) ? user.roles.map((r: any) => r.name) : []
               // cityName and barangayName already come from backend
             }));
             this.applyFilters();

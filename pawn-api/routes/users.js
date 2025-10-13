@@ -37,7 +37,14 @@ router.get('/', requireAdmin, async (req, res) => {
              c.name as city_name,
              br.name as barangay_name,
              last_login.created_at as last_login_at,
-             last_login.ip_address as last_login_ip
+             last_login.ip_address as last_login_ip,
+             COALESCE(
+               (SELECT json_agg(json_build_object('id', r.id, 'name', r.name, 'displayName', r.display_name, 'isPrimary', er.is_primary) ORDER BY er.is_primary DESC, r.name)
+                FROM employee_roles er
+                JOIN roles r ON er.role_id = r.id
+                WHERE er.employee_id = e.id),
+               '[]'::json
+             ) as roles
       FROM employees e
       LEFT JOIN branches b ON e.branch_id = b.id
       LEFT JOIN addresses a ON e.address_id = a.id
@@ -61,6 +68,7 @@ router.get('/', requireAdmin, async (req, res) => {
       lastName: row.last_name,
       contactNumber: row.mobile_number,
       role: row.role,
+      roles: row.roles,
       isActive: row.is_active,
       branchName: row.branch_name,
       addressId: row.address_id,
@@ -244,7 +252,14 @@ router.get('/:id', requireAdmin, async (req, res) => {
       SELECT e.id, e.username, e.email, e.first_name, e.middle_name, e.last_name, e.role, 
              e.mobile_number, e.is_active, e.created_at, e.updated_at,
              e.position, e.contact_number, e.address,
-             b.name as branch_name
+             b.name as branch_name,
+             COALESCE(
+               (SELECT json_agg(json_build_object('id', r.id, 'name', r.name, 'displayName', r.display_name, 'isPrimary', er.is_primary) ORDER BY er.is_primary DESC, r.name)
+                FROM employee_roles er
+                JOIN roles r ON er.role_id = r.id
+                WHERE er.employee_id = e.id),
+               '[]'::json
+             ) as roles
       FROM employees e
       LEFT JOIN branches b ON e.branch_id = b.id
       WHERE e.id = $1
@@ -267,6 +282,7 @@ router.get('/:id', requireAdmin, async (req, res) => {
       lastName: row.last_name,
       mobileNumber: row.mobile_number,
       role: row.role,
+      roles: row.roles,
       isActive: row.is_active,
       position: row.position,
       contactNumber: row.contact_number,

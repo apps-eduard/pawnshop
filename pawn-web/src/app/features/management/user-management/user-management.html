@@ -350,9 +350,11 @@
 
           <!-- Role -->
           <td class="px-6 py-4 whitespace-nowrap">
-            <div *ngIf="!user.isEditing">
-              <span [class]="getRoleBadgeClass(user.role)" class="inline-flex px-2 py-1 text-xs font-semibold rounded-full">
-                {{ getRoleDisplayName(user.role) }}
+            <div *ngIf="!user.isEditing" class="flex flex-wrap gap-1">
+              <span *ngFor="let role of (user.roles && user.roles.length > 0 ? user.roles : [user.role])"
+                    [class]="getRoleBadgeClass(role)"
+                    class="inline-flex px-2 py-1 text-xs font-semibold rounded-full">
+                {{ getRoleDisplayName(role) }}
               </span>
             </div>
             <div *ngIf="user.isEditing" class="space-y-1">

@@ -150,15 +150,23 @@ router.post('/login', [
     // Remove sensitive data
     delete user.password_hash;
     
-    // Determine available roles based on user's role
-    let availableRoles = [user.role]; // Default: single role
-    
-    // Only Manager and Auctioneer have access to multiple roles
-    // Administrator stays as single role for security
-    if (user.role === 'manager') {
-      availableRoles = ['manager', 'auctioneer', 'cashier'];
-    } else if (user.role === 'auctioneer') {
-      availableRoles = ['auctioneer', 'appraiser', 'cashier'];
+    // Fetch all roles for the user from employee_roles table
+    let availableRoles = [user.role]; // Default to primary role if no roles found
+    try {
+      const rolesResult = await pool.query(`
+        SELECT r.name
+        FROM employee_roles er
+        JOIN roles r ON er.role_id = r.id
+        WHERE er.employee_id = $1
+        ORDER BY er.is_primary DESC, r.name
+      `, [user.id]);
+      
+      if (rolesResult.rows.length > 0) {
+        availableRoles = rolesResult.rows.map(row => row.name);
+      }
+    } catch (rolesError) {
+      console.error('❌ Error fetching user roles:', rolesError);
+      // Fall back to single role if query fails
     }
     
     console.log(`👥 Available roles for ${username}: [${availableRoles.join(', ')}]`);
