@@ -31,6 +31,7 @@ const rbacRoutes = require('./routes/rbac');
 const queueRoutes = require('./routes/queue');
 const healthRoutes = require('./routes/health');
 const auctioneerRoutes = require('./routes/auctioneer');
+const menuConfigRoutes = require('./routes/menu-config');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -191,6 +192,7 @@ app.use('/api/reports', reportsRoutes);
 app.use('/api/rbac', rbacRoutes);
 app.use('/api/auctioneer', auctioneerRoutes);
 app.use('/api/queue', queueRoutes);
+app.use('/api/menu-config', menuConfigRoutes);
 
 // New Dynamic RBAC v2 routes
 const rbacV2Routes = require('./routes/rbac-v2');

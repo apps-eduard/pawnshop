@@ -14,6 +14,8 @@ interface NavigationItem {
   route: string;
   icon: string;
   roles: string[];
+  children?: NavigationItem[]; // Add children support
+  isExpanded?: boolean; // Track expanded state
 }
 
 interface VoucherForm {
@@ -133,9 +135,12 @@ export class SidebarComponent implements OnInit, OnDestroy {
   updateNavigationCache(): void {
     if (this.useDynamicMenus && this.dynamicMenuItems && this.dynamicMenuItems.length > 0) {
       const dynamicItems = this.getDynamicNavigation();
-      this.cachedNavigationItems = dynamicItems.map(menu => this.convertToNavigationItem(menu));
+      const flatItems = dynamicItems.map(menu => this.convertToNavigationItem(menu));
+      this.cachedNavigationItems = this.buildHierarchy(flatItems);
+      console.log('📦 Navigation cache updated with hierarchy');
     } else {
       this.cachedNavigationItems = this.getFilteredNavigation();
+      console.log('📦 Navigation cache updated with static menus');
     }
   }
 
@@ -163,15 +168,73 @@ export class SidebarComponent implements OnInit, OnDestroy {
       label: menu.name,
       route: route,
       icon: menu.icon,
-      roles: []
+      roles: [],
+      children: undefined, // Will be populated in buildHierarchy
+      isExpanded: false
     };
+  }
+
+  buildHierarchy(items: NavigationItem[]): NavigationItem[] {
+    console.log('🔧 buildHierarchy called with items:', items.length);
+    console.log('🔧 dynamicMenuItems:', this.dynamicMenuItems.length);
+    
+    const map = new Map<string, NavigationItem>();
+    const roots: NavigationItem[] = [];
+
+    // Create a map of all items WITHOUT children array initially
+    items.forEach(item => {
+      map.set(item.label, { ...item, children: undefined, isExpanded: false });
+      console.log(`  📝 Mapped: ${item.label}`);
+    });
+
+    // Build the hierarchy
+    this.dynamicMenuItems.forEach(menu => {
+      const item = map.get(menu.name);
+      if (item) {
+        if (menu.parent_id === null) {
+          // Root item
+          roots.push(item);
+          console.log(`  🌳 Root: ${menu.name} (id: ${menu.id})`);
+        } else {
+          // Find parent
+          const parent = this.dynamicMenuItems.find(m => m.id === menu.parent_id);
+          if (parent) {
+            const parentItem = map.get(parent.name);
+            if (parentItem) {
+              if (!parentItem.children) {
+                parentItem.children = [];
+              }
+              parentItem.children.push(item);
+              console.log(`  👶 Child: ${menu.name} → Parent: ${parent.name}`);
+            }
+          } else {
+            console.log(`  ⚠️ Parent not found for ${menu.name} (parent_id: ${menu.parent_id})`);
+          }
+        }
+      } else {
+        console.log(`  ⚠️ Item not in map: ${menu.name}`);
+      }
+    });
+
+    // Debug: Log hierarchy structure
+    console.log('🔍 Built hierarchy:', roots);
+    roots.forEach(root => {
+      if (root.children && root.children.length > 0) {
+        console.log(`  ✅ ${root.label} has ${root.children.length} children`, root.children.map(c => c.label));
+      } else {
+        console.log(`  ⚪ ${root.label} has no children`);
+      }
+    });
+
+    return roots;
   }
 
   getNavigation(): NavigationItem[] {
     try {
       if (this.useDynamicMenus && this.dynamicMenuItems && this.dynamicMenuItems.length > 0) {
         const dynamicItems = this.getDynamicNavigation();
-        return dynamicItems.map(menu => this.convertToNavigationItem(menu));
+        const flatItems = dynamicItems.map(menu => this.convertToNavigationItem(menu));
+        return this.buildHierarchy(flatItems);
       }
       return this.getFilteredNavigation();
     } catch (error) {
@@ -210,6 +273,28 @@ export class SidebarComponent implements OnInit, OnDestroy {
   handleMenuClick(event: Event, route: string): void {
     // Just close the sidebar - routerLink will handle navigation
     this.closeSidebar.emit();
+  }
+
+  // Toggle parent menu expansion
+  toggleMenu(item: NavigationItem, event?: Event): void {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+
+    // Only toggle if item has children
+    if (item.children && item.children.length > 0) {
+      item.isExpanded = !item.isExpanded;
+    } else if (item.route && item.route !== '#') {
+      // Navigate if it's a leaf item with a route
+      this.router.navigate([item.route]);
+      this.closeSidebar.emit();
+    }
+  }
+
+  // Check if item has children
+  hasChildren(item: NavigationItem): boolean {
+    return item.children !== undefined && item.children.length > 0;
   }
 
   // Close sidebar when clicking outside (mobile)

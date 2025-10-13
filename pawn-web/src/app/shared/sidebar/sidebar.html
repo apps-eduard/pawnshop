@@ -75,16 +75,58 @@
           Navigation {{ useDynamicMenus ? '(Dynamic)' : '(Static)' }}
         </div>
 
-        <div *ngFor="let item of cachedNavigationItems" class="group">
-          <a
-            [routerLink]="item.route"
-            routerLinkActive="bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 border-r-2 border-primary-500"
-            class="flex items-center px-3 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 rounded-l-md hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white transition-all duration-200 group"
-            (click)="handleMenuClick($event, item.route)">
-            <span class="text-lg mr-3">{{ item.icon }}</span>
-            {{ item.label }}
-          </a>
-        </div>
+        <!-- Render hierarchical menu -->
+        <ng-container *ngFor="let item of cachedNavigationItems">
+          <!-- Parent menu item (with or without children) -->
+          <div class="group">
+            <a
+              *ngIf="!hasChildren(item)"
+              [routerLink]="item.route"
+              routerLinkActive="bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 border-r-2 border-primary-500"
+              class="flex items-center px-3 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 rounded-l-md hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white transition-all duration-200 group"
+              (click)="handleMenuClick($event, item.route)">
+              <span class="text-lg mr-3">{{ item.icon }}</span>
+              {{ item.label }}
+            </a>
+
+            <!-- Parent with children (expandable) -->
+            <div *ngIf="hasChildren(item)">
+              <button
+                (click)="toggleMenu(item, $event)"
+                class="w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 rounded-l-md hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white transition-all duration-200"
+                [class.bg-gray-50]="item.isExpanded"
+                [class.dark:bg-gray-800]="item.isExpanded">
+                <div class="flex items-center">
+                  <span class="text-lg mr-3">{{ item.icon }}</span>
+                  {{ item.label }}
+                </div>
+                <svg
+                  class="w-4 h-4 transition-transform duration-200"
+                  [class.rotate-90]="item.isExpanded"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                </svg>
+              </button>
+
+              <!-- Child menu items -->
+              <div
+                *ngIf="item.isExpanded && item.children"
+                class="ml-6 mt-1 space-y-1 border-l-2 border-gray-200 dark:border-gray-700 pl-2">
+                <a
+                  *ngFor="let child of item.children"
+                  [routerLink]="child.route"
+                  routerLinkActive="bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 border-r-2 border-primary-500"
+                  class="flex items-center px-3 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 rounded-l-md hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white transition-all duration-200"
+                  (click)="closeSidebar.emit()">
+                  <span class="text-base mr-2">{{ child.icon }}</span>
+                  {{ child.label }}
+                </a>
+              </div>
+            </div>
+          </div>
+        </ng-container>
       </nav>
     </div>
 
