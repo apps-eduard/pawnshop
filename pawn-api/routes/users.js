@@ -59,7 +59,7 @@ router.get('/', requireAdmin, async (req, res) => {
       firstName: row.first_name,
       middleName: row.middle_name,
       lastName: row.last_name,
-      mobileNumber: row.mobile_number,
+      contactNumber: row.mobile_number,
       role: row.role,
       isActive: row.is_active,
       branchName: row.branch_name,
@@ -527,7 +527,7 @@ router.put('/:id', requireAdmin, async (req, res) => {
       employeeValues.push(position);
     }
     if (contactNumber !== undefined) {
-      employeeFields.push(`contact_number = $${paramCount++}`);
+      employeeFields.push(`mobile_number = $${paramCount++}`);
       employeeValues.push(contactNumber);
     }
     if (branchId !== undefined) {
