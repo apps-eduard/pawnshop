@@ -336,11 +336,26 @@
                         Balance: {{ formatCurrency(history.balance) }}
                       </p>
                     </ng-container>
+                    <!-- Auction Sale Display -->
+                    <ng-container *ngIf="history.transactionType === 'auction_sale'">
+                      <p class="text-xs font-medium text-gray-900 dark:text-white">
+                        Auction Price: {{ formatCurrency(history.principalAmount) }}
+                      </p>
+                      <p class="text-xs text-gray-600 dark:text-gray-400" *ngIf="history.discountAmount">
+                        Discount: -{{ formatCurrency(history.discountAmount) }}
+                      </p>
+                      <p class="text-xs text-green-600 dark:text-green-400">
+                        Final Sale: {{ formatCurrency(history.amountPaid) }}
+                      </p>
+                      <p class="text-xs text-gray-500 dark:text-gray-400 mt-1" *ngIf="history.notes">
+                        {{ history.notes }}
+                      </p>
+                    </ng-container>
                     <!-- For other transaction types, show generic format -->
-                    <p class="text-xs font-medium text-gray-900 dark:text-white" *ngIf="history.transactionType !== 'partial_payment' && history.transactionType !== 'new_loan' && history.transactionType !== 'additional_loan' && history.transactionType !== 'renewal' && history.transactionType !== 'redemption'">
+                    <p class="text-xs font-medium text-gray-900 dark:text-white" *ngIf="history.transactionType !== 'partial_payment' && history.transactionType !== 'new_loan' && history.transactionType !== 'additional_loan' && history.transactionType !== 'renewal' && history.transactionType !== 'redemption' && history.transactionType !== 'auction_sale'">
                       <span *ngIf="history.amountPaid">Paid: {{ formatCurrency(history.amountPaid) }}</span>
                     </p>
-                    <p class="text-xs text-gray-500 dark:text-gray-400" *ngIf="history.transactionType !== 'partial_payment' && history.transactionType !== 'new_loan' && history.transactionType !== 'additional_loan' && history.transactionType !== 'renewal' && history.transactionType !== 'redemption'">
+                    <p class="text-xs text-gray-500 dark:text-gray-400" *ngIf="history.transactionType !== 'partial_payment' && history.transactionType !== 'new_loan' && history.transactionType !== 'additional_loan' && history.transactionType !== 'renewal' && history.transactionType !== 'redemption' && history.transactionType !== 'auction_sale'">
                       Balance: {{ formatCurrency(history.balance) }}
                     </p>
                   </div>

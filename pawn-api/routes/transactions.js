@@ -101,7 +101,7 @@ router.get('/search/:ticketNumber', async (req, res) => {
       SELECT 
         t.*,
         p.first_name, p.last_name, p.mobile_number, p.email,
-        p.city_id, p.barangay_id, p.house_number, p.street,
+        a.city_id, a.barangay_id, a.address_details,
         c.name as city_name, 
         b.name as barangay_name,
         e.first_name as cashier_first_name, 
@@ -109,8 +109,9 @@ router.get('/search/:ticketNumber', async (req, res) => {
         br.name as branch_name
       FROM transactions t
       JOIN pawners p ON t.pawner_id = p.id
-      LEFT JOIN cities c ON p.city_id = c.id
-      LEFT JOIN barangays b ON p.barangay_id = b.id
+      LEFT JOIN addresses a ON p.address_id = a.id
+      LEFT JOIN cities c ON a.city_id = c.id
+      LEFT JOIN barangays b ON a.barangay_id = b.id
       LEFT JOIN branches br ON t.branch_id = br.id
       LEFT JOIN employees e ON t.created_by = e.id
       WHERE t.id = $1
@@ -251,7 +252,7 @@ router.get('/search/:ticketNumber', async (req, res) => {
         pawnerEmail: row.email,
         cityName: row.city_name,
         barangayName: row.barangay_name,
-        completeAddress: `${row.house_number || ''} ${row.street || ''}`.trim(),
+        completeAddress: row.address_details || '',
         // Branch information
         branchName: row.branch_name,
         // Cashier information
@@ -406,7 +407,7 @@ router.get('/', async (req, res) => {
     const result = await pool.query(`
       SELECT t.*, 
              p.first_name, p.last_name, p.mobile_number, p.email,
-             p.city_id, p.barangay_id, p.house_number, p.street,
+             a.city_id, a.barangay_id, a.address_details,
              c.name as city_name, b.name as barangay_name,
              e.first_name as cashier_first_name, e.last_name as cashier_last_name,
              br.name as branch_name,
@@ -473,8 +474,9 @@ router.get('/', async (req, res) => {
              ) as transaction_history
       FROM transactions t
       JOIN pawners p ON t.pawner_id = p.id
-      LEFT JOIN cities c ON p.city_id = c.id
-      LEFT JOIN barangays b ON p.barangay_id = b.id
+      LEFT JOIN addresses a ON p.address_id = a.id
+      LEFT JOIN cities c ON a.city_id = c.id
+      LEFT JOIN barangays b ON a.barangay_id = b.id
       LEFT JOIN branches br ON t.branch_id = br.id
       LEFT JOIN employees e ON t.created_by = e.id
       WHERE ${whereClause}
@@ -483,6 +485,7 @@ router.get('/', async (req, res) => {
     `, params);
     
     console.log(`✅ Found ${result.rows.length} transactions (Total: ${total})`);
+    console.log(`📊 Transaction IDs found:`, result.rows.map(r => `${r.id}:${r.transaction_number}:${r.transaction_type}`));
     
     // Debug: Check if transaction_history exists in first row
     if (result.rows.length > 0) {
@@ -570,7 +573,7 @@ router.get('/', async (req, res) => {
       pawnerAddress: {
         city: row.city_name,
         barangay: row.barangay_name,
-        details: `${row.house_number || ''} ${row.street || ''}`.trim()
+        details: row.address_details || ''
       },
       // Cashier information
       cashierName: `${row.cashier_first_name || ''} ${row.cashier_last_name || ''}`.trim(),
@@ -612,14 +615,15 @@ router.get('/:id', async (req, res) => {
     const result = await pool.query(`
       SELECT t.*, 
              p.first_name, p.last_name, p.mobile_number, p.email,
-             p.city_id, p.barangay_id, p.address_details,
+             a.city_id, a.barangay_id, a.address_details,
              c.name as city_name, b.name as barangay_name,
              u.first_name as cashier_first_name, u.last_name as cashier_last_name,
              br.name as branch_name
       FROM transactions t
       JOIN pawners p ON t.pawner_id = p.id
-      LEFT JOIN cities c ON p.city_id = c.id
-      LEFT JOIN barangays b ON p.barangay_id = b.id
+      LEFT JOIN addresses a ON p.address_id = a.id
+      LEFT JOIN cities c ON a.city_id = c.id
+      LEFT JOIN barangays b ON a.barangay_id = b.id
       LEFT JOIN branches br ON t.branch_id = br.id
       LEFT JOIN employees u ON t.created_by = u.id
       WHERE t.id = $1
@@ -697,7 +701,7 @@ router.get('/:id', async (req, res) => {
         pawnerAddress: {
           city: row.city_name,
           barangay: row.barangay_name,
-          details: `${row.house_number || ''} ${row.street || ''}`.trim()
+          details: row.address_details || ''
         },
         // Cashier information
         cashierName: `${row.cashier_first_name} ${row.cashier_last_name}`,
@@ -767,20 +771,44 @@ router.post('/new-loan', async (req, res) => {
       if (pawnerData.id) {
         pawnerId = pawnerData.id;
       } else {
-        // Create new pawner
+        // Create new pawner with address
+        let addressId = null;
+        
+        // Create or find address if city and barangay provided
+        if (pawnerData.cityId && pawnerData.barangayId) {
+          const addressDetails = pawnerData.addressDetails || 'No address details';
+          
+          // Check if address exists
+          const existingAddress = await client.query(`
+            SELECT id FROM addresses 
+            WHERE city_id = $1 AND barangay_id = $2 AND address_details = $3
+          `, [pawnerData.cityId, pawnerData.barangayId, addressDetails]);
+          
+          if (existingAddress.rows.length > 0) {
+            addressId = existingAddress.rows[0].id;
+          } else {
+            // Create new address
+            const newAddress = await client.query(`
+              INSERT INTO addresses (city_id, barangay_id, address_details)
+              VALUES ($1, $2, $3)
+              RETURNING id
+            `, [pawnerData.cityId, pawnerData.barangayId, addressDetails]);
+            addressId = newAddress.rows[0].id;
+          }
+        }
+        
+        // Create pawner with address_id
         const pawnerResult = await client.query(`
           INSERT INTO pawners (
-            first_name, last_name, mobile_number, email,
-            city_id, barangay_id, house_number
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+            first_name, last_name, mobile_number, email, address_id
+          ) VALUES ($1, $2, $3, $4, $5)
           RETURNING id
         `, [
           pawnerData.firstName, pawnerData.lastName, pawnerData.contactNumber,
-          pawnerData.email || null, pawnerData.cityId, pawnerData.barangayId,
-          pawnerData.addressDetails || ''
+          pawnerData.email || null, addressId
         ]);
         pawnerId = pawnerResult.rows[0].id;
-        console.log(`✅ Created new pawner: ${pawnerId}`);
+        console.log(`✅ Created new pawner: ${pawnerId} with address: ${addressId}`);
       }
       
       // 2. Generate ticket number using configuration

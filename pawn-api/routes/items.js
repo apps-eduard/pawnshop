@@ -941,8 +941,22 @@ router.post('/for-auction/confirm-sale', async (req, res) => {
       // Generate proper transaction number (TXN-202510-XXXXXX format)
       const transactionNumber = await generateTicketNumber();
       
-      // Generate tracking number for this auction sale transaction
-      const trackingNumber = `TRK-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      // **USE ORIGINAL LOAN'S TRACKING NUMBER** to link auction sale to loan history
+      let trackingNumber = `TRK-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`; // Fallback
+      let previousTransactionNumber = null;
+      
+      if (soldItem.transaction_id) {
+        // Get the original transaction's tracking number and transaction number
+        const origTrans = await client.query(
+          'SELECT tracking_number, transaction_number FROM transactions WHERE id = $1',
+          [soldItem.transaction_id]
+        );
+        if (origTrans.rows.length > 0) {
+          trackingNumber = origTrans.rows[0].tracking_number; // Use same tracking number
+          previousTransactionNumber = origTrans.rows[0].transaction_number;
+          console.log(`🔗 Linking auction sale to original loan chain: ${trackingNumber}`);
+        }
+      }
       
       console.log(`📝 Creating transaction record for auction sale: ${transactionNumber}`);
       
@@ -960,6 +974,7 @@ router.post('/for-auction/confirm-sale', async (req, res) => {
         INSERT INTO transactions (
           transaction_number,
           tracking_number,
+          previous_transaction_number,
           transaction_type,
           transaction_date,
           granted_date,
@@ -980,14 +995,15 @@ router.post('/for-auction/confirm-sale', async (req, res) => {
           created_by,
           updated_by
         ) VALUES (
-          $1, $2, 'auction_sale', CURRENT_DATE, CURRENT_DATE,
+          $1, $2, $3, 'auction_sale', CURRENT_DATE, CURRENT_DATE,
           CURRENT_DATE, CURRENT_DATE, CURRENT_DATE,
-          $3, $4, $5, 0, 0, 0, $6, $6, 0,
-          'completed', $7, $8, $8
+          $4, $5, $6, 0, 0, 0, $7, $7, 0,
+          'completed', $8, $9, $9
         ) RETURNING id
       `, [
         transactionNumber,
         trackingNumber,
+        previousTransactionNumber,
         finalBuyerId,
         branchId,
         item.auction_price || finalPrice, // Original auction price as principal

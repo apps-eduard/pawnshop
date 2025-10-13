@@ -41,9 +41,10 @@ router.get('/search', async (req, res) => {
     
     const result = await pool.query(`
       SELECT p.id, p.first_name, p.last_name, p.mobile_number, p.email,
-             p.house_number as address, p.id_type, p.id_number, p.birth_date, p.is_active,
+             a.address_details as address, p.id_type, p.id_number, p.birth_date, p.is_active,
              p.created_at, p.updated_at
       FROM pawners p
+      LEFT JOIN addresses a ON p.address_id = a.id
       WHERE p.is_active = true
         AND (
           LOWER(p.first_name) LIKE LOWER($1) OR
@@ -107,12 +108,13 @@ router.get('/', async (req, res) => {
     
     const result = await pool.query(`
       SELECT p.id, p.first_name, p.last_name, p.mobile_number as contact_number, p.email,
-             p.city_id, p.barangay_id, p.house_number as address_details, p.is_active,
+             p.address_id, a.city_id, a.barangay_id, a.address_details, p.is_active,
              p.created_at, p.updated_at,
              c.name as city_name, b.name as barangay_name
       FROM pawners p
-      LEFT JOIN cities c ON p.city_id = c.id
-      LEFT JOIN barangays b ON p.barangay_id = b.id
+      LEFT JOIN addresses a ON p.address_id = a.id
+      LEFT JOIN cities c ON a.city_id = c.id
+      LEFT JOIN barangays b ON a.barangay_id = b.id
       ORDER BY p.created_at DESC
     `);
     
@@ -127,6 +129,7 @@ router.get('/', async (req, res) => {
         lastName: row.last_name,
         contactNumber: row.contact_number,
         email: row.email,
+        addressId: row.address_id,
         cityId: row.city_id,
         barangayId: row.barangay_id,
         addressDetails: row.address_details,
@@ -155,12 +158,13 @@ router.get('/:id', async (req, res) => {
     
     const result = await pool.query(`
       SELECT p.id, p.first_name, p.last_name, p.mobile_number as contact_number, p.email,
-             p.city_id, p.barangay_id, p.house_number as address_details, p.is_active,
+             p.address_id, a.city_id, a.barangay_id, a.address_details, p.is_active,
              p.created_at, p.updated_at,
              c.name as city_name, b.name as barangay_name
       FROM pawners p
-      LEFT JOIN cities c ON p.city_id = c.id
-      LEFT JOIN barangays b ON p.barangay_id = b.id
+      LEFT JOIN addresses a ON p.address_id = a.id
+      LEFT JOIN cities c ON a.city_id = c.id
+      LEFT JOIN barangays b ON a.barangay_id = b.id
       WHERE p.id = $1
     `, [id]);
     
@@ -182,6 +186,7 @@ router.get('/:id', async (req, res) => {
         lastName: row.last_name,
         contactNumber: row.contact_number,
         email: row.email,
+        addressId: row.address_id,
         cityId: row.city_id,
         barangayId: row.barangay_id,
         addressDetails: row.address_details,
@@ -224,7 +229,7 @@ router.post('/', async (req, res) => {
     }
     
     // Use default values for optional fields if not provided
-    const safeAddressDetails = addressDetails || '';
+    const safeAddressDetails = addressDetails || 'No address details';
     const safeCityId = cityId || null;
     const safeBarangayId = barangayId || null;
     
@@ -250,11 +255,35 @@ router.post('/', async (req, res) => {
     `);
     const currentBranchId = branchResult.rows.length > 0 ? parseInt(branchResult.rows[0].branch_id) : 1;
 
+    // Create or find address first (if city and barangay provided)
+    let addressId = null;
+    if (safeCityId && safeBarangayId) {
+      // Try to find existing address
+      const existingAddress = await pool.query(`
+        SELECT id FROM addresses 
+        WHERE city_id = $1 AND barangay_id = $2 AND address_details = $3
+      `, [safeCityId, safeBarangayId, safeAddressDetails]);
+
+      if (existingAddress.rows.length > 0) {
+        addressId = existingAddress.rows[0].id;
+        console.log(`♻️ Using existing address: ${addressId}`);
+      } else {
+        // Create new address
+        const newAddress = await pool.query(`
+          INSERT INTO addresses (city_id, barangay_id, address_details)
+          VALUES ($1, $2, $3)
+          RETURNING id
+        `, [safeCityId, safeBarangayId, safeAddressDetails]);
+        addressId = newAddress.rows[0].id;
+        console.log(`➕ Created new address: ${addressId}`);
+      }
+    }
+
     const result = await pool.query(`
-      INSERT INTO pawners (first_name, last_name, mobile_number, email, city_id, barangay_id, house_number, branch_id, is_active)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-      RETURNING id, first_name, last_name, mobile_number as contact_number, email, city_id, barangay_id, house_number as address_details, branch_id, is_active, created_at, updated_at
-    `, [firstName, lastName, contactNumber, email, safeCityId, safeBarangayId, safeAddressDetails, currentBranchId, isActive]);
+      INSERT INTO pawners (first_name, last_name, mobile_number, email, address_id, branch_id, is_active)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      RETURNING id, first_name, last_name, mobile_number as contact_number, email, address_id, branch_id, is_active, created_at, updated_at
+    `, [firstName, lastName, contactNumber, email, addressId, currentBranchId, isActive]);
     
     const row = result.rows[0];
     
@@ -287,9 +316,10 @@ router.post('/', async (req, res) => {
         lastName: row.last_name,
         contactNumber: row.contact_number,
         email: row.email,
-        cityId: row.city_id,
-        barangayId: row.barangay_id,
-        addressDetails: row.address_details,
+        addressId: row.address_id,
+        cityId: safeCityId,
+        barangayId: safeBarangayId,
+        addressDetails: safeAddressDetails,
         branchId: row.branch_id,
         isActive: row.is_active,
         createdAt: row.created_at,
@@ -366,18 +396,63 @@ router.put('/:id', async (req, res) => {
       fields.push(`email = $${paramCount++}`);
       values.push(email);
     }
-    if (cityId !== undefined) {
-      fields.push(`city_id = $${paramCount++}`);
-      values.push(cityId);
+    
+    // Handle address update - update or create address record
+    if (cityId !== undefined || barangayId !== undefined || addressDetails !== undefined) {
+      // Get current pawner address info
+      const currentPawner = await pool.query(
+        'SELECT address_id FROM pawners WHERE id = $1',
+        [id]
+      );
+      
+      let currentAddressId = currentPawner.rows[0].address_id;
+      let finalCityId = cityId;
+      let finalBarangayId = barangayId;
+      let finalAddressDetails = addressDetails;
+      
+      // If updating address but some fields not provided, get current values
+      if (currentAddressId && (cityId === undefined || barangayId === undefined || addressDetails === undefined)) {
+        const currentAddress = await pool.query(
+          'SELECT city_id, barangay_id, address_details FROM addresses WHERE id = $1',
+          [currentAddressId]
+        );
+        
+        if (currentAddress.rows.length > 0) {
+          finalCityId = cityId !== undefined ? cityId : currentAddress.rows[0].city_id;
+          finalBarangayId = barangayId !== undefined ? barangayId : currentAddress.rows[0].barangay_id;
+          finalAddressDetails = addressDetails !== undefined ? addressDetails : currentAddress.rows[0].address_details;
+        }
+      }
+      
+      // Only proceed if we have both city and barangay
+      if (finalCityId && finalBarangayId) {
+        // Check if address already exists
+        const existingAddress = await pool.query(`
+          SELECT id FROM addresses 
+          WHERE city_id = $1 AND barangay_id = $2 AND address_details = $3
+        `, [finalCityId, finalBarangayId, finalAddressDetails || 'No address details']);
+        
+        let newAddressId;
+        if (existingAddress.rows.length > 0) {
+          newAddressId = existingAddress.rows[0].id;
+          console.log(`♻️ Using existing address: ${newAddressId}`);
+        } else {
+          // Create new address
+          const createdAddress = await pool.query(`
+            INSERT INTO addresses (city_id, barangay_id, address_details)
+            VALUES ($1, $2, $3)
+            RETURNING id
+          `, [finalCityId, finalBarangayId, finalAddressDetails || 'No address details']);
+          newAddressId = createdAddress.rows[0].id;
+          console.log(`➕ Created new address: ${newAddressId}`);
+        }
+        
+        // Update pawner's address_id
+        fields.push(`address_id = $${paramCount++}`);
+        values.push(newAddressId);
+      }
     }
-    if (barangayId !== undefined) {
-      fields.push(`barangay_id = $${paramCount++}`);
-      values.push(barangayId);
-    }
-    if (addressDetails !== undefined) {
-      fields.push(`street = $${paramCount++}`);
-      values.push(addressDetails);
-    }
+    
     if (isActive !== undefined) {
       fields.push(`is_active = $${paramCount++}`);
       values.push(isActive);

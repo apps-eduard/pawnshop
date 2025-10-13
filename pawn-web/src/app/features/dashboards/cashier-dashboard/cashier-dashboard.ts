@@ -666,7 +666,8 @@ export class CashierDashboard implements OnInit, OnDestroy {
       'partial_payment': 'Partial Payment',
       'redemption': 'Redemption',
       'renewal': 'Renewal',
-      'full_payment': 'Full Payment'
+      'full_payment': 'Full Payment',
+      'auction_sale': 'Auction Sale'
     };
     return labels[type] || type;
   }

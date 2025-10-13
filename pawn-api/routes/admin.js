@@ -734,6 +734,7 @@ router.get('/transaction-config', async (req, res) => {
 router.put('/transaction-config', async (req, res) => {
   try {
     console.log(`⚙️ [${new Date().toISOString()}] Admin updating transaction config - User: ${req.user?.username || 'Unauthenticated'}`);
+    console.log('📦 Request body:', JSON.stringify(req.body, null, 2));
     
     const {
       prefix,
@@ -744,11 +745,31 @@ router.put('/transaction-config', async (req, res) => {
       separator
     } = req.body;
     
+    console.log('🔍 Extracted values:', { prefix, includeYear, includeMonth, includeDay, sequenceDigits, separator });
+    
     // Validate required fields
-    if (!prefix || typeof sequenceDigits !== 'number') {
+    if (!prefix) {
+      console.log('❌ Validation failed: prefix is missing');
       return res.status(400).json({
         success: false,
-        message: 'Invalid configuration data'
+        message: 'Transaction prefix is required'
+      });
+    }
+    
+    if (sequenceDigits === undefined || sequenceDigits === null) {
+      console.log('❌ Validation failed: sequenceDigits is missing');
+      return res.status(400).json({
+        success: false,
+        message: 'Sequence digits is required'
+      });
+    }
+    
+    const parsedSequenceDigits = parseInt(sequenceDigits);
+    if (isNaN(parsedSequenceDigits) || parsedSequenceDigits < 2 || parsedSequenceDigits > 6) {
+      console.log('❌ Validation failed: sequenceDigits is invalid');
+      return res.status(400).json({
+        success: false,
+        message: 'Sequence digits must be a number between 2 and 6'
       });
     }
     
@@ -757,9 +778,11 @@ router.put('/transaction-config', async (req, res) => {
       includeYear: !!includeYear,
       includeMonth: !!includeMonth,
       includeDay: !!includeDay,
-      sequenceDigits: parseInt(sequenceDigits),
+      sequenceDigits: parsedSequenceDigits,
       separator: separator || '-'
     };
+    
+    console.log('💾 Saving configuration:', JSON.stringify(config, null, 2));
     
     // Insert or update configuration
     await pool.query(`
@@ -771,7 +794,7 @@ router.put('/transaction-config', async (req, res) => {
         updated_at = NOW()
     `, [JSON.stringify(config)]);
     
-    console.log('✅ Transaction configuration updated:', config);
+    console.log('✅ Transaction configuration updated successfully');
     
     res.json({
       success: true,

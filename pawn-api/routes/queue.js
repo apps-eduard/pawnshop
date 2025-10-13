@@ -99,13 +99,14 @@ router.get('/', async (req, res) => {
         pq.joined_at, pq.called_at, pq.completed_at, pq.wait_time_minutes,
         pq.service_time_minutes, pq.notes,
         p.id as pawner_id, p.first_name, p.last_name, p.mobile_number, p.email,
-        p.house_number as address, p.city_id, p.barangay_id,
+        a.address_details as address, a.city_id, a.barangay_id,
         b.name as branch_name,
         e.username as processed_by_username,
         e.first_name as processed_by_first_name,
         e.last_name as processed_by_last_name
       FROM pawner_queue pq
       INNER JOIN pawners p ON pq.pawner_id = p.id
+      LEFT JOIN addresses a ON p.address_id = a.id
       LEFT JOIN branches b ON pq.branch_id = b.id
       LEFT JOIN employees e ON pq.processed_by = e.id
       WHERE 1=1
