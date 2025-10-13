@@ -177,7 +177,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
   buildHierarchy(items: NavigationItem[]): NavigationItem[] {
     console.log('🔧 buildHierarchy called with items:', items.length);
     console.log('🔧 dynamicMenuItems:', this.dynamicMenuItems.length);
-    
+
     const map = new Map<string, NavigationItem>();
     const roots: NavigationItem[] = [];
 

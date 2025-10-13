@@ -33,6 +33,42 @@ export class MenuConfigComponent implements OnInit {
   showCreateModal = false;
   showEditModal = false;
   showDeleteModal = false;
+  showIconPicker = false;
+  isEditMode = false;
+
+  // Icon picker options
+  availableIcons = [
+    { emoji: '📊', name: 'Chart/Dashboard' },
+    { emoji: '📁', name: 'Folder/Management' },
+    { emoji: '💰', name: 'Money/Transactions' },
+    { emoji: '👥', name: 'Users/People' },
+    { emoji: '🧑‍🤝‍🧑', name: 'Pawner/People' },
+    { emoji: '🏠', name: 'House/Address' },
+    { emoji: '📦', name: 'Box/Items' },
+    { emoji: '🎟️', name: 'Voucher/Ticket' },
+    { emoji: '💎', name: 'Diamond/Appraisal' },
+    { emoji: '➕', name: 'Plus/Add' },
+    { emoji: '💵', name: 'Dollar/Payment' },
+    { emoji: '🎁', name: 'Gift/Redeem' },
+    { emoji: '🔄', name: 'Refresh/Renew' },
+    { emoji: '🔨', name: 'Hammer/Auction' },
+    { emoji: '📈', name: 'Reports/Analytics' },
+    { emoji: '⚙️', name: 'Settings/Config' },
+    { emoji: '🔐', name: 'Lock/Security' },
+    { emoji: '📋', name: 'Clipboard/List' },
+    { emoji: '🏦', name: 'Bank/Financial' },
+    { emoji: '💳', name: 'Credit Card' },
+    { emoji: '📱', name: 'Phone/Mobile' },
+    { emoji: '🔔', name: 'Bell/Notification' },
+    { emoji: '📅', name: 'Calendar/Date' },
+    { emoji: '🕐', name: 'Clock/Time' },
+    { emoji: '📝', name: 'Note/Document' },
+    { emoji: '✅', name: 'Check/Success' },
+    { emoji: '❌', name: 'Cross/Cancel' },
+    { emoji: '⚠️', name: 'Warning/Alert' },
+    { emoji: '🔍', name: 'Search/Find' },
+    { emoji: '🌟', name: 'Star/Featured' }
+  ];
 
   // Form data
   menuForm: Partial<MenuItem> = {
@@ -306,5 +342,20 @@ export class MenuConfigComponent implements OnInit {
     this.filterActive = 'all';
     this.filterParent = 'all';
     this.applyFilters();
+  }
+
+  // Icon picker methods
+  openIconPicker(isEdit: boolean = false): void {
+    this.isEditMode = isEdit;
+    this.showIconPicker = true;
+  }
+
+  closeIconPicker(): void {
+    this.showIconPicker = false;
+  }
+
+  selectIcon(icon: string): void {
+    this.menuForm.icon = icon;
+    this.closeIconPicker();
   }
 }

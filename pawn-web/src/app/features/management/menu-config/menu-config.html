@@ -229,15 +229,29 @@
         </div>
 
         <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Icon * (Emoji)</label>
-          <input
-            type="text"
-            [(ngModel)]="menuForm.icon"
-            placeholder="📁 or 💰"
-            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-            maxlength="4"
-            required
-          />
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Icon *</label>
+          <div class="flex gap-2">
+            <div class="flex-1 relative">
+              <input
+                type="text"
+                [(ngModel)]="menuForm.icon"
+                placeholder="Click 'Choose Icon' button"
+                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                readonly
+                required
+              />
+              <div *ngIf="menuForm.icon" class="absolute right-3 top-2.5 text-2xl">
+                {{ menuForm.icon }}
+              </div>
+            </div>
+            <button
+              type="button"
+              (click)="openIconPicker(false)"
+              class="px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors whitespace-nowrap"
+            >
+              Choose Icon
+            </button>
+          </div>
         </div>
 
         <div>
@@ -344,15 +358,29 @@
         </div>
 
         <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Icon * (Emoji)</label>
-          <input
-            type="text"
-            [(ngModel)]="menuForm.icon"
-            placeholder="📁 or 💰"
-            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-            maxlength="4"
-            required
-          />
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Icon *</label>
+          <div class="flex gap-2">
+            <div class="flex-1 relative">
+              <input
+                type="text"
+                [(ngModel)]="menuForm.icon"
+                placeholder="Click 'Choose Icon' button"
+                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                readonly
+                required
+              />
+              <div *ngIf="menuForm.icon" class="absolute right-3 top-2.5 text-2xl">
+                {{ menuForm.icon }}
+              </div>
+            </div>
+            <button
+              type="button"
+              (click)="openIconPicker(true)"
+              class="px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors whitespace-nowrap"
+            >
+              Choose Icon
+            </button>
+          </div>
         </div>
 
         <div>
@@ -463,6 +491,46 @@
         >
           <span *ngIf="!isSaving">Delete</span>
           <span *ngIf="isSaving">Deleting...</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Icon Picker Modal -->
+<div *ngIf="showIconPicker" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+  <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+    <div class="p-6">
+      <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Choose an Icon</h2>
+        <button (click)="closeIconPicker()" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+
+      <div class="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-3">
+        <button
+          *ngFor="let iconOption of availableIcons"
+          (click)="selectIcon(iconOption.emoji)"
+          class="flex flex-col items-center justify-center p-4 border-2 border-gray-200 dark:border-gray-700 rounded-lg hover:border-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-all duration-200"
+          [class.border-primary-500]="menuForm.icon === iconOption.emoji"
+          [class.bg-primary-50]="menuForm.icon === iconOption.emoji"
+          [class.dark:bg-primary-900/20]="menuForm.icon === iconOption.emoji"
+          title="{{ iconOption.name }}"
+        >
+          <span class="text-4xl mb-2">{{ iconOption.emoji }}</span>
+          <span class="text-xs text-gray-600 dark:text-gray-400 text-center">{{ iconOption.name }}</span>
+        </button>
+      </div>
+
+      <div class="mt-6 flex gap-3">
+        <button
+          (click)="closeIconPicker()"
+          class="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+        >
+          Cancel
         </button>
       </div>
     </div>
