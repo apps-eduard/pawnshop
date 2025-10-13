@@ -194,6 +194,10 @@ app.use('/api/auctioneer', auctioneerRoutes);
 app.use('/api/queue', queueRoutes);
 app.use('/api/menu-config', menuConfigRoutes);
 
+// Audit logs and trails routes
+const auditRoutes = require('./routes/audit');
+app.use('/api/audit', auditRoutes);
+
 // New Dynamic RBAC v2 routes
 const rbacV2Routes = require('./routes/rbac-v2');
 app.use('/api/rbac-v2', rbacV2Routes);

@@ -67,6 +67,15 @@ try {
     npx knex seed:run
     if ($LASTEXITCODE -ne 0) { throw "Failed to seed database" }
 
+    Write-Host "Fixing audit tables schema..." -ForegroundColor Cyan
+    Write-Host "  - Recreating audit_logs table with correct structure..." -ForegroundColor Gray
+    Write-Host "  - Recreating audit_trails table with transaction tracking..." -ForegroundColor Gray
+    Write-Host "  - Adding performance indexes..." -ForegroundColor Gray
+    node run-audit-migration.js
+    if ($LASTEXITCODE -ne 0) { 
+        Write-Host "⚠️  Warning: Audit tables migration failed, but continuing..." -ForegroundColor Yellow
+    }
+
     Set-Location ".."
 
     Write-Host "Setting up frontend dependencies..." -ForegroundColor Cyan
@@ -105,9 +114,10 @@ try {
         Write-Host "  * Cities and barangays data seeded" -ForegroundColor Green
         Write-Host "  * Item descriptions seeded" -ForegroundColor Green
         Write-Host "  * Demo accounts created with password: password123" -ForegroundColor Green
-        Write-Host "  * RBAC system configured (5 roles, 17 menus with cascading structure)" -ForegroundColor Green
-        Write-Host "  * Menu items: Management (6 children), Transactions (7 children), Reports" -ForegroundColor Green
+        Write-Host "  * RBAC system configured (5 roles, 18 menus with cascading structure)" -ForegroundColor Green
+        Write-Host "  * Menu items: Management (6 children), Transactions (7 children), Reports, RBAC, Settings, Audit Logs" -ForegroundColor Green
         Write-Host "  * Employee roles assigned (7 employees)" -ForegroundColor Green
+        Write-Host "  * Audit system configured (audit_logs and audit_trails tables)" -ForegroundColor Green
         Write-Host ""
         Write-Host "To start the application:" -ForegroundColor Cyan
         Write-Host "1. Terminal 1: cd pawn-api; npm start" -ForegroundColor Yellow

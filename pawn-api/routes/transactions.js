@@ -3,6 +3,7 @@ const { pool } = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
 const { generateTicketNumber } = require('../utils/transactionUtils');
 const PenaltyCalculatorService = require('../services/penalty-calculator.service');
+const { logAuditTrail, getIpAddress, getUserAgent } = require('../utils/auditLogger');
 
 const router = express.Router();
 const penaltyCalculator = new PenaltyCalculatorService();
@@ -954,19 +955,30 @@ router.post('/new-loan', async (req, res) => {
       }
       console.log(`✅ Added ${items.length} items to ticket`);
       
-      // 8. Log audit trail
-      await client.query(`
-        INSERT INTO audit_logs (
-          entity_type, entity_id, action, user_id, changes, description
-        ) VALUES ($1, $2, $3, $4, $5, $6)
-      `, [
-        'transactions',
-        transaction.id,
-        'CREATE',
-        req.user.id,
-        JSON.stringify({ new_values: transaction }),
-        'New loan transaction created'
-      ]);
+      // 8. Log audit trail for transaction creation
+      await logAuditTrail({
+        transactionId: transaction.id,
+        loanNumber: ticketNumber,
+        userId: req.user.id,
+        username: req.user.username,
+        actionType: 'CREATE',
+        description: `New loan created - Principal: ₱${principalAmount.toFixed(2)}, Items: ${items.length}`,
+        oldData: null,
+        newData: {
+          transaction_number: ticketNumber,
+          principal_amount: principalAmount,
+          interest_rate: interestRate,
+          total_amount: totalAmount,
+          status: 'active',
+          item_count: items.length
+        },
+        amount: principalAmount,
+        statusBefore: null,
+        statusAfter: 'active',
+        branchId: req.user.branch_id || 1,
+        ipAddress: getIpAddress(req),
+        client
+      });
       
       // 9. Mark source appraisal as completed if this loan was created from a pending appraisal
       if (sourceAppraisalId) {

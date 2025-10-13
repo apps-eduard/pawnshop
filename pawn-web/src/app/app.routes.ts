@@ -5,6 +5,7 @@ import { transactionRoutes } from './features/transactions/routes/transaction.ro
 import { dashboardRoutes } from './features/dashboards/routes/dashboard.routes';
 import { managementRoutes } from './features/management/routes/management.routes';
 import { settingsRoutes } from './features/settings/routes/settings.routes';
+import { AUDIT_ROUTES } from './features/audit/routes/audit.routes';
 // Import auth component
 import { LoginComponent } from './auth/login/login';
 // Import layout component
@@ -70,6 +71,12 @@ export const routes: Routes = [
       {
         path: 'profile',
         component: ProfileComponent
+      },
+
+      // Audit Logs Route
+      {
+        path: 'audit',
+        children: AUDIT_ROUTES
       },
 
       // Legacy redirects for management

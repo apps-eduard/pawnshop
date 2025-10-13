@@ -24,9 +24,9 @@ exports.seed = async function(knex) {
     },
     {
       id: 19,
-      name: 'Transactions',
+      name: 'Transaction',
       route: null,
-      icon: '💰',
+      icon: '📁',
       parent_id: null,
       order_index: 200,
       is_active: true
@@ -162,7 +162,7 @@ exports.seed = async function(knex) {
     }
   ]).returning('*');
 
-  console.log('✅ Created Transactions children: Appraisal, New Loan, Additional, Partial Payment, Redeem, Renew, Auction');
+  console.log('✅ Created Transaction children: Appraisal, New Loan, Additional, Partial Payment, Redeem, Renew, Auction');
 
   // Insert standalone menu items (no parent)
   const standaloneMenus = await knex('menu_items').insert([
@@ -201,10 +201,20 @@ exports.seed = async function(knex) {
       parent_id: null,
       order_index: 600,
       is_active: true
+    },
+    {
+      id: 23,
+      name: 'Audit Logs',
+      route: '/audit',
+      icon: '📊',
+      parent_id: null,
+      order_index: 700,
+      is_active: true,
+      description: 'View system audit logs and transaction trails'
     }
   ]).returning('*');
 
-  console.log('✅ Created standalone menus: Reports, RBAC, Menu Config, Settings');
+  console.log('✅ Created standalone menus: Reports, RBAC, Menu Config, Settings, Audit Logs');
 
   // Get administrator role ID
   const adminRole = await knex('roles').where('name', 'administrator').first();
@@ -264,12 +274,13 @@ exports.seed = async function(knex) {
     can_delete: true
   }));
 
-  // Assign permissions for standalone menus (Reports, RBAC, Menu Config, Settings)
+  // Assign permissions for standalone menus (Reports, RBAC, Menu Config, Settings, Audit Logs)
   const standalonePermissions = [
     { role_id: adminRole.id, menu_item_id: 13, can_view: true, can_create: true, can_edit: true, can_delete: true },
     { role_id: adminRole.id, menu_item_id: 14, can_view: true, can_create: true, can_edit: true, can_delete: true },
     { role_id: adminRole.id, menu_item_id: 20, can_view: true, can_create: true, can_edit: true, can_delete: true },
-    { role_id: adminRole.id, menu_item_id: 22, can_view: true, can_create: true, can_edit: true, can_delete: true }
+    { role_id: adminRole.id, menu_item_id: 22, can_view: true, can_create: true, can_edit: true, can_delete: true },
+    { role_id: adminRole.id, menu_item_id: 23, can_view: true, can_create: false, can_edit: false, can_delete: false }
   ];
 
   // Insert all permissions for Administrator
@@ -371,7 +382,7 @@ exports.seed = async function(knex) {
   console.log('      ├─ 📦 Item');
   console.log('      ├─ 🎟️ Vouchers');
   console.log('      └─ 📋 Transactions');
-  console.log('   💰 Transactions (parent)');
+  console.log('   � Transactions (parent)');
   console.log('      ├─ 💎 Appraisal');
   console.log('      ├─ ➕ New Loan');
   console.log('      ├─ 💵 Additional');

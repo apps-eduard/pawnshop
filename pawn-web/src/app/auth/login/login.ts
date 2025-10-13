@@ -62,7 +62,7 @@ export class LoginComponent implements OnInit {
     },
     {
       role: 'Pawner',
-      username: 'pawner',
+      username: 'pawner1',
       password: 'password123',
       color: 'bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200',
       icon: '🎫',
@@ -161,7 +161,8 @@ export class LoginComponent implements OnInit {
     this.loginForm.patchValue({
       username: 'admin',
       password: 'password123'
-    });
+    })
+
     this.onSubmit();
   }
 

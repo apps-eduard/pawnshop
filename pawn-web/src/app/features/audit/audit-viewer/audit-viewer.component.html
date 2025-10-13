@@ -1,0 +1,583 @@
+<div class="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
+  <div class="max-w-7xl mx-auto">
+
+    <!-- Header -->
+    <div class="mb-6">
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+        📊 Audit System Viewer
+      </h1>
+      <p class="text-gray-600 dark:text-gray-400">
+        Monitor system activities and transaction history for compliance and security
+      </p>
+    </div>
+
+    <!-- Tabs -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 mb-6">
+      <div class="border-b border-gray-200 dark:border-gray-700">
+        <nav class="flex -mb-px">
+          <button
+            (click)="switchTab('dashboard')"
+            [class.border-primary-600]="activeTab === 'dashboard'"
+            [class.text-primary-600]="activeTab === 'dashboard'"
+            class="px-6 py-3 text-sm font-medium border-b-2 transition-colors hover:text-primary-600">
+            📈 Dashboard
+          </button>
+          <button
+            (click)="switchTab('logs')"
+            [class.border-primary-600]="activeTab === 'logs'"
+            [class.text-primary-600]="activeTab === 'logs'"
+            class="px-6 py-3 text-sm font-medium border-b-2 transition-colors hover:text-primary-600">
+            🗂️ System Audit Logs
+          </button>
+          <button
+            (click)="switchTab('trails')"
+            [class.border-primary-600]="activeTab === 'trails'"
+            [class.text-primary-600]="activeTab === 'trails'"
+            class="px-6 py-3 text-sm font-medium border-b-2 transition-colors hover:text-primary-600">
+            💰 Transaction Audit Trails
+          </button>
+        </nav>
+      </div>
+    </div>
+
+    <!-- Loading State -->
+    <div *ngIf="isLoading" class="flex items-center justify-center py-12">
+      <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- TAB 1: Dashboard -->
+    <!-- ========================================== -->
+    <div *ngIf="!isLoading && activeTab === 'dashboard'" class="space-y-6">
+      <!-- Statistics Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-sm font-medium text-gray-600 dark:text-gray-400">Total System Logs</span>
+            <span class="text-2xl">🗂️</span>
+          </div>
+          <div class="text-3xl font-bold text-gray-900 dark:text-white">{{ stats?.totalLogs || 0 }}</div>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">All system activities</p>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-sm font-medium text-gray-600 dark:text-gray-400">Total Transaction Trails</span>
+            <span class="text-2xl">💰</span>
+          </div>
+          <div class="text-3xl font-bold text-gray-900 dark:text-white">{{ stats?.totalTrails || 0 }}</div>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Financial transactions</p>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-sm font-medium text-gray-600 dark:text-gray-400">Today's System Logs</span>
+            <span class="text-2xl">📅</span>
+          </div>
+          <div class="text-3xl font-bold text-blue-600">{{ stats?.todayLogs || 0 }}</div>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Activities today</p>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-sm font-medium text-gray-600 dark:text-gray-400">Today's Transactions</span>
+            <span class="text-2xl">💸</span>
+          </div>
+          <div class="text-3xl font-bold text-green-600">{{ stats?.todayTrails || 0 }}</div>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Transactions today</p>
+        </div>
+      </div>
+
+      <!-- Top Actions & Users -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Top Actions -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Top Actions (Today)</h3>
+          </div>
+          <div class="p-6">
+            <div *ngFor="let item of stats?.topActions" class="flex items-center justify-between py-2">
+              <span class="text-sm text-gray-700 dark:text-gray-300">{{ item.action }}</span>
+              <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                {{ item.count }}
+              </span>
+            </div>
+            <p *ngIf="(!stats?.topActions) || (stats && stats.topActions && stats.topActions.length === 0)" class="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
+              No actions recorded today
+            </p>
+          </div>
+        </div>
+
+        <!-- Top Users -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Most Active Users (Today)</h3>
+          </div>
+          <div class="p-6">
+            <div *ngFor="let item of stats?.topUsers" class="flex items-center justify-between py-2">
+              <span class="text-sm text-gray-700 dark:text-gray-300">{{ item.username }}</span>
+              <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                {{ item.count }} actions
+              </span>
+            </div>
+            <p *ngIf="(!stats?.topUsers) || (stats && stats.topUsers && stats.topUsers.length === 0)" class="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
+              No user activity today
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- TAB 2: System Audit Logs -->
+    <!-- ========================================== -->
+    <div *ngIf="!isLoading && activeTab === 'logs'" class="space-y-6">
+      <!-- Filters -->
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Filters</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Action</label>
+            <select [(ngModel)]="logsFilters.action" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+              <option [ngValue]="undefined">All Actions</option>
+              <option *ngFor="let action of availableActions" [value]="action">{{ action }}</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Table</label>
+            <select [(ngModel)]="logsFilters.table_name" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+              <option [ngValue]="undefined">All Tables</option>
+              <option *ngFor="let table of availableTables" [value]="table">{{ table }}</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Date From</label>
+            <input type="date" [(ngModel)]="logsFilters.dateFrom" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Date To</label>
+            <input type="date" [(ngModel)]="logsFilters.dateTo" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+          </div>
+          <div class="md:col-span-2">
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Search</label>
+            <input type="text" [(ngModel)]="logsFilters.search" placeholder="Username, action, or table..." class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+          </div>
+          <div class="md:col-span-2 flex items-end gap-2">
+            <button (click)="applyLogsFilters()" class="flex-1 px-4 py-2 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition">
+              Apply Filters
+            </button>
+            <button (click)="clearLogsFilters()" class="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 font-medium rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition">
+              Clear
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Logs Table -->
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead class="bg-gray-50 dark:bg-gray-700">
+              <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Time</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">User</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Action</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Table</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Record ID</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">IP Address</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+              <tr *ngFor="let log of auditLogs" class="hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                  {{ formatDate(log.created_at) }}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                  {{ log.username || 'System' }}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <span [class]="'inline-flex px-2 py-1 text-xs font-medium rounded-full ' + getActionBadgeClass(log.action)">
+                    {{ log.action }}
+                  </span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                  {{ log.table_name || '-' }}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                  {{ log.record_id || '-' }}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                  {{ log.ip_address || '-' }}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm">
+                  <button (click)="viewLogDetails(log)" class="text-primary-600 hover:text-primary-800 font-medium">
+                    View Details
+                  </button>
+                </td>
+              </tr>
+              <tr *ngIf="auditLogs.length === 0">
+                <td colspan="7" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+                  No audit logs found
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination -->
+        <div *ngIf="logsPagination.totalPages > 1" class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
+          <div class="text-sm text-gray-700 dark:text-gray-300">
+            Showing {{ (logsPagination.currentPage - 1) * logsPagination.pageSize + 1 }} to {{ Math.min(logsPagination.currentPage * logsPagination.pageSize, logsPagination.totalRecords) }} of {{ logsPagination.totalRecords }} results
+          </div>
+          <div class="flex gap-2">
+            <button
+              (click)="changeLogsPage(logsPagination.currentPage - 1)"
+              [disabled]="logsPagination.currentPage === 1"
+              class="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed">
+              Previous
+            </button>
+            <button *ngFor="let page of getPaginationRange()"
+              (click)="page > 0 && changeLogsPage(page)"
+              [class.bg-primary-600]="page === logsPagination.currentPage"
+              [class.text-white]="page === logsPagination.currentPage"
+              class="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700">
+              {{ page > 0 ? page : '...' }}
+            </button>
+            <button
+              (click)="changeLogsPage(logsPagination.currentPage + 1)"
+              [disabled]="logsPagination.currentPage === logsPagination.totalPages"
+              class="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed">
+              Next
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- TAB 3: Transaction Audit Trails -->
+    <!-- ========================================== -->
+    <div *ngIf="!isLoading && activeTab === 'trails'" class="space-y-6">
+      <!-- Filters -->
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Filters</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Action Type</label>
+            <select [(ngModel)]="trailsFilters.action_type" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+              <option [ngValue]="undefined">All Actions</option>
+              <option *ngFor="let actionType of availableActionTypes" [value]="actionType">{{ actionType }}</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Loan Number</label>
+            <input type="text" [(ngModel)]="trailsFilters.loan_number" placeholder="PN-2025-00123" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Date From</label>
+            <input type="date" [(ngModel)]="trailsFilters.dateFrom" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Date To</label>
+            <input type="date" [(ngModel)]="trailsFilters.dateTo" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+          </div>
+          <div class="md:col-span-2">
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Search</label>
+            <input type="text" [(ngModel)]="trailsFilters.search" placeholder="Username, loan number, description..." class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+          </div>
+          <div class="md:col-span-2 flex items-end gap-2">
+            <button (click)="applyTrailsFilters()" class="flex-1 px-4 py-2 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition">
+              Apply Filters
+            </button>
+            <button (click)="clearTrailsFilters()" class="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 font-medium rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition">
+              Clear
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Trails Table -->
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead class="bg-gray-50 dark:bg-gray-700">
+              <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Time</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Loan Number</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">User</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Action</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Amount</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Status Change</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+              <tr *ngFor="let trail of auditTrails" class="hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                  {{ formatDate(trail.created_at) }}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                  {{ trail.loan_number || '-' }}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                  {{ trail.username || 'System' }}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <span [class]="'inline-flex px-2 py-1 text-xs font-medium rounded-full ' + getActionBadgeClass(trail.action_type)">
+                    {{ trail.action_type }}
+                  </span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                  {{ trail.amount ? '₱' + trail.amount.toFixed(2) : '-' }}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm">
+                  <span *ngIf="trail.status_before && trail.status_after">
+                    <span class="text-gray-500">{{ trail.status_before }}</span>
+                    <span class="mx-1">→</span>
+                    <span class="text-green-600 font-medium">{{ trail.status_after }}</span>
+                  </span>
+                  <span *ngIf="!trail.status_before || !trail.status_after" class="text-gray-400">-</span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm">
+                  <button (click)="viewTrailDetails(trail)" class="text-primary-600 hover:text-primary-800 font-medium">
+                    View Details
+                  </button>
+                </td>
+              </tr>
+              <tr *ngIf="auditTrails.length === 0">
+                <td colspan="7" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+                  No audit trails found
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination -->
+        <div *ngIf="trailsPagination.totalPages > 1" class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
+          <div class="text-sm text-gray-700 dark:text-gray-300">
+            Showing {{ (trailsPagination.currentPage - 1) * trailsPagination.pageSize + 1 }} to {{ Math.min(trailsPagination.currentPage * trailsPagination.pageSize, trailsPagination.totalRecords) }} of {{ trailsPagination.totalRecords }} results
+          </div>
+          <div class="flex gap-2">
+            <button
+              (click)="changeTrailsPage(trailsPagination.currentPage - 1)"
+              [disabled]="trailsPagination.currentPage === 1"
+              class="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed">
+              Previous
+            </button>
+            <button *ngFor="let page of getPaginationRange()"
+              (click)="page > 0 && changeTrailsPage(page)"
+              [class.bg-primary-600]="page === trailsPagination.currentPage"
+              [class.text-white]="page === trailsPagination.currentPage"
+              class="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700">
+              {{ page > 0 ? page : '...' }}
+            </button>
+            <button
+              (click)="changeTrailsPage(trailsPagination.currentPage + 1)"
+              [disabled]="trailsPagination.currentPage === trailsPagination.totalPages"
+              class="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed">
+              Next
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ========================================== -->
+<!-- MODAL: Log Details -->
+<!-- ========================================== -->
+<div *ngIf="selectedLog"
+     class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+  <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+    <div class="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 z-10">
+      <div class="flex items-center justify-between">
+        <h3 class="text-xl font-semibold text-gray-900 dark:text-white">
+          Audit Log Details
+        </h3>
+        <button
+          (click)="closeLogDetails()"
+          class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="px-6 py-4 space-y-4">
+      <!-- Basic Info -->
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Time</label>
+          <p class="text-sm text-gray-900 dark:text-white">{{ formatDate(selectedLog.created_at) }}</p>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">User</label>
+          <p class="text-sm text-gray-900 dark:text-white">{{ selectedLog.username || 'System' }}</p>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Action</label>
+          <span [class]="'inline-flex px-2 py-1 text-xs font-medium rounded-full ' + getActionBadgeClass(selectedLog.action)">
+            {{ selectedLog.action }}
+          </span>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Table</label>
+          <p class="text-sm text-gray-900 dark:text-white">{{ selectedLog.table_name || '-' }}</p>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Record ID</label>
+          <p class="text-sm text-gray-900 dark:text-white">{{ selectedLog.record_id || '-' }}</p>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">IP Address</label>
+          <p class="text-sm text-gray-900 dark:text-white">{{ selectedLog.ip_address || '-' }}</p>
+        </div>
+      </div>
+
+      <!-- User Agent -->
+      <div *ngIf="selectedLog.user_agent">
+        <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">User Agent</label>
+        <p class="text-xs text-gray-600 dark:text-gray-300 break-all">{{ selectedLog.user_agent }}</p>
+      </div>
+
+      <!-- Old Values -->
+      <div *ngIf="hasOldValues(selectedLog)" class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+        <h4 class="text-sm font-medium text-red-800 dark:text-red-300 mb-2">Old Values (Before)</h4>
+        <div class="space-y-2">
+          <div *ngFor="let key of getObjectKeys(selectedLog.old_values)" class="grid grid-cols-3 gap-2">
+            <span class="text-xs font-medium text-gray-600 dark:text-gray-400">{{ key }}:</span>
+            <pre class="col-span-2 text-xs text-gray-800 dark:text-gray-200 whitespace-pre-wrap">{{ formatValue(selectedLog.old_values![key]) }}</pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- New Values -->
+      <div *ngIf="hasNewValues(selectedLog)" class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+        <h4 class="text-sm font-medium text-green-800 dark:text-green-300 mb-2">New Values (After)</h4>
+        <div class="space-y-2">
+          <div *ngFor="let key of getObjectKeys(selectedLog.new_values)" class="grid grid-cols-3 gap-2">
+            <span class="text-xs font-medium text-gray-600 dark:text-gray-400">{{ key }}:</span>
+            <pre class="col-span-2 text-xs text-gray-800 dark:text-gray-200 whitespace-pre-wrap">{{ formatValue(selectedLog.new_values![key]) }}</pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sticky bottom-0 bg-gray-50 dark:bg-gray-700 border-t border-gray-200 dark:border-gray-600 px-6 py-4">
+      <button
+        (click)="closeLogDetails()"
+        class="w-full px-4 py-2 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 font-medium rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition">
+        Close
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ========================================== -->
+<!-- MODAL: Trail Details -->
+<!-- ========================================== -->
+<div *ngIf="selectedTrail"
+     class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+  <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+    <div class="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 z-10">
+      <div class="flex items-center justify-between">
+        <h3 class="text-xl font-semibold text-gray-900 dark:text-white">
+          Transaction Audit Trail Details
+        </h3>
+        <button
+          (click)="closeTrailDetails()"
+          class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="px-6 py-4 space-y-4">
+      <!-- Basic Info -->
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Time</label>
+          <p class="text-sm text-gray-900 dark:text-white">{{ formatDate(selectedTrail.created_at) }}</p>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Loan Number</label>
+          <p class="text-sm font-medium text-gray-900 dark:text-white">{{ selectedTrail.loan_number || '-' }}</p>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">User</label>
+          <p class="text-sm text-gray-900 dark:text-white">{{ selectedTrail.username || 'System' }}</p>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Action Type</label>
+          <span [class]="'inline-flex px-2 py-1 text-xs font-medium rounded-full ' + getActionBadgeClass(selectedTrail.action_type)">
+            {{ selectedTrail.action_type }}
+          </span>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Amount</label>
+          <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ selectedTrail.amount ? '₱' + selectedTrail.amount.toFixed(2) : '-' }}</p>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Status Change</label>
+          <p class="text-sm text-gray-900 dark:text-white">
+            <span *ngIf="selectedTrail.status_before && selectedTrail.status_after">
+              <span class="text-gray-500">{{ selectedTrail.status_before }}</span>
+              <span class="mx-1">→</span>
+              <span class="text-green-600 font-medium">{{ selectedTrail.status_after }}</span>
+            </span>
+            <span *ngIf="!selectedTrail.status_before || !selectedTrail.status_after">-</span>
+          </p>
+        </div>
+        <div class="col-span-2">
+          <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Description</label>
+          <p class="text-sm text-gray-900 dark:text-white">{{ selectedTrail.description }}</p>
+        </div>
+        <div *ngIf="selectedTrail.branch_name">
+          <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Branch</label>
+          <p class="text-sm text-gray-900 dark:text-white">{{ selectedTrail.branch_name }}</p>
+        </div>
+        <div *ngIf="selectedTrail.ip_address">
+          <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">IP Address</label>
+          <p class="text-sm text-gray-900 dark:text-white">{{ selectedTrail.ip_address }}</p>
+        </div>
+      </div>
+
+      <!-- Old Data -->
+      <div *ngIf="hasOldData(selectedTrail)" class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+        <h4 class="text-sm font-medium text-red-800 dark:text-red-300 mb-2">Old Data (Before Transaction)</h4>
+        <div class="space-y-2">
+          <div *ngFor="let key of getObjectKeys(selectedTrail.old_data)" class="grid grid-cols-3 gap-2">
+            <span class="text-xs font-medium text-gray-600 dark:text-gray-400">{{ key }}:</span>
+            <pre class="col-span-2 text-xs text-gray-800 dark:text-gray-200 whitespace-pre-wrap">{{ formatValue(selectedTrail.old_data![key]) }}</pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- New Data -->
+      <div *ngIf="hasNewData(selectedTrail)" class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+        <h4 class="text-sm font-medium text-green-800 dark:text-green-300 mb-2">New Data (After Transaction)</h4>
+        <div class="space-y-2">
+          <div *ngFor="let key of getObjectKeys(selectedTrail.new_data)" class="grid grid-cols-3 gap-2">
+            <span class="text-xs font-medium text-gray-600 dark:text-gray-400">{{ key }}:</span>
+            <pre class="col-span-2 text-xs text-gray-800 dark:text-gray-200 whitespace-pre-wrap">{{ formatValue(selectedTrail.new_data![key]) }}</pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sticky bottom-0 bg-gray-50 dark:bg-gray-700 border-t border-gray-200 dark:border-gray-600 px-6 py-4">
+      <button
+        (click)="closeTrailDetails()"
+        class="w-full px-4 py-2 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 font-medium rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition">
+        Close
+      </button>
+    </div>
+  </div>
+</div>
