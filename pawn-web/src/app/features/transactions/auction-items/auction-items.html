@@ -463,10 +463,10 @@
                      (click)="selectBuyer(buyer)"
                      class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer border-b border-gray-200 dark:border-gray-700 last:border-0">
                   <div class="text-sm font-medium text-gray-900 dark:text-white">
-                    {{ buyer.first_name }} {{ buyer.last_name }}
+                    {{ buyer.firstName }} {{ buyer.lastName }}
                   </div>
                   <div class="text-xs text-gray-500 dark:text-gray-400">
-                    {{ buyer.mobile_number || 'No contact' }} • Code: {{ buyer.customer_code }}
+                    {{ buyer.contactNumber || 'No contact' }}<span *ngIf="buyer.customerCode"> • Id: {{ buyer.customerCode }}</span>
                   </div>
                 </div>
               </div>
@@ -476,10 +476,10 @@
                 <div class="flex items-center justify-between">
                   <div>
                     <div class="text-sm font-medium text-gray-900 dark:text-white">
-                      {{ selectedBuyer.first_name }} {{ selectedBuyer.last_name }}
+                      {{ selectedBuyer.firstName }} {{ selectedBuyer.lastName }}
                     </div>
                     <div class="text-xs text-gray-500 dark:text-gray-400">
-                      {{ selectedBuyer.mobile_number || 'No contact' }}
+                      {{ selectedBuyer.contactNumber || 'No contact' }}
                     </div>
                   </div>
                   <button

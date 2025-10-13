@@ -15,7 +15,7 @@ router.get('/', async (req, res) => {
     
     const result = await pool.query(`
       SELECT pi.id, pi.custom_description, 
-             pi.appraised_value, pi.loan_amount,
+             pi.appraised_value, t.principal_amount as loan_amount,
              pi.appraisal_notes,
              pi.status, pi.location, pi.created_at,
              t.transaction_number, t.principal_amount, t.status as transaction_status,
@@ -79,7 +79,7 @@ router.get('/expired', async (req, res) => {
         pi.id, 
         pi.custom_description,
         pi.appraised_value,
-        pi.loan_amount,
+        t.principal_amount as loan_amount,
         pi.auction_price,
         pi.status,
         t.id as transaction_id,
@@ -253,7 +253,7 @@ router.get('/for-auction/list', async (req, res) => {
         pi.id, 
         pi.custom_description,
         pi.appraised_value,
-        pi.loan_amount,
+        t.principal_amount as loan_amount,
         pi.auction_price,
         pi.status,
         t.transaction_number as ticket_number,
@@ -427,7 +427,7 @@ router.get('/sold-items', authorizeRoles('administrator', 'admin', 'manager', 'a
         pi.id,
         pi.custom_description,
         pi.appraised_value,
-        pi.loan_amount,
+        t.principal_amount as loan_amount,
         pi.auction_price,
         pi.discount_amount,
         pi.final_price,
@@ -548,7 +548,7 @@ router.get('/:id', async (req, res) => {
     
     const result = await pool.query(`
       SELECT pi.id, pi.transaction_id, pi.custom_description, 
-             pi.appraised_value, pi.loan_amount, pi.appraisal_notes, 
+             pi.appraised_value, t.principal_amount as loan_amount, pi.appraisal_notes, 
              pi.status, pi.location, pi.created_at,
              t.transaction_number, t.principal_amount, t.status as transaction_status,
              p.id as pawner_id, p.first_name, p.last_name, p.mobile_number,

@@ -94,7 +94,7 @@ router.get('/transactions', authorizeRoles('manager', 'admin', 'administrator'),
     const auctionQuery = `
       SELECT 
         COUNT(*) as count,
-        COALESCE(SUM(auction_price), 0) as total_amount,
+        COALESCE(SUM(final_price), 0) as total_amount,
         DATE(updated_at) as sale_date
       FROM pawn_items
       WHERE status = 'sold'
@@ -174,7 +174,7 @@ router.get('/revenue', authorizeRoles('manager', 'admin', 'administrator'), asyn
       SELECT 
         DATE(updated_at) as date,
         COUNT(*) as count,
-        COALESCE(SUM(auction_price), 0) as auction_revenue
+        COALESCE(SUM(final_price), 0) as auction_revenue
       FROM pawn_items
       WHERE status = 'sold'
       ${startDate && endDate ? `AND DATE(updated_at) BETWEEN $1 AND $2` : `AND DATE(updated_at) = CURRENT_DATE`}
@@ -348,7 +348,12 @@ router.get('/expired-items', authorizeRoles('manager', 'admin', 'administrator')
         i.status,
         COUNT(*) as count,
         COALESCE(SUM(i.appraised_value), 0) as total_appraised_value,
-        COALESCE(SUM(i.auction_price), 0) as total_auction_price
+        COALESCE(SUM(
+          CASE 
+            WHEN i.status = 'sold' THEN i.final_price
+            ELSE i.auction_price
+          END
+        ), 0) as total_auction_price
       FROM pawn_items i
       INNER JOIN transactions t ON i.transaction_id = t.id
       WHERE t.expiry_date < CURRENT_DATE

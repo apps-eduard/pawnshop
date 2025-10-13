@@ -56,7 +56,7 @@ router.get('/dashboard/stats', async (req, res) => {
       pool.query(`
         SELECT 
           COUNT(*) as count,
-          COALESCE(SUM(pi.auction_price), 0) as revenue
+          COALESCE(SUM(pi.final_price), 0) as revenue
         FROM pawn_items pi
         WHERE pi.status = 'sold'
           AND DATE(pi.sold_date) = $1
@@ -66,7 +66,7 @@ router.get('/dashboard/stats', async (req, res) => {
       pool.query(`
         SELECT 
           COUNT(*) as count,
-          COALESCE(SUM(pi.auction_price), 0) as revenue
+          COALESCE(SUM(pi.final_price), 0) as revenue
         FROM pawn_items pi
         WHERE pi.status = 'sold'
           AND EXTRACT(MONTH FROM pi.sold_date) = EXTRACT(MONTH FROM CURRENT_DATE)
@@ -77,7 +77,7 @@ router.get('/dashboard/stats', async (req, res) => {
       pool.query(`
         SELECT 
           COUNT(*) as count,
-          COALESCE(SUM(pi.auction_price), 0) as revenue
+          COALESCE(SUM(pi.final_price), 0) as revenue
         FROM pawn_items pi
         WHERE pi.status = 'sold'
           AND EXTRACT(YEAR FROM pi.sold_date) = EXTRACT(YEAR FROM CURRENT_DATE)
@@ -86,10 +86,10 @@ router.get('/dashboard/stats', async (req, res) => {
       // Average sale price
       pool.query(`
         SELECT 
-          COALESCE(AVG(pi.auction_price), 0) as avg_price
+          COALESCE(AVG(pi.final_price), 0) as avg_price
         FROM pawn_items pi
         WHERE pi.status = 'sold'
-          AND pi.auction_price IS NOT NULL
+          AND pi.final_price IS NOT NULL
       `)
     ]);
     

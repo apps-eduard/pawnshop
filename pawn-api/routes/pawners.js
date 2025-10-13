@@ -58,10 +58,10 @@ router.get('/search', async (req, res) => {
     
     const mappedResults = result.rows.map(row => ({
       id: row.id,
-      customer_code: row.customer_code,
-      first_name: row.first_name,
-      last_name: row.last_name,
-      mobile_number: row.mobile_number,
+      customerCode: row.customer_code,
+      firstName: row.first_name,
+      lastName: row.last_name,
+      contactNumber: row.mobile_number,
       email: row.email,
       address: row.address,
       idType: row.id_type,
@@ -73,7 +73,7 @@ router.get('/search', async (req, res) => {
     }));
 
     console.log(`✅ [${new Date().toISOString()}] Found ${result.rows.length} pawners matching: "${q}"`);
-    console.log(`📊 [${new Date().toISOString()}] Search results:`, mappedResults.map(r => `${r.first_name} ${r.last_name} (${r.customer_code})`));
+    console.log(`📊 [${new Date().toISOString()}] Search results:`, mappedResults.map(r => `${r.firstName} ${r.lastName} (${r.customerCode})`));
     
     const response = {
       success: true,

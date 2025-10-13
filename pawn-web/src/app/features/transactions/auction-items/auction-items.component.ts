@@ -519,9 +519,9 @@ export class AuctionItemsComponent implements OnInit, OnDestroy, AfterViewChecke
 
   selectBuyer(buyer: any): void {
     this.selectedBuyer = buyer;
-    this.buyerSearchQuery = `${buyer.first_name} ${buyer.last_name}`;
+    this.buyerSearchQuery = `${buyer.firstName} ${buyer.lastName}`;
     this.showSearchResults = false;
-    this.buyerContact = buyer.mobile_number || '';
+    this.buyerContact = buyer.contactNumber || '';
   }
 
   showNewCustomerForm(): void {
