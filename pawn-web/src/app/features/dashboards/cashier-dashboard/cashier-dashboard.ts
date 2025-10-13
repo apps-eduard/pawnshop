@@ -526,7 +526,8 @@ export class CashierDashboard implements OnInit, OnDestroy {
       new_loan: 'New Loan',
       payment: 'Payment',
       renewal: 'Renewal',
-      redemption: 'Redemption'
+      redemption: 'Redemption',
+      auction_sale: 'Auction Sale'
     };
 
     return typeMap[type] || type;

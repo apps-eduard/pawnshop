@@ -2,6 +2,7 @@ const express = require('express');
 const { authenticateToken, authorizeRoles } = require('../middleware/auth');
 const { pool } = require('../config/database');
 const { updateExpiredTransactions } = require('../utils/updateExpiredTransactions');
+const { generateTicketNumber } = require('../utils/transactionUtils');
 
 const router = express.Router();
 
@@ -441,7 +442,6 @@ router.get('/sold-items', authorizeRoles('administrator', 'admin', 'manager', 'a
         p.last_name as pawner_last_name,
         p.mobile_number as pawner_contact,
         buyer.id as buyer_id,
-        buyer.customer_code as buyer_code,
         buyer.first_name as buyer_first_name,
         buyer.last_name as buyer_last_name,
         buyer.mobile_number as buyer_contact,
@@ -482,7 +482,6 @@ router.get('/sold-items', authorizeRoles('administrator', 'admin', 'manager', 'a
         
         // Buyer info
         buyerId: row.buyer_id,
-        buyerCode: row.buyer_code || 'N/A',
         buyerName: row.buyer_first_name && row.buyer_last_name 
           ? `${row.buyer_first_name} ${row.buyer_last_name}` 
           : 'N/A',
@@ -889,18 +888,8 @@ router.post('/for-auction/confirm-sale', async (req, res) => {
         // Create new pawner record for the buyer
         console.log(`📝 Creating new pawner: ${buyerFirstName} ${buyerLastName}`);
         
-        // Generate customer code
-        const codeResult = await client.query(`
-          SELECT COALESCE(MAX(CAST(SUBSTRING(customer_code FROM 5) AS INTEGER)), 0) + 1 as next_code
-          FROM pawners
-          WHERE customer_code ~ '^CUST[0-9]+$'
-        `);
-        const nextCode = codeResult.rows[0].next_code;
-        const customerCode = `CUST${String(nextCode).padStart(6, '0')}`;
-        
         const newPawner = await client.query(`
           INSERT INTO pawners (
-            customer_code,
             first_name,
             last_name,
             mobile_number,
@@ -908,10 +897,9 @@ router.post('/for-auction/confirm-sale', async (req, res) => {
             created_by,
             updated_by
           )
-          VALUES ($1, $2, $3, $4, true, $5, $5)
+          VALUES ($1, $2, $3, true, $4, $4)
           RETURNING id
         `, [
-          customerCode,
           buyerFirstName.trim(),
           buyerLastName.trim(),
           buyerContact || null,
@@ -919,7 +907,7 @@ router.post('/for-auction/confirm-sale', async (req, res) => {
         ]);
         
         finalBuyerId = newPawner.rows[0].id;
-        console.log(`✅ Created new pawner with ID: ${finalBuyerId}, Code: ${customerCode}`);
+        console.log(`✅ Created new pawner with ID: ${finalBuyerId}`);
       } else {
         console.log(`👤 Using existing pawner ID: ${buyerId}`);
       }
@@ -937,7 +925,7 @@ router.post('/for-auction/confirm-sale', async (req, res) => {
           sold_date = CURRENT_DATE,
           updated_at = CURRENT_TIMESTAMP
         WHERE id = $6
-        RETURNING *
+        RETURNING *, transaction_id
       `, [
         finalBuyerId,
         saleNotes || null,
@@ -946,6 +934,70 @@ router.post('/for-auction/confirm-sale', async (req, res) => {
         receivedAmount || 0,
         itemId
       ]);
+      
+      const soldItem = updateResult.rows[0];
+      
+      // **CREATE TRANSACTION RECORD FOR AUCTION SALE**
+      // Generate proper transaction number (TXN-202510-XXXXXX format)
+      const transactionNumber = await generateTicketNumber();
+      
+      // Generate tracking number for this auction sale transaction
+      const trackingNumber = `TRK-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      
+      console.log(`📝 Creating transaction record for auction sale: ${transactionNumber}`);
+      
+      // Get branch_id from user or original transaction
+      let branchId = req.user.branchId;
+      if (!branchId && soldItem.transaction_id) {
+        const origTrans = await client.query(
+          'SELECT branch_id FROM transactions WHERE id = $1',
+          [soldItem.transaction_id]
+        );
+        branchId = origTrans.rows[0]?.branch_id || 1; // Default to branch 1
+      }
+      
+      const transactionResult = await client.query(`
+        INSERT INTO transactions (
+          transaction_number,
+          tracking_number,
+          transaction_type,
+          transaction_date,
+          granted_date,
+          maturity_date,
+          grace_period_date,
+          expiry_date,
+          pawner_id,
+          branch_id,
+          principal_amount,
+          interest_rate,
+          interest_amount,
+          service_charge,
+          total_amount,
+          amount_paid,
+          balance,
+          status,
+          notes,
+          created_by,
+          updated_by
+        ) VALUES (
+          $1, $2, 'auction_sale', CURRENT_DATE, CURRENT_DATE,
+          CURRENT_DATE, CURRENT_DATE, CURRENT_DATE,
+          $3, $4, $5, 0, 0, 0, $6, $6, 0,
+          'completed', $7, $8, $8
+        ) RETURNING id
+      `, [
+        transactionNumber,
+        trackingNumber,
+        finalBuyerId,
+        branchId,
+        item.auction_price || finalPrice, // Original auction price as principal
+        finalPrice, // Final price after discount as total/amount paid
+        saleNotes || `Auction sale - Item ${itemId}`,
+        req.user.id
+      ]);
+      
+      const saleTransactionId = transactionResult.rows[0].id;
+      console.log(`✅ Created transaction record ID: ${saleTransactionId} - ${transactionNumber}`);
       
       // Update transaction status if needed
       if (item.transaction_status === 'active') {

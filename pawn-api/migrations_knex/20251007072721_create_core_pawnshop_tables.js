@@ -27,7 +27,6 @@ exports.up = async function(knex) {
   // 2. Create pawners (customers) table
   await knex.schema.createTable('pawners', (table) => {
     table.increments('id').primary();
-    table.string('customer_code', 20).unique();
     table.string('first_name', 50).notNullable();
     table.string('middle_name', 50);
     table.string('last_name', 50).notNullable();

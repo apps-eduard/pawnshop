@@ -306,23 +306,6 @@ export class AuctionItemsComponent implements OnInit, OnDestroy, AfterViewChecke
     }).format(dateObj);
   }
 
-  viewItemDetails(item: AuctionItem): void {
-    console.log('View details for item:', item);
-    // Implement navigation to item details page
-  }
-
-  editItem(item: AuctionItem): void {
-    console.log('Edit item:', item);
-    // Implement edit functionality
-  }
-
-  deleteItem(item: AuctionItem): void {
-    if (confirm(`Are you sure you want to remove "${item.itemDescription}" from auction?`)) {
-      this.auctionItems = this.auctionItems.filter(i => i.id !== item.id);
-      this.applyFilters();
-    }
-  }
-
   async saleItem(item: AuctionItem): Promise<void> {
     // First, verify the item is still available for auction
     try {
@@ -507,8 +490,13 @@ export class AuctionItemsComponent implements OnInit, OnDestroy, AfterViewChecke
 
     try {
       // Call API to search pawners by name or contact
+      console.log('🔍 Searching buyers with query:', query);
       const response = await this.itemService.searchPawners(query);
+      console.log('📦 Full API response:', response);
+      console.log('📋 Response data:', response.data);
       this.searchResults = response.data || [];
+      console.log('🎯 Search results assigned:', this.searchResults);
+      console.log('🎯 First result:', this.searchResults[0]);
     } catch (error) {
       console.error('Error searching buyers:', error);
       this.searchResults = [];

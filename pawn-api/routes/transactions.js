@@ -493,96 +493,99 @@ router.get('/', async (req, res) => {
       console.log('  - transaction_history:', result.rows[0].transaction_history);
     }
     
+    // Map regular transactions
+    const transactions = result.rows.map(row => ({
+      id: row.id,
+      // Tracking chain fields
+      tracking_number: row.tracking_number,
+      trackingNumber: row.tracking_number,
+      previous_transaction_number: row.previous_transaction_number,
+      previousTransactionNumber: row.previous_transaction_number,
+      // Snake case for frontend compatibility
+      ticket_number: row.transaction_number,
+      transaction_type: row.transaction_type,
+      principal_amount: parseFloat(row.principal_amount || 0),
+      total_amount: parseFloat(row.total_amount || 0),
+      balance_remaining: parseFloat(row.balance || 0),
+      status: row.status,
+      loan_date: row.granted_date || row.transaction_date,
+      maturity_date: row.maturity_date,
+      grace_period_date: row.grace_period_date,
+      first_name: row.first_name,
+      last_name: row.last_name,
+      branch_name: row.branch_name || 'N/A',
+      // Camel case for backward compatibility
+      ticketNumber: row.transaction_number,
+      transactionNumber: row.transaction_number,
+      loanNumber: row.loan_number,
+      pawnerId: row.pawner_id,
+      branchId: row.branch_id,
+      createdBy: row.created_by,
+      transactionType: row.transaction_type,
+      transactionDate: row.transaction_date,
+      loanDate: row.granted_date || row.transaction_date,
+      dateGranted: row.granted_date || row.transaction_date,
+      maturityDate: row.maturity_date,
+      dateMatured: row.maturity_date,
+      gracePeriodDate: row.grace_period_date,
+      expiryDate: row.expiry_date,
+      dateExpired: row.expiry_date,
+      principalAmount: parseFloat(row.principal_amount || 0),
+      principalLoan: parseFloat(row.principal_amount || 0),
+      interestRate: parseFloat(row.interest_rate || 0), // Already stored as percentage (3, 6, etc.)
+      interest_rate: parseFloat(row.interest_rate || 0), // Same value, not decimal
+      interestAmount: parseFloat(row.interest_amount || 0),
+      interest_amount: parseFloat(row.interest_amount || 0),
+      serviceCharge: parseFloat(row.service_charge || 0),
+      service_charge: parseFloat(row.service_charge || 0),
+      penaltyAmount: parseFloat(row.penalty_amount || 0),
+      penalty_amount: parseFloat(row.penalty_amount || 0),
+      otherCharges: parseFloat(row.other_charges || 0),
+      other_charges: parseFloat(row.other_charges || 0),
+      netProceeds: parseFloat(row.principal_amount || 0) - parseFloat(row.service_charge || 0),
+      netProceed: parseFloat(row.principal_amount || 0) - parseFloat(row.service_charge || 0),
+      totalAmount: parseFloat(row.total_amount || 0),
+      paymentAmount: parseFloat(row.amount_paid || 0),
+      balanceRemaining: parseFloat(row.balance || 0),
+      dueAmount: parseFloat(row.balance || 0),
+      additionalAmount: 0,
+      renewalFee: 0,
+      penaltyAmount: parseFloat(row.penalty_amount || 0),
+      penalty: parseFloat(row.penalty_amount || 0),
+      status: row.status,
+      loanStatus: row.status,
+      redeemedDate: null,
+      renewedDate: null,
+      defaultedDate: null,
+      parentTicketId: row.parent_transaction_id,
+      approvedBy: row.approved_by,
+      notes: row.notes,
+      reason: null,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+      // Pawner information
+      pawnerName: `${row.first_name} ${row.last_name}`,
+      pawnerContact: row.mobile_number,
+      pawnerEmail: row.email,
+      pawnerAddress: {
+        city: row.city_name,
+        barangay: row.barangay_name,
+        details: `${row.house_number || ''} ${row.street || ''}`.trim()
+      },
+      // Cashier information
+      cashierName: `${row.cashier_first_name || ''} ${row.cashier_last_name || ''}`.trim(),
+      // Branch information
+      branchName: row.branch_name || 'N/A',
+      // Items information
+      items: row.items || [],
+      // Transaction history (partial payments, redemptions, etc.)
+      transactionHistory: row.transaction_history || []
+    }));
+    
     res.json({
       success: true,
       message: 'Transactions retrieved successfully',
-      data: result.rows.map(row => ({
-        id: row.id,
-        // Tracking chain fields
-        tracking_number: row.tracking_number,
-        trackingNumber: row.tracking_number,
-        previous_transaction_number: row.previous_transaction_number,
-        previousTransactionNumber: row.previous_transaction_number,
-        // Snake case for frontend compatibility
-        ticket_number: row.transaction_number,
-        transaction_type: row.transaction_type,
-        principal_amount: parseFloat(row.principal_amount || 0),
-        total_amount: parseFloat(row.total_amount || 0),
-        balance_remaining: parseFloat(row.balance || 0),
-        status: row.status,
-        loan_date: row.granted_date || row.transaction_date,
-        maturity_date: row.maturity_date,
-        grace_period_date: row.grace_period_date,
-        first_name: row.first_name,
-        last_name: row.last_name,
-        branch_name: row.branch_name || 'N/A',
-        // Camel case for backward compatibility
-        ticketNumber: row.transaction_number,
-        transactionNumber: row.transaction_number,
-        loanNumber: row.loan_number,
-        pawnerId: row.pawner_id,
-        branchId: row.branch_id,
-        createdBy: row.created_by,
-        transactionType: row.transaction_type,
-        transactionDate: row.transaction_date,
-        loanDate: row.granted_date || row.transaction_date,
-        dateGranted: row.granted_date || row.transaction_date,
-        maturityDate: row.maturity_date,
-        dateMatured: row.maturity_date,
-        gracePeriodDate: row.grace_period_date,
-        expiryDate: row.expiry_date,
-        dateExpired: row.expiry_date,
-        principalAmount: parseFloat(row.principal_amount || 0),
-        principalLoan: parseFloat(row.principal_amount || 0),
-        interestRate: parseFloat(row.interest_rate || 0), // Already stored as percentage (3, 6, etc.)
-        interest_rate: parseFloat(row.interest_rate || 0), // Same value, not decimal
-        interestAmount: parseFloat(row.interest_amount || 0),
-        interest_amount: parseFloat(row.interest_amount || 0),
-        serviceCharge: parseFloat(row.service_charge || 0),
-        service_charge: parseFloat(row.service_charge || 0),
-        penaltyAmount: parseFloat(row.penalty_amount || 0),
-        penalty_amount: parseFloat(row.penalty_amount || 0),
-        otherCharges: parseFloat(row.other_charges || 0),
-        other_charges: parseFloat(row.other_charges || 0),
-        netProceeds: parseFloat(row.principal_amount || 0) - parseFloat(row.service_charge || 0),
-        netProceed: parseFloat(row.principal_amount || 0) - parseFloat(row.service_charge || 0),
-        totalAmount: parseFloat(row.total_amount || 0),
-        paymentAmount: parseFloat(row.amount_paid || 0),
-        balanceRemaining: parseFloat(row.balance || 0),
-        dueAmount: parseFloat(row.balance || 0),
-        additionalAmount: 0,
-        renewalFee: 0,
-        penaltyAmount: parseFloat(row.penalty_amount || 0),
-        penalty: parseFloat(row.penalty_amount || 0),
-        status: row.status,
-        loanStatus: row.status,
-        redeemedDate: null,
-        renewedDate: null,
-        defaultedDate: null,
-        parentTicketId: row.parent_transaction_id,
-        approvedBy: row.approved_by,
-        notes: row.notes,
-        reason: null,
-        createdAt: row.created_at,
-        updatedAt: row.updated_at,
-        // Pawner information
-        pawnerName: `${row.first_name} ${row.last_name}`,
-        pawnerContact: row.mobile_number,
-        pawnerEmail: row.email,
-        pawnerAddress: {
-          city: row.city_name,
-          barangay: row.barangay_name,
-          details: `${row.house_number || ''} ${row.street || ''}`.trim()
-        },
-        // Cashier information
-        cashierName: `${row.cashier_first_name || ''} ${row.cashier_last_name || ''}`.trim(),
-        // Branch information
-        branchName: row.branch_name || 'N/A',
-        // Items information
-        items: row.items || [],
-        // Transaction history (partial payments, redemptions, etc.)
-        transactionHistory: row.transaction_history || []
-      })),
+      data: transactions,
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
