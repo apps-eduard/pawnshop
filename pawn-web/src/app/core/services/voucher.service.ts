@@ -108,6 +108,13 @@ export class VoucherService {
   }
 
   /**
+   * Update an existing voucher
+   */
+  updateVoucher(id: number, voucher: VoucherForm): Observable<VoucherResponse> {
+    return this.http.put<VoucherResponse>(`${this.vouchersUrl}/${id}`, voucher);
+  }
+
+  /**
    * Create multiple vouchers at once
    */
   createVouchersBatch(vouchers: VoucherForm[]): Observable<VoucherResponse> {

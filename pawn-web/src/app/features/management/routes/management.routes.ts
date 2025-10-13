@@ -5,6 +5,7 @@ import { AddressManagementComponent } from '../address-management/address-manage
 import { ItemManagementComponent } from '../item-management/item-management';
 import { PawnerManagementComponent } from '../pawner-management/pawner-management';
 import { UserManagementComponent } from '../user-management/user-management';
+import { VoucherManagementComponent } from '../voucher-management/voucher-management';
 
 export const managementRoutes: Routes = [
   {
@@ -30,5 +31,11 @@ export const managementRoutes: Routes = [
     component: UserManagementComponent,
     // canActivate: [AuthGuard],
     data: { roles: ['administrator'] }
+  },
+  {
+    path: 'vouchers',
+    component: VoucherManagementComponent,
+    // canActivate: [AuthGuard],
+    data: { roles: ['administrator', 'manager', 'cashier'] }
   }
 ];

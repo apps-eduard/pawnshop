@@ -202,28 +202,13 @@ export class SidebarComponent implements OnInit, OnDestroy {
 
   // Handle navigation
   navigateTo(route: string): void {
-    // Special handling for Vouchers - open modal instead of navigating
-    if (route === '/vouchers') {
-      this.openVoucherModal();
-      return;
-    }
-
     this.router.navigate([route]);
     this.closeSidebar.emit();
   }
 
   // Handle menu click with event for proper control
   handleMenuClick(event: Event, route: string): void {
-    // Special handling for Vouchers - prevent default and open modal
-    if (route === '/vouchers') {
-      event.preventDefault();
-      event.stopPropagation();
-      this.openVoucherModal();
-      return;
-    }
-
-    // For other routes, let routerLink handle navigation
-    // Just close the sidebar
+    // Just close the sidebar - routerLink will handle navigation
     this.closeSidebar.emit();
   }
 

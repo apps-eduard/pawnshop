@@ -69,7 +69,7 @@ router.get('/', async (req, res) => {
     const countResult = await client.query(countQuery, queryParams);
     const total = parseInt(countResult.rows[0].total);
     
-    // Get vouchers with user details
+    // Get vouchers with employee details
     const vouchersQuery = `
       SELECT 
         v.id,
@@ -81,11 +81,11 @@ router.get('/', async (req, res) => {
         v.created_by,
         v.created_at,
         v.updated_at,
-        u.username as created_by_username,
-        u.first_name as created_by_first_name,
-        u.last_name as created_by_last_name
+        e.username as created_by_username,
+        e.first_name as created_by_first_name,
+        e.last_name as created_by_last_name
       FROM vouchers v
-      LEFT JOIN users u ON v.created_by = u.id
+      LEFT JOIN employees e ON v.created_by = e.id
       ${whereClause}
       ORDER BY v.created_at DESC
       LIMIT $${paramCounter} OFFSET $${paramCounter + 1}
@@ -138,11 +138,11 @@ router.get('/:id', async (req, res) => {
         v.created_by,
         v.created_at,
         v.updated_at,
-        u.username as created_by_username,
-        u.first_name as created_by_first_name,
-        u.last_name as created_by_last_name
+        e.username as created_by_username,
+        e.first_name as created_by_first_name,
+        e.last_name as created_by_last_name
       FROM vouchers v
-      LEFT JOIN users u ON v.created_by = u.id
+      LEFT JOIN employees e ON v.created_by = e.id
       WHERE v.id = $1
     `;
     
