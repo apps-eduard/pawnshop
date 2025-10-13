@@ -32,12 +32,7 @@ export class AuditViewerComponent implements OnInit {
   // Audit Trails
   auditTrails: AuditTrail[] = [];
   trailsPagination = { currentPage: 1, totalPages: 1, totalRecords: 0, pageSize: 50 };
-  trailsFilters: AuditFilters = { 
-    page: 1, 
-    limit: 50,
-    dateFrom: new Date().toISOString().split('T')[0], // Default to today
-    dateTo: new Date().toISOString().split('T')[0]     // Default to today
-  };
+  trailsFilters: AuditFilters = { page: 1, limit: 50 };
   availableActionTypes: string[] = [];
   selectedTrail: AuditTrail | null = null;
 

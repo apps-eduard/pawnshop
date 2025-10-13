@@ -203,31 +203,31 @@ router.get('/trails', async (req, res) => {
 
     // Build WHERE conditions
     if (action_type) {
-      whereConditions.push(`action_type = $${paramIndex}`);
+      whereConditions.push(`at.action_type = $${paramIndex}`);
       queryParams.push(action_type);
       paramIndex++;
     }
 
     if (transaction_id) {
-      whereConditions.push(`transaction_id = $${paramIndex}`);
+      whereConditions.push(`at.transaction_id = $${paramIndex}`);
       queryParams.push(transaction_id);
       paramIndex++;
     }
 
     if (loan_number) {
-      whereConditions.push(`loan_number = $${paramIndex}`);
+      whereConditions.push(`at.loan_number = $${paramIndex}`);
       queryParams.push(loan_number);
       paramIndex++;
     }
 
     if (user_id) {
-      whereConditions.push(`user_id = $${paramIndex}`);
+      whereConditions.push(`at.user_id = $${paramIndex}`);
       queryParams.push(user_id);
       paramIndex++;
     }
 
     if (branch_id) {
-      whereConditions.push(`branch_id = $${paramIndex}`);
+      whereConditions.push(`at.branch_id = $${paramIndex}`);
       queryParams.push(branch_id);
       paramIndex++;
     }
@@ -245,7 +245,7 @@ router.get('/trails', async (req, res) => {
     }
 
     if (search) {
-      whereConditions.push(`(username ILIKE $${paramIndex} OR loan_number ILIKE $${paramIndex} OR description ILIKE $${paramIndex})`);
+      whereConditions.push(`(at.username ILIKE $${paramIndex} OR at.loan_number ILIKE $${paramIndex} OR at.description ILIKE $${paramIndex})`);
       queryParams.push(`%${search}%`);
       paramIndex++;
     }
@@ -253,7 +253,7 @@ router.get('/trails', async (req, res) => {
     const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
 
     // Get total count
-    const countQuery = `SELECT COUNT(*) FROM audit_trails ${whereClause}`;
+    const countQuery = `SELECT COUNT(*) FROM audit_trails at ${whereClause}`;
     const countResult = await pool.query(countQuery, queryParams);
     const totalRecords = parseInt(countResult.rows[0].count);
 
