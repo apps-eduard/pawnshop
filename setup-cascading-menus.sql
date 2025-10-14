@@ -4,7 +4,7 @@
 INSERT INTO menu_items (name, route, icon, parent_id, order_index, is_active, description, created_at, updated_at)
 VALUES 
   ('Management', '#', '📁', NULL, 2, true, 'Management section', NOW(), NOW()),
-  ('Transactions', '#', '💰', NULL, 3, true, 'Transactions section', NOW(), NOW())
+  ('Transactions', '#', '📁', NULL, 3, true, 'Transactions section', NOW(), NOW())
 ON CONFLICT DO NOTHING;
 
 -- Step 2: Get the IDs of the parent menus
